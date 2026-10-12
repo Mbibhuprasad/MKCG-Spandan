@@ -19,15 +19,13 @@ function readCredential(req) {
   return null;
 }
 
-// Resolves the caller from the session credential. The role and account status
-// always come from the database — never from the token or the request.
-async function resolveAuth(req, { enforceCsrf = true } = {}) {
-  const credential = readCredential(req);
-  if (!credential) throw ApiError.unauthorized();
-
+// Resolves a session token to its user and session. The role and account
+// status always come from the database — never from the token or the request.
+// Shared by HTTP requests and the realtime (Socket.IO) gateway.
+async function authenticateToken(token) {
   let payload;
   try {
-    payload = verifyToken(credential.token);
+    payload = verifyToken(token);
   } catch {
     throw ApiError.unauthorized('Your session has expired. Please sign in again.', 'SESSION_EXPIRED');
   }
@@ -47,6 +45,15 @@ async function resolveAuth(req, { enforceCsrf = true } = {}) {
       'ACCOUNT_SUSPENDED'
     );
   }
+
+  return { user, session };
+}
+
+async function resolveAuth(req, { enforceCsrf = true } = {}) {
+  const credential = readCredential(req);
+  if (!credential) throw ApiError.unauthorized();
+
+  const { user, session } = await authenticateToken(credential.token);
 
   // Cookie sessions are ambient credentials, so state-changing requests must
   // also present the session-bound CSRF token. Bearer tokens are not ambient.
@@ -127,4 +134,4 @@ const requireAdmin = requireRole(ROLES.ADMIN);
 
 const isAdmin = (user) => Boolean(user && user.role === ROLES.ADMIN);
 
-module.exports = { requireAuth, optionalAuth, probeSession, sessionForLogout, requireRole, requireAdmin, isAdmin };
+module.exports = { authenticateToken, requireAuth, optionalAuth, probeSession, sessionForLogout, requireRole, requireAdmin, isAdmin };

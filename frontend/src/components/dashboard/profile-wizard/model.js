@@ -9,12 +9,11 @@ import {
   Images,
   MapPin,
   Medal,
-  ShieldCheck,
   Stethoscope,
   UserRound,
-  UsersRound,
 } from 'lucide-react';
 import { DEFAULT_COUNTRY, PROFILE_SECTIONS } from '@/lib/constants';
+import { sameText } from '@/lib/specialties';
 
 export const YEAR_MIN = 1940;
 export const YEAR_MAX = 2100;
@@ -36,32 +35,44 @@ export const LIST_LIMITS = {
 // sends exactly those, so a half-finished later step never blocks an earlier one.
 // The gallery step owns none: memories and blogs are saved through their own
 // APIs the moment they are created, like the profile photo.
+// The order here is the order of the wizard; the API keeps the same count
+// (PROFILE_WIZARD_STEPS in backend/src/config/constants.js).
 export const STEPS = [
   {
     id: 'basic',
-    title: 'Basic profile of doctor',
+    title: 'Basic profile',
     short: 'Basic profile',
     icon: UserRound,
     description: 'How batchmates will recognise you. Your name is carried over from registration.',
     top: ['name'],
-    profile: ['professionalTitle', 'designation', 'address', 'bio', 'languages'],
+    profile: ['professionalTitle', 'designation', 'headline', 'bloodGroup', 'address', 'bio', 'languages'],
   },
   {
     id: 'expertise',
-    title: 'Field of work, expertise & procedures',
+    title: 'Expertise',
     short: 'Expertise',
     icon: Stethoscope,
-    description: 'What you do. Pick suggestions or type your own — every specialty and every kind of practice is welcome.',
+    description: 'What you do. Pick from the lists or type your own — every specialty and every kind of practice is welcome.',
     top: [],
-    profile: ['specialization', 'subspecialty', 'fieldOfWork', 'expertise', 'procedures', 'interests', 'experience'],
+    profile: ['specialization', 'subspecialty', 'fieldOfWork', 'expertise', 'procedures', 'experience'],
+  },
+  {
+    id: 'education',
+    title: 'Education',
+    short: 'Education',
+    icon: GraduationCap,
+    description: 'Your degrees and earlier education, and your professional qualifications and certifications.',
+    optional: true,
+    top: [],
+    profile: ['education', 'qualifications', 'credentials'],
   },
   {
     id: 'practice',
-    title: 'Clinical practice area, address & contact',
-    short: 'Practice & contact',
+    title: 'Practice & contacts',
+    short: 'Practice & contacts',
     icon: MapPin,
     description: 'Where you practise and how colleagues can reach you there. Workplace details only — never a home address.',
-    top: [],
+    top: ['whatsapp'],
     profile: [
       'practiceArea',
       'hospital',
@@ -76,18 +87,8 @@ export const STEPS = [
     ],
   },
   {
-    id: 'education',
-    title: 'Education, degree & certification',
-    short: 'Education',
-    icon: GraduationCap,
-    description: 'Your academic degrees, and your professional qualifications and certifications.',
-    optional: true,
-    top: [],
-    profile: ['education', 'qualifications', 'credentials'],
-  },
-  {
     id: 'fellowships',
-    title: 'Fellowship & postdoctoral certification',
+    title: 'Fellowship',
     short: 'Fellowship',
     icon: Medal,
     description: 'Fellowships and postdoctoral qualifications. Skip this step if it does not apply to you.',
@@ -97,23 +98,13 @@ export const STEPS = [
   },
   {
     id: 'awards',
-    title: 'Awards',
-    short: 'Awards',
+    title: 'Awards & memberships',
+    short: 'Awards & memberships',
     icon: Award,
-    description: 'Awards and honours you have received, with a photo or certificate if you like.',
+    description: 'Awards and honours you have received, and the professional bodies you belong to.',
     optional: true,
     top: [],
-    profile: ['achievements'],
-  },
-  {
-    id: 'memberships',
-    title: 'Membership',
-    short: 'Membership',
-    icon: UsersRound,
-    description: 'Professional bodies, associations and societies you belong to.',
-    optional: true,
-    top: [],
-    profile: ['memberships'],
+    profile: ['achievements', 'memberships'],
   },
   {
     id: 'publications',
@@ -127,7 +118,7 @@ export const STEPS = [
   },
   {
     id: 'gallery',
-    title: 'Gallery and blogs',
+    title: 'Gallery & blogs',
     short: 'Gallery & blogs',
     icon: Images,
     description: 'Photos and writing for your portfolio. Each item is published as soon as you save it.',
@@ -136,21 +127,12 @@ export const STEPS = [
     profile: [],
   },
   {
-    id: 'visibility',
-    title: 'Privacy & profile visibility',
-    short: 'Visibility',
-    icon: ShieldCheck,
-    description: 'You decide who can find you and what they can see. These choices are enforced by the server.',
-    top: ['visibility'],
-    profile: [],
-  },
-  {
     id: 'review',
-    title: 'Review & submit',
-    short: 'Review',
+    title: 'Visibility & review',
+    short: 'Visibility & review',
     icon: ClipboardCheck,
-    description: 'Check everything once more. Nothing is final — you can edit your profile whenever you like.',
-    top: [],
+    description: 'Decide who can see what, then check everything once more. Nothing is final — you can edit your profile whenever you like.',
+    top: ['visibility'],
     profile: [],
   },
 ];
@@ -201,7 +183,17 @@ export const BLANK = {
   }),
   achievements: () => ({ key: newKey(), title: '', issuer: '', year: '', description: '', imageId: null, imageUrl: '' }),
   memberships: () => ({ key: newKey(), organization: '', type: '', number: '', startYear: '', endYear: '', current: false }),
-  practiceLocations: () => ({ key: newKey(), hospital: '', area: '', address: '', city: '', state: '', country: DEFAULT_COUNTRY, phone: '' }),
+  practiceLocations: () => ({
+    key: newKey(),
+    hospital: '',
+    designation: '',
+    area: '',
+    address: '',
+    city: '',
+    state: '',
+    country: DEFAULT_COUNTRY,
+    phone: '',
+  }),
   publications: () => ({ key: newKey(), title: '', journal: '', authors: '', year: '', description: '', url: '' }),
   links: () => ({ key: newKey(), label: '', url: '' }),
 };
@@ -211,21 +203,26 @@ export function toForm(account) {
   const user = account || {};
   const p = user.profile || {};
   const v = user.visibility || {};
+  const w = user.whatsapp || {};
   const sections = v.sections || {};
   return {
     name: user.name || '',
     professionalTitle: p.professionalTitle || '',
     designation: p.designation || '',
+    headline: p.headline || '',
+    bloodGroup: p.bloodGroup || '',
     address: p.address || '',
     bio: p.bio || '',
     languages: [...(p.languages || [])],
 
     specialization: p.specialization || '',
     subspecialty: p.subspecialty || '',
+    // Not sent to the API: the specialization the subspecialization was chosen
+    // for, so a later change of specialization can ask about it (see subspecialtyNeedsReview).
+    subspecialtyFor: p.specialization || '',
     fieldOfWork: p.fieldOfWork || '',
     expertise: [...(p.expertise || [])],
     procedures: [...(p.procedures || [])],
-    interests: [...(p.interests || [])],
     experience: (p.experience || []).map((e) => ({
       key: e.id,
       role: e.role || '',
@@ -247,9 +244,13 @@ export function toForm(account) {
     country: p.country || DEFAULT_COUNTRY,
     workEmail: p.workEmail || '',
     workPhone: p.workPhone || '',
+    // "Same as my registered phone" keeps a single copy of that number on the account.
+    whatsappSame: Boolean(w.sameAsPhone),
+    whatsappNumber: w.sameAsPhone ? '' : w.number || '',
     practiceLocations: (p.practiceLocations || []).map((l) => ({
       key: l.id,
       hospital: l.hospital || '',
+      designation: l.designation || '',
       area: l.area || '',
       address: l.address || '',
       city: l.city || '',
@@ -324,11 +325,14 @@ export function toForm(account) {
 
     visibility: {
       directory: v.directory !== false,
+      portfolio: v.portfolio !== false,
       publicListing: Boolean(v.publicListing),
       showEmail: Boolean(v.showEmail),
       showPhone: Boolean(v.showPhone),
+      showWhatsapp: v.showWhatsapp !== false,
       showWorkContact: v.showWorkContact !== false,
       showRegistration: Boolean(v.showRegistration),
+      showBloodGroup: Boolean(v.showBloodGroup),
       sections: Object.fromEntries(PROFILE_SECTIONS.map(({ key }) => [key, sections[key] !== false])),
     },
   };
@@ -338,9 +342,12 @@ export function toForm(account) {
 export function toPayload(form) {
   return {
     name: form.name,
+    whatsapp: { sameAsPhone: form.whatsappSame, number: form.whatsappSame ? '' : form.whatsappNumber.trim() },
     profile: {
       professionalTitle: form.professionalTitle,
       designation: form.designation,
+      headline: form.headline,
+      bloodGroup: form.bloodGroup,
       address: form.address,
       bio: form.bio,
       languages: form.languages,
@@ -350,7 +357,6 @@ export function toPayload(form) {
       fieldOfWork: form.fieldOfWork,
       expertise: form.expertise,
       procedures: form.procedures,
-      interests: form.interests,
       experience: form.experience.map((e) => ({
         role: e.role,
         organization: e.organization,
@@ -373,6 +379,7 @@ export function toPayload(form) {
       workPhone: form.workPhone.trim(),
       practiceLocations: form.practiceLocations.map((l) => ({
         hospital: l.hospital,
+        designation: l.designation,
         area: l.area,
         address: l.address,
         city: l.city,
@@ -472,6 +479,34 @@ export function stepOfErrorKey(key) {
   return STEPS.findIndex((step) => (head === 'profile' ? step.profile.includes(field) : step.top.includes(head)));
 }
 
+/**
+ * True while the doctor has changed the specialization but still holds a
+ * subspecialization chosen for the previous one that is not an option of the
+ * new one. It must then be replaced, cleared or explicitly kept — it is never
+ * carried over silently. `isListed(specialization, subspecialty)` comes from
+ * the specialty catalogue.
+ */
+export function subspecialtyNeedsReview(form, isListed = () => false) {
+  if (!form.subspecialty.trim()) return false;
+  if (sameText(form.specialization, form.subspecialtyFor)) return false;
+  return !isListed(form.specialization, form.subspecialty);
+}
+
+/**
+ * After a save, shows the specialization and subspecialization as the API
+ * stored them (it tidies typed values: "spine surgery" → "Spine Surgery").
+ * A field the doctor has edited again since `sent` is left alone.
+ */
+export function adoptStored(form, sent, account) {
+  const stored = (account && account.profile) || {};
+  const next = { ...form };
+  for (const key of ['specialization', 'subspecialty']) {
+    if (typeof stored[key] === 'string' && form[key] === sent[key]) next[key] = stored[key];
+  }
+  if (form.specialization === sent.specialization && form.subspecialty === sent.subspecialty) next.subspecialtyFor = next.specialization;
+  return next;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const isHttpUrl = (value) => /^https?:\/\/\S+$/i.test(String(value).trim());
 const URL_MESSAGE = 'Enter a full link starting with http:// or https://';
@@ -497,8 +532,9 @@ const isBefore = (end, start) => end !== '' && start !== '' && Number(end) < Num
  * so server-side messages land on the same fields.
  * `strict` also demands the fields required for final submission; without it
  * only the format of what has been entered is checked (used for saving a draft).
+ * `isListedSubspecialty` is the specialty catalogue's check (see subspecialtyNeedsReview).
  */
-export function validateStep(form, stepId, { strict = true } = {}) {
+export function validateStep(form, stepId, { strict = true, isListedSubspecialty } = {}) {
   const errors = {};
   const put = (key, message) => {
     if (message && !errors[key]) errors[key] = message;
@@ -512,6 +548,12 @@ export function validateStep(form, stepId, { strict = true } = {}) {
 
     case 'expertise':
       if (strict && !form.specialization.trim()) put('profile.specialization', 'Choose or type your primary specialization.');
+      if (subspecialtyNeedsReview(form, isListedSubspecialty)) {
+        put(
+          'profile.subspecialty',
+          `You changed your specialization. Choose a subspecialization that fits it, clear this one, or confirm that “${form.subspecialty.trim()}” still applies.`
+        );
+      }
       form.experience.forEach((e, i) => {
         if (!e.role.trim()) put(`profile.experience.${i}.role`, 'Designation or job title is required.');
         years('experience', i, 'startYear');
@@ -522,10 +564,23 @@ export function validateStep(form, stepId, { strict = true } = {}) {
       });
       break;
 
+    case 'education':
+      form.education.forEach((e, i) => {
+        if (!e.degree.trim()) put(`profile.education.${i}.degree`, 'Qualification or degree is required.');
+        years('education', i, 'startYear', 'year');
+        if (isBefore(e.year, e.startYear)) put(`profile.education.${i}.year`, 'The completion year cannot be before the start year.');
+      });
+      form.credentials.forEach((c, i) => {
+        if (!c.title.trim()) put(`profile.credentials.${i}.title`, 'Qualification is required.');
+        years('credentials', i, 'year');
+      });
+      break;
+
     case 'practice':
       if (strict && !form.city.trim()) put('profile.city', 'Enter the city where you practise.');
       if (form.workEmail.trim() && !EMAIL_RE.test(form.workEmail.trim())) put('profile.workEmail', 'Enter a valid email address.');
       if (form.workPhone.trim() && !isPhone(form.workPhone)) put('profile.workPhone', PHONE_MESSAGE);
+      if (!form.whatsappSame && form.whatsappNumber.trim() && !isPhone(form.whatsappNumber)) put('whatsapp.number', PHONE_MESSAGE);
       form.practiceLocations.forEach((l, i) => {
         if (!l.hospital.trim()) put(`profile.practiceLocations.${i}.hospital`, 'Hospital or clinic name is required.');
         if (l.phone.trim() && !isPhone(l.phone)) put(`profile.practiceLocations.${i}.phone`, PHONE_MESSAGE);
@@ -536,21 +591,9 @@ export function validateStep(form, stepId, { strict = true } = {}) {
       });
       break;
 
-    case 'education':
-      form.education.forEach((e, i) => {
-        if (!e.degree.trim()) put(`profile.education.${i}.degree`, 'Degree title is required.');
-        years('education', i, 'startYear', 'year');
-        if (isBefore(e.year, e.startYear)) put(`profile.education.${i}.year`, 'The completion year cannot be before the start year.');
-      });
-      form.credentials.forEach((c, i) => {
-        if (!c.title.trim()) put(`profile.credentials.${i}.title`, 'Qualification is required.');
-        years('credentials', i, 'year');
-      });
-      break;
-
     case 'fellowships':
       form.fellowships.forEach((f, i) => {
-        if (!f.title.trim()) put(`profile.fellowships.${i}.title`, 'Fellowship title is required.');
+        if (!f.title.trim()) put(`profile.fellowships.${i}.title`, 'Fellowship or qualification is required.');
         years('fellowships', i, 'startYear', 'endYear');
         if (isBefore(f.endYear, f.startYear)) put(`profile.fellowships.${i}.endYear`, 'The completion year cannot be before the start year.');
       });
@@ -561,11 +604,8 @@ export function validateStep(form, stepId, { strict = true } = {}) {
         if (!a.title.trim()) put(`profile.achievements.${i}.title`, 'Award title is required.');
         years('achievements', i, 'year');
       });
-      break;
-
-    case 'memberships':
       form.memberships.forEach((m, i) => {
-        if (!m.organization.trim()) put(`profile.memberships.${i}.organization`, 'Organisation or association name is required.');
+        if (!m.organization.trim()) put(`profile.memberships.${i}.organization`, 'Association or organisation name is required.');
         years('memberships', i, 'startYear');
         if (!m.current) {
           years('memberships', i, 'endYear');

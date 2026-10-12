@@ -5,42 +5,63 @@ Every doctor has a profile that doubles as a small professional portfolio. It is
 
 Code: `backend/src/controllers/doctor.controller.js`, `backend/src/validators/doctor.validators.js`,
 `backend/src/services/serializers.js` (`profileBody`, `memberProfileBody`, `profileCompletion`,
-`requiredProfileIssues`, `serializeDoctor*`).
+`requiredProfileIssues`, `serializeDoctor*`), `backend/src/services/profileOrder.js` (display order and derived
+figures), `backend/src/services/specialty.service.js` and `backend/src/config/specialties.js` (specialization
+catalogue).
 
 Pages: `/dashboard/profile` (the profile wizard), `/doctors` (member directory), `/doctors/[id]` (portfolio).
 
 ## The profile wizard
 
 `/dashboard/profile` is a step-by-step wizard (`frontend/src/components/dashboard/profile-wizard/`). It is used both to
-complete a new profile and to edit a finished one. Nine steps collect the profile, followed by privacy and a review.
+complete a new profile and to edit a finished one. It has nine steps, in this order:
 
 | # | Step | Fields (`profile.…` unless noted) |
 | --- | --- | --- |
-| 1 | Basic profile of doctor | photo, top-level `name`\*, `professionalTitle`, `designation`, `address`, `bio`, `languages[]` |
-| 2 | Field of work, expertise & procedures | `specialization`\*, `subspecialty`, `fieldOfWork`, `expertise[]`, `procedures[]`, `interests[]`, `experience[]` |
-| 3 | Clinical practice area, address & contact | `practiceArea`, `hospital`, `workAddress`, `city`\*, `state`, `country`, `workEmail`, `workPhone`, `practiceLocations[]`, `links[]` |
-| 4 | Education, degree & certification | `education[]` (academic degrees), `qualifications[]` (letters), `credentials[]` (professional qualifications and certifications) |
-| 5 | Fellowship & postdoctoral certification | `fellowships[]` |
-| 6 | Awards | `achievements[]`, each with an optional image |
-| 7 | Membership | `memberships[]` |
-| 8 | Publications | `publications[]` |
-| 9 | Gallery and blogs | not part of the profile document — see "Gallery and blogs" below |
-| 10 | Privacy & profile visibility | top-level `visibility` |
-| 11 | Review & submit | — (summary of the steps above, each with an Edit button) |
+| 1 | Basic profile | photo, top-level `name`\*, `professionalTitle`, `designation`, `bloodGroup`, `headline`, `address`, `bio`, `languages[]` |
+| 2 | Expertise | `specialization`\*, `subspecialty`, `fieldOfWork`, `expertise[]`, `procedures[]`, `experience[]` |
+| 3 | Education | `education[]`, `qualifications[]` (letters), `credentials[]` (professional qualifications and certifications) |
+| 4 | Practice & contacts | `hospital`, `designation` (the same field as in step 1), `practiceArea`, `workAddress`, `city`\*, `state`, `country`, `workPhone`, `workEmail`, top-level `whatsapp`, `practiceLocations[]`, `links[]`; also the `showWorkContact` and `showWhatsapp` switches |
+| 5 | Fellowship | `fellowships[]` |
+| 6 | Awards & memberships | `achievements[]` (awards, each with an optional image) and `memberships[]`, as two subsections |
+| 7 | Publications | `publications[]` |
+| 8 | Gallery & blogs | not part of the profile document — see "Gallery and blogs" below |
+| 9 | Visibility & review | top-level `visibility`, followed by a summary of steps 1–8, each with an Edit button |
 
 \* required before the wizard can be submitted. Everything else is optional. Administrators are never listed in the
-directory, so for them only the name is required and the privacy step does not apply.
+directory, so for them only the name is required and the visibility settings do not apply.
 
-Fields that existed before this structure were kept and given a home rather than dropped: languages (step 1),
-positions held (step 2), professional links (step 3) and qualification letters (step 4). Awards are stored in the
-existing `achievements` list.
+The wizard originally had eleven steps in a different order (practice before education, awards and memberships as
+separate steps, privacy and review as separate steps). Nothing was removed from the schema when they were
+reorganised. A resume position saved under the old order is translated when it is read: `profileWizard.layout`
+records which order `profileWizard.step` refers to (`1` = the former eleven steps, `2` = the current nine), and
+`PROFILE_WIZARD_LEGACY_STEP_MAP` maps an old position to the step that now covers the same ground.
 
-Three fields are **no longer collected or shown**: the professional headline (`headline`), total years of experience
-(`yearsOfExperience`) and batch year (`batchYear`). They remain in the schema and the API still accepts and returns
-them, so values saved earlier are not lost — the form, the review, the portfolio and the directory card simply no
-longer use them, and the completion meter no longer counts years of experience.
+Fields that are **no longer collected or shown**: clinical and professional interests (`interests[]`), total years of
+experience (`yearsOfExperience`) and batch year (`batchYear`). They remain in the schema and the API still accepts
+and returns them, so values saved earlier are not lost; the wizard never sends them, so saving the form leaves them
+untouched. The portfolio shows years of experience derived from the dated positions instead (see "Portfolio page").
 
-### Gallery and blogs (step 9)
+### Specialization and subspecialization (step 2)
+
+- The options come from `GET /doctors/specialties` — the predefined catalogue in
+  `backend/src/config/specialties.js` plus the values listed doctors typed themselves. No component carries its own
+  list (`frontend/src/lib/specialties.js` is the only reader).
+- Both fields are searchable comboboxes. A doctor can pick an option or type a value that is missing; an alias finds
+  its entry ("orthopedics" finds *Orthopaedics*).
+- The subspecialization options depend on the specialization and are refreshed when it changes.
+- **Changing the specialization never keeps an old subspecialization silently.** If the current one is also an
+  option of the new specialization it stays. Otherwise the form asks the doctor to choose a new one, clear it, or
+  confirm that it still applies, and "Next" and "Save progress" are refused until they do. The API applies the same
+  rule to a request that changes `specialization` without naming `subspecialty`: the stored subspecialization is
+  kept only if it is a predefined option of the new specialization, and cleared otherwise.
+- **Display formatting** is done by the API (`normalizeSpecialization`, `normalizeSubspecialty`), also at
+  registration. A predefined option keeps its listed spelling whatever capitals were typed. Any other value is tidied
+  into Title Case ("spine surgery" → "Spine Surgery", "head AND neck surgery" → "Head and Neck Surgery"), keeping
+  capitals that carry meaning: known abbreviations ("ent" → "ENT", from `MEDICAL_ACRONYMS`) and any word typed with
+  capitals after its first letter ("MCh", "LASIK", "IgA"). After a save the form shows the value as stored.
+
+### Gallery and blogs (step 8)
 
 This step has two subsections and stores nothing in the profile:
 
@@ -78,7 +99,7 @@ How it behaves:
   moves focus to the first field concerned.
 - **Photo** uploads are saved immediately through the photo endpoints (see below); they are not part of a step's
   save. An **award image** is uploaded immediately too (`POST /media`, purpose `award`) and attached to the profile
-  when the awards step is saved.
+  when the awards and memberships step is saved.
 - **Expired sessions**: a save answered with `401` signs the interface out and returns to the login page with
   `next=/dashboard/profile`; after signing in the wizard resumes from what was last saved.
 
@@ -97,10 +118,11 @@ complete the profile gradually.
 | Profile photo | set via `PUT /doctors/me/photo` | JPG / PNG / WebP up to `MAX_IMAGE_MB` |
 | Full name | top-level `name` | 2–80 characters |
 | Professional title | `professionalTitle` | ≤ 120 |
-| Address | `address` | ≤ 240. Entered in the basic profile step; shown to signed-in members on the portfolio, never on directory or public cards |
-| Professional headline | `headline` | ≤ 160 — no longer collected by the form |
-| Specialization | `specialization` | ≤ 80 |
-| Subspecialization | `subspecialty` | ≤ 80 |
+| Blood group | `bloodGroup` | empty or one of `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-`. Optional and **private**: other members receive it only with `visibility.showBloodGroup`; it never appears on directory or public cards. It is a profile detail, not a medical record |
+| Address | `address` | ≤ 240. An area or locality, entered in the basic profile step (the form asks doctors not to enter a home address); shown to signed-in members on the portfolio, never on directory or public cards |
+| Professional headline | `headline` | ≤ 160. One line shown below the name on the portfolio |
+| Specialization | `specialization` | ≤ 80. A catalogue option or a typed value; stored in display form (see above) |
+| Subspecialization | `subspecialty` | ≤ 80. Belongs to the specialization; a catalogue option or a typed value, stored in display form |
 | Field of work | `fieldOfWork` | ≤ 120 |
 | Areas of expertise | `expertise[]` | ≤ 20 entries, ≤ 80 each |
 | Procedures performed | `procedures[]` | ≤ 30 entries, ≤ 100 each |
@@ -111,14 +133,14 @@ complete the profile gradually.
 | Workplace address | `workAddress` | ≤ 240 |
 | Workplace email | `workEmail` | empty or a valid email address (stored lower-case) |
 | Workplace phone | `workPhone` | empty or a valid phone number (stored as `+<digits>`) |
-| Other practice locations | `practiceLocations[] { hospital*, area, address, city, state, country, phone }` | ≤ 5 entries; `phone` empty or a valid phone number, shown to members only with `showWorkContact` |
+| Other practice locations | `practiceLocations[] { hospital*, designation, area, address, city, state, country, phone }` | ≤ 5 entries; `phone` empty or a valid phone number, shown to members only with `showWorkContact` |
 | Batch year | `batchYear` | 1940–2100 or `null` — no longer collected by the form |
 | Years of experience | `yearsOfExperience` | 0–80 or `null` — no longer collected by the form |
 | Biography | `bio` | ≤ 1200 |
 | Qualification letters | `qualifications[]` | ≤ 12 entries, ≤ 80 each |
-| Professional interests | `interests[]` | ≤ 15 entries, ≤ 60 each |
+| Professional interests | `interests[]` | ≤ 15 entries, ≤ 60 each — no longer collected by the form |
 | Languages | `languages[]` | ≤ 12 entries, ≤ 40 each |
-| Academic degrees | `education[] { degree*, level, institution, fieldOfStudy, startYear, year, certification, details }` | ≤ 10 entries; `degree` is the degree title; `level` is empty or one of `UNDERGRADUATE`, `POSTGRADUATE`, `SUPER_SPECIALITY`, `DOCTORATE`, `DIPLOMA`, `OTHER`; `year` is the completion year and may not precede `startYear` |
+| Academic degrees | `education[] { degree*, level, institution, fieldOfStudy, startYear, year, certification, details }` | ≤ 10 entries; `degree` is the degree title; `level` is empty or one of `SUPER_SPECIALITY`, `DOCTORATE`, `POSTGRADUATE`, `DIPLOMA`, `UNDERGRADUATE`, `HIGHER_SECONDARY`, `SECONDARY`, `OTHER`; `year` is the completion year and may not precede `startYear` |
 | Professional qualifications and certifications | `credentials[] { title*, type, institution, year, registration, details }` | ≤ 15 entries; `type` is empty or one of `DEGREE`, `DIPLOMA`, `BOARD_CERTIFICATION`, `MEMBERSHIP`, `LICENCE`, `OTHER` |
 | Professional experience | `experience[] { role*, organization, employmentType, city, state, startYear, endYear, current, description }` | ≤ 15 entries; end year not before start year; `employmentType` is empty or one of `FULL_TIME`, `PART_TIME`, `VISITING`, `HONORARY`, `PRIVATE_PRACTICE`, `TRAINING`, `ACADEMIC`, `OTHER` |
 | Fellowships and postdoctoral certifications | `fellowships[] { title*, institution, specialty, startYear, endYear, certificate, description }` | ≤ 10 entries; `certificate` holds the postdoctoral qualification or certification; completion year not before start year |
@@ -144,8 +166,8 @@ account fields: they are set at registration and cannot be changed through the p
 
 ### Updating
 
-`PATCH /api/v1/doctors/me` accepts any subset of `name`, `profile`, `visibility`, `dismissProfilePrompt`,
-`wizardStep` (0–10) and `submit`. Only the fields present are changed; list fields (`education`, `links`, …) are
+`PATCH /api/v1/doctors/me` accepts any subset of `name`, `whatsapp`, `profile`, `visibility`, `dismissProfilePrompt`,
+`wizardStep` (0–8) and `submit`. Only the fields present are changed; list fields (`education`, `links`, …) are
 replaced as a whole when sent; `visibility.sections` is merged key by key. Unknown keys — including `role`,
 `status`, `email`, `phone`, `featured`, `profileWizard` and `profileCompletion` — are discarded, so a profile request
 can never change a role, an account status or the completion timestamp.
@@ -168,7 +190,8 @@ Computed on every read by `profileCompletion()`:
   complete.
 - `requiredMissing` — labels of the required fields still empty (`Full name`, `Primary specialization`, `City`).
 - `completedAt` — when the wizard was first submitted, or `null`.
-- `resumeStep` — the step (0-based) the wizard reopens on for an unfinished profile.
+- `resumeStep` — the step (0-based, 0–8) the wizard reopens on for an unfinished profile. A position saved by the
+  former eleven-step wizard is translated to the matching step of the current one.
 - `percent` and `missing` — how much of the portfolio is filled in, from nine equally weighted checks: profile photo;
   professional title or designation; specialization; hospital or clinic; city; biography; at
   least one education entry; at least one qualification (letters or a detailed entry); at least one experience
@@ -179,21 +202,25 @@ and submit; all their saved data is prefilled.
 
 ## Visibility preferences
 
-Stored in `user.visibility`; changed by the doctor in step 9 (`PATCH /doctors/me`).
+Stored in `user.visibility`; changed by the doctor in the last step (`PATCH /doctors/me`). The two switches for
+professional contact details and WhatsApp are also offered next to those fields in step 4 — they are the same settings.
 
 | Preference | Default | Effect |
 | --- | --- | --- |
 | `directory` | `true` | Listed in the member directory and searchable. When off, other members who open the profile link see only a name card |
+| `portfolio` | `true` | The full portfolio is open to members. When off, the doctor can stay in the directory while other members who open the profile see only a name card |
 | `publicListing` | `false` | **Consent** to appear as a small card on the public homepage |
 | `showEmail` | `false` | Account email visible to signed-in members on the portfolio |
 | `showPhone` | `false` | Account phone visible to signed-in members on the portfolio |
 | `showWorkContact` | `true` | Workplace email and phone (if entered) visible to signed-in members on the portfolio |
+| `showWhatsapp` | `true` | The WhatsApp number (if entered) visible to signed-in members |
 | `showRegistration` | `false` | Registration details of qualifications **and membership numbers** visible to signed-in members |
+| `showBloodGroup` | `false` | Blood group visible to signed-in members on the portfolio. No other setting reveals it |
 | `sections.{education, qualifications, experience, fellowships, achievements, memberships, publications, gallery, links}` | `true` each | Whether that portfolio section is shown to other members. `gallery` governs the items kept for the portfolio only; memories shared with the community stay in the Memories section, and blogs are public |
 
 These settings are enforced in the API, not in the browser: for another member, `memberProfileBody()` empties the
-hidden sections, blanks `registration` and membership `number`, removes the phone numbers of extra practice
-locations, and leaves workplace contact out of `contact` before the response is sent,
+hidden sections, blanks `registration`, membership `number` and `bloodGroup`, removes the phone numbers of extra
+practice locations, and leaves workplace contact and WhatsApp out of `contact` before the response is sent,
 so hidden data never reaches their device. The doctor and administrators always receive the full profile; on their
 own portfolio the doctor sees "Hidden from other members" and "Only you can see this" markers instead.
 
@@ -212,8 +239,8 @@ A doctor appears on the public homepage only when **both** `visibility.publicLis
 | --- | --- | --- |
 | Signed-out visitor | `GET /doctors/featured` | `id, name, photoUrl, professionalTitle, specialization, city` — opted-in **and** featured doctors only, at most 8. No contact details, hospital or biography |
 | Member, directory card | `GET /doctors` | `id, name, photoUrl, professionalTitle, specialization, designation, hospital, city, state, yearsOfExperience, batchYear`. Never email or phone |
-| Member, portfolio | `GET /doctors/:id` | `profile` with the doctor's visibility choices applied, `memberSince`, and in `contact`: `email` / `phone` / `workEmail` + `workPhone` only if the doctor enabled each |
-| Member, doctor hidden from the directory | `GET /doctors/:id` | `limited: true` with `name`, photo, professional title and specialization only |
+| Member, portfolio | `GET /doctors/:id` | `profile` with the doctor's visibility choices applied and its repeated sections in display order, `summary`, `memberSince`, and in `contact`: `email` / `phone` / `workEmail` + `workPhone` / `whatsapp` only if the doctor enabled each |
+| Member, doctor hidden from the directory or with the portfolio closed | `GET /doctors/:id` | `limited: true` with `name`, photo, professional title and specialization only |
 | The doctor themself | `GET /doctors/me`, `GET /doctors/:id` | Everything, including own contact details, visibility settings and completion |
 | Administrator | `GET /admin/doctors`, `GET /admin/doctors/:id` | Everything plus status, suspension details, `featured`, last login and content counts |
 
@@ -222,33 +249,92 @@ administrator account is never listed in the directory.
 
 ## Portfolio page
 
-`/doctors/[id]` is built entirely from the saved profile — there is no per-doctor page. It is laid out like a
-personal portfolio site rather than a stack of cards:
+`/doctors/[id]` is built entirely from the saved profile — there is no per-doctor page. Sections and cards without
+data are not rendered, and no rating, verification badge, fee or other figure is invented.
 
-- **Hero** — the photo (or initials), the name as the page heading, specialization, professional title and
-  designation, hospital, location, address and "member since"; "Get in touch" / "Call" buttons when the doctor shows
-  contact details; and a strip of real figures (areas of expertise, procedures, awards, publications) when there are
-  at least two to show.
-- **Chapter bar** — links to each section, pinned below the site header while scrolling.
-- **Chapters** — open sections separated by rules, each with its number and title in a side column, **in the order of
-  the profile form**. Each is shown only when it has content, and fades in as it scrolls into view (not with reduced
-  motion):
+Code: `frontend/src/components/doctors/DoctorPortfolio.jsx` (data and sections) with
+`frontend/src/components/doctors/portfolio/` — `PortfolioHero.jsx`, `HeroParticles.jsx`, `PortfolioNav.jsx` (the
+section bar and the sidebar) and `parts.jsx` (the section, panel, info-box and timeline building blocks).
 
-1. About — biography and languages
-2. Field of work, expertise and procedures — specialization, subspecialization, field of work, areas of expertise,
-   procedures performed, interests, and work experience as a timeline with the current position marked
-3. Clinical practice, address and contact — main practice, the contact details the doctor chose to show,
-   professional links, and other practice locations
-4. Education, degrees and certification — qualification letters, academic degrees, professional qualifications
-5. Fellowship and postdoctoral certification
-6. Awards — with the award image where one was uploaded
-7. Membership
-8. Publications — authors, journal, description and a safe link
-9. Gallery and blogs — the doctor's memories (`GET /memories?owner=`) as a photo grid and their blogs
-   (`GET /blogs?author=`) as a list
+The hero is dark: navy running into blue and a grey-teal, with soft glows, a few translucent shapes and cyan accents.
+Below it are light sections of bordered, rounded cards. Headings use the body typeface at its heaviest weight;
+everything below the hero is drawn with the site's colour tokens, so the dark theme works without extra rules. No
+global style was changed for it.
+
+- **Profile navigation** — back to the directory, the doctor's name, a link to each section that exists, and a
+  "Contact" button when the doctor shares contact details or links. The section being read is marked. From 1280 px it
+  is a vertical panel in a right-hand column beside the sections, kept in view while they scroll (`PortfolioSidebar`);
+  below that it is a dark pill pinned under the site header whose links scroll sideways (`PortfolioNav`).
+- **Hero** — specialization and subspecialization, the name as the page heading (an honorific such as "Dr" is set
+  apart in white), professional title and designation, the headline as a quotation, the opening of the biography, and
+  up to three facts (years of experience, hospital, location). The photograph — or the initials — sits in a square
+  frame with rounded corners, a hairline border and a blue-teal glow, on the right, below the text on small screens.
+  Buttons: "Get in touch" (email, or a link to the contact section when no
+  email is shared), "Call" and "WhatsApp" for the details the doctor chose to show, and "Edit profile" for the owner.
+- **Summary bar** — one card overlapping the foot of the hero with up to four facts, each only when the data exists:
+  years of experience (derived from the dated positions), specialization, current practice (the main hospital or
+  clinic, otherwise the organisation of a position marked current) and qualifications.
+- **Sections**, in this order. Each fades in as it scrolls into view (not with reduced motion):
+
+1. About — the biography and languages, with an "at a glance" panel (current practice, location, address, member
+   since)
+2. Professional credentials — a grid of boxes: qualification letters, specialization, subspecialization and current
+   designation, then one box per detailed qualification. Left out when the specialization would be its only entry
+3. Expertise and procedures — field of work and clinical practice area, areas of expertise as tags, and one compact
+   card per procedure
+4. Professional experience — a timeline with current positions first, then the most recently held; an ongoing
+   position shows "Present" and a "Current" badge
+5. Academic degrees — a timeline, highest level first. On wide screens it stands beside the experience timeline
+6. Fellowships and postdoctoral qualifications — one card each, most recent completion first
+7. Awards and memberships — two separate panels
+8. Publications — cards, most recent first, each with a safe external link when one was entered
+9. Practice locations — one card per hospital or clinic: the main practice (when a hospital, practice area or
+   workplace address is saved) and each other location, with designation, practice area, address, the contact
+   details the doctor allows and "Get directions". A city on its own is not shown as a practice
+10. Contact — the contact details the doctor shares (account email and phone, WhatsApp, and the workplace contact
+    when there is no main practice card to carry it) and the professional links
+11. Gallery — the doctor's memories (`GET /memories?owner=`) as a grid of equal tiles; a tile opens the memory in the
+    lightbox used on the Memories page
+12. Blogs — the doctor's community blogs (`GET /blogs?author=`) as cards linking to `/blogs/[slug]`
+
+"Get directions" opens a Google Maps search for the name and address saved for that location, in a new tab. Nothing
+is geocoded or stored, and there is no embedded map (the Content-Security-Policy does not allow one). The platform
+stores no opening hours, consultation fees, ratings or appointment slots, so none are shown, and there is no booking
+action.
+
+The browser tab is titled "name · specialization" once the profile has loaded. It is set in the browser from what the
+signed-in member was allowed to load; the server-rendered HTML and its metadata carry no profile data.
+
+Animation: the hero's text and photograph use the site's CSS `rise-in` entrance. Sixteen small glowing particles
+(nine on small screens) sit behind the hero's content: Framer Motion fades each one in, GSAP lets it drift and dim
+slowly and — with a mouse on a large screen — shifts the two particle layers slightly with the pointer. The layer
+ignores the pointer, is hidden from assistive technology and pauses while the hero is off screen. GSAP also makes the
+glow behind the photograph breathe and drifts the backdrop shapes (large screens only). Framer Motion (`Reveal`) fades
+each section in once. Every GSAP animation is created in a context that is reverted when the component unmounts, and
+with `prefers-reduced-motion` nothing moves.
+
+### Display order
+
+The profile is stored, and edited in the wizard, in the order the doctor entered it. For the portfolio the API
+(`orderProfile` in `services/profileOrder.js`, applied by `serializeDoctorProfile`) returns copies in display order;
+ties always keep the saved order, and undated entries go last. Nothing stored is rewritten.
+
+| Section | Order |
+| --- | --- |
+| `education` | By level — super-speciality and doctorate, postgraduate, diploma, other, undergraduate, higher secondary (+2 / 12th), secondary (10th) — then by completion year, latest first. When `level` is empty the level is read from a well-known degree title (MBBS, MD, MS, DNB, DM, MCh, PhD, "+2", "10th" …); an unrecognised title ranks as "other" |
+| `experience` | Positions marked current first, then by end year (start year when there is none), latest first |
+| `fellowships` | By completion year (start year when there is none), latest first |
+| `achievements`, `credentials`, `publications` | By year, latest first |
+| `memberships` | Current memberships first, then by end or start year, latest first |
+
+`summary.experience` is `{ years, since }`: the years covered by positions that have a start year and either an end
+year or the current flag. Overlapping positions are counted once and gaps are left out; with no such position both
+values are `null` and the card is not shown. It is computed from what the viewer may see, so hiding the experience
+section hides the figure as well.
 
 On their own portfolio a doctor also sees "Hidden from other members" on sections they switched off, "Only you can
-see this" on private numbers, and "Edit profile", "Add photos" and "Write a blog" buttons.
+see this" on private details (blood group, registration and membership numbers), and "Edit profile", "Add photos"
+and "Write a blog" buttons.
 
 On the web the directory and portfolio pages are client-rendered behind the member gate, are marked `noindex`, and
 are disallowed in `robots.txt` — and, independently of that, the API refuses unauthenticated requests. The wizard
@@ -260,11 +346,26 @@ lives under `/dashboard`, which is `noindex` and requires a session.
 
 - `q` — case-insensitive match anywhere in the name (input is escaped and limited to 60 characters).
 - `specialization`, `city` — exact, case-insensitive match (collation strength 2). The available values come from
-  `GET /doctors/filters`, which returns the distinct values present among listed doctors. The wizard offers the same
-  values as suggestions (together with a list of common specialties) to keep spellings consistent, while still
-  accepting anything a doctor types.
+  `GET /doctors/filters`, which returns the distinct values present among listed doctors. The wizard's specialization
+  options come from `GET /doctors/specialties` (see below) and its city suggestions from the filters, which keeps
+  spellings consistent while still accepting anything a doctor types.
 - Sorted by name; `limit` defaults to 12 (maximum 48).
 - Only active doctors with `visibility.directory: true` are returned.
+
+## Specialization catalogue
+
+`GET /api/v1/doctors/specialties?q=` (members only) returns
+`{ specializations: [{ name, aliases[], subspecializations[], custom }] }`, sorted by name:
+
+- the predefined entries of `backend/src/config/specialties.js` (`custom: false`) — fifty specializations, each with
+  its subspecializations and alternative names. That file is the only place the options are defined: edit it to
+  add, rename or regroup an option. Stored profiles keep whatever text they hold;
+- plus what listed, active doctors have saved: a typed specialization becomes its own entry (`custom: true`), and a
+  typed subspecialization is added under the specialization it was saved with — also when that specialization was
+  entered through an alias. Doctors who are not listed in the directory do not feed the suggestions.
+
+`q` (≤ 60 characters) keeps the entries whose name, an alias or a subspecialization contains the text, ignoring
+capitals.
 
 ## Profile photo
 
@@ -282,15 +383,25 @@ photo the interface shows the doctor's initials.
 ## Remaining limitations
 
 - Email and phone cannot be changed after registration.
-- Specialization and city are free text, so spelling variants ("Bhubaneswar" / "Bhubaneshwar") can still appear as
-  separate filter values; the wizard's suggestions reduce this but do not prevent it.
+- City is free text, so spelling variants ("Bhubaneswar" / "Bhubaneshwar") can still appear as separate filter
+  values. A typed specialization is stored as typed (in display form): an alias such as "Orthopedics" finds the
+  options of *Orthopaedics* but remains a separate value in the directory filter.
+- Display formatting cannot know every abbreviation. An unknown one typed in lower case becomes an ordinary word
+  ("tmj" → "Tmj"); typed in capitals within a mixed-case entry it is kept. Add recurring ones to `MEDICAL_ACRONYMS`.
+- A typed specialization or subspecialization is offered to other doctors as soon as its author is listed in the
+  directory; there is no review of typed values.
+- Publications carry a year, not a full date, so two publications of the same year keep the order of entry.
+- `designation` is one field: the "Designation" input in step 4 and "Current designation" in step 1 edit the same
+  value. Each additional practice location has its own designation.
+- The blood group has no verification and must not be relied on for any medical purpose.
 - Admin "featured" selection is manual; there is no ordering control beyond most recently updated first.
 - Credentials and registration details are self-declared: the platform does not verify them.
 - Because profile photos are public-delivery assets, anyone who obtains a photo's URL can open it.
 - The wizard does not intercept the browser's Back button: unsaved changes on the current step are lost if the
   doctor leaves that way (everything saved by an earlier "Next" or "Save progress" is kept).
 - The admin doctor detail view lists the original profile sections; expertise, procedures, practice locations,
-  fellowships, memberships and detailed qualifications are visible to administrators on the doctor's portfolio page.
+  fellowships, memberships, detailed qualifications, headline and blood group are visible to administrators on the
+  doctor's portfolio page.
 - Award images, like profile photos, are public-delivery Cloudinary assets: anyone who obtains the URL can open it.
 - Gallery items and blogs are saved by their own modules, so they are not covered by the wizard's "unsaved changes"
   warning or its final submission — each is complete as soon as its own form is saved.

@@ -1,8 +1,10 @@
 const { z, line, text, httpUrl, year, page, limit, objectId, nullableId } = require('./common');
 const { email, phone } = require('./auth.validators');
+const { normalizeSpecialization, normalizeSubspecialty } = require('../services/specialty.service');
 const {
   EMPLOYMENT_TYPES,
   DEGREE_LEVELS,
+  BLOOD_GROUPS,
   CREDENTIAL_TYPES,
   PROFILE_SECTIONS,
   PROFILE_WIZARD_STEPS,
@@ -94,6 +96,7 @@ const membership = z
 
 const practiceLocation = z.object({
   hospital: line(1, 160, 'Hospital or clinic'),
+  designation: line(0, 120, 'Designation').default(''),
   area: line(0, 160, 'Practice area').default(''),
   address: line(0, 240, 'Address').default(''),
   city: line(0, 80, 'City').default(''),
@@ -120,13 +123,22 @@ const link = z.object({ label: line(1, 40, 'Label'), url: httpUrl });
 // cannot be set here.
 const updateProfile = z.object({
   name: line(2, 80, 'Full name').optional(),
+  // '' clears the number. `sameAsPhone` means "my registered phone number is my WhatsApp number".
+  whatsapp: z
+    .object({
+      sameAsPhone: z.boolean().default(false),
+      number: z.union([z.literal(''), phone]).default(''),
+    })
+    .optional(),
   profile: z
     .object({
       professionalTitle: line(0, 120, 'Professional title'),
       headline: line(0, 160, 'Headline'),
+      bloodGroup: z.enum(['', ...BLOOD_GROUPS], 'Choose one of the listed blood groups.'),
       address: line(0, 240, 'Address'),
-      specialization: line(0, 80, 'Specialization'),
-      subspecialty: line(0, 80, 'Subspecialty'),
+      // Listed options keep their listed spelling; typed values are tidied into Title Case.
+      specialization: line(0, 80, 'Specialization').transform(normalizeSpecialization),
+      subspecialty: line(0, 80, 'Subspecialization').transform(normalizeSubspecialty),
       fieldOfWork: line(0, 120, 'Field of work'),
       expertise: tagList(20, 80, 'Area of expertise'),
       procedures: tagList(30, 100, 'Procedure'),
@@ -160,11 +172,14 @@ const updateProfile = z.object({
   visibility: z
     .object({
       directory: z.boolean(),
+      portfolio: z.boolean(),
       publicListing: z.boolean(),
       showEmail: z.boolean(),
       showPhone: z.boolean(),
+      showWhatsapp: z.boolean(),
       showWorkContact: z.boolean(),
       showRegistration: z.boolean(),
+      showBloodGroup: z.boolean(),
       sections: z.object(Object.fromEntries(PROFILE_SECTIONS.map((key) => [key, z.boolean()]))).partial(),
     })
     .partial()
@@ -182,6 +197,8 @@ const updateProfile = z.object({
 
 const setPhoto = z.object({ mediaId: objectId });
 
+const specialtyQuery = z.object({ q: z.string().trim().max(60).optional() });
+
 const directoryQuery = z.object({
   q: z.string().trim().max(60).optional(),
   specialization: z.string().trim().max(80).optional(),
@@ -190,4 +207,4 @@ const directoryQuery = z.object({
   limit: limit(12, 48),
 });
 
-module.exports = { updateProfile, setPhoto, directoryQuery };
+module.exports = { updateProfile, setPhoto, directoryQuery, specialtyQuery };

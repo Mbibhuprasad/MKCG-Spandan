@@ -60,8 +60,21 @@ const EMPLOYMENT_TYPES = Object.freeze([
   'OTHER',
 ]);
 
-// Level of an academic degree (education entries).
-const DEGREE_LEVELS = Object.freeze(['UNDERGRADUATE', 'POSTGRADUATE', 'SUPER_SPECIALITY', 'DOCTORATE', 'DIPLOMA', 'OTHER']);
+// Level of an education entry, from school to super-speciality. The portfolio
+// orders education by this level (see services/profileOrder.js).
+const DEGREE_LEVELS = Object.freeze([
+  'SUPER_SPECIALITY',
+  'DOCTORATE',
+  'POSTGRADUATE',
+  'DIPLOMA',
+  'UNDERGRADUATE',
+  'HIGHER_SECONDARY',
+  'SECONDARY',
+  'OTHER',
+]);
+
+// Optional and private by default: shown to members only if the doctor opts in.
+const BLOOD_GROUPS = Object.freeze(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
 
 const CREDENTIAL_TYPES = Object.freeze(['DEGREE', 'DIPLOMA', 'BOARD_CERTIFICATION', 'MEMBERSHIP', 'LICENCE', 'OTHER']);
 
@@ -79,7 +92,13 @@ const PROFILE_SECTIONS = Object.freeze([
 ]);
 
 // Number of steps in the profile wizard (used to validate the saved resume position).
-const PROFILE_WIZARD_STEPS = 11;
+const PROFILE_WIZARD_STEPS = 9;
+
+// The wizard once had 11 steps in a different order. A resume position saved
+// under that layout (`profileWizard.layout` 1) is translated on read:
+// old step index → the step of the current layout that covers the same ground.
+const PROFILE_WIZARD_LAYOUT = 2;
+const PROFILE_WIZARD_LEGACY_STEP_MAP = Object.freeze([0, 1, 2, 2, 4, 5, 5, 6, 7, 8, 8]);
 
 const LIMITS = Object.freeze({
   postMedia: 4,
@@ -106,9 +125,12 @@ module.exports = {
   MEDIA_PURPOSES,
   EMPLOYMENT_TYPES,
   DEGREE_LEVELS,
+  BLOOD_GROUPS,
   CREDENTIAL_TYPES,
   PROFILE_SECTIONS,
   PROFILE_WIZARD_STEPS,
+  PROFILE_WIZARD_LAYOUT,
+  PROFILE_WIZARD_LEGACY_STEP_MAP,
   LIMITS,
   POLICY_VERSION,
 };

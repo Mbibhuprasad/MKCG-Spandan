@@ -1,8 +1,16 @@
 // Explicit output shapes. Controllers never send Mongoose documents directly,
 // so internal fields (password hashes, sessions, Cloudinary ids, moderation
 // internals of other people's content) cannot leak by accident.
-const { ROLES, MODERATION, PROFILE_SECTIONS } = require('../config/constants');
+const {
+  ROLES,
+  MODERATION,
+  PROFILE_SECTIONS,
+  PROFILE_WIZARD_STEPS,
+  PROFILE_WIZARD_LAYOUT,
+  PROFILE_WIZARD_LEGACY_STEP_MAP,
+} = require('../config/constants');
 const { serializeMedia } = require('./media.service');
+const { orderProfile, experienceSummary } = require('./profileOrder');
 
 const AUTHOR_FIELDS = 'name role status profile.professionalTitle profile.specialization profile.photo';
 
@@ -64,6 +72,14 @@ function requiredProfileIssues(user) {
   return issues;
 }
 
+// The step the wizard reopens on. A position saved by the former 11-step wizard
+// is translated to the step that now covers the same ground.
+function resumeStepOf(wizard) {
+  const step = wizard.step || 0;
+  if (wizard.layout === PROFILE_WIZARD_LAYOUT) return Math.min(step, PROFILE_WIZARD_STEPS - 1);
+  return PROFILE_WIZARD_LEGACY_STEP_MAP[step] ?? 0;
+}
+
 // `percent` and `missing` describe how much of the portfolio is filled in.
 // `isComplete` is the wizard's status: it turns true only once the doctor has
 // submitted the wizard (a timestamp written by the API after a successful
@@ -92,7 +108,7 @@ function profileCompletion(user) {
     missing: checks.filter(([, ok]) => !ok).map(([label]) => label),
     requiredMissing,
     completedAt: wizard.completedAt || null,
-    resumeStep: wizard.step || 0,
+    resumeStep: resumeStepOf(wizard),
   };
 }
 
@@ -108,6 +124,7 @@ function profileBody(user) {
     photoUrl: (p.photo && p.photo.url) || '',
     professionalTitle: p.professionalTitle || '',
     headline: p.headline || '',
+    bloodGroup: p.bloodGroup || '',
     address: p.address || '',
     specialization: p.specialization || '',
     subspecialty: p.subspecialty || '',
@@ -154,10 +171,17 @@ function profileBody(user) {
       imageThumbUrl: (item.image && item.image.thumbUrl) || '',
     })),
     memberships: plain(p.memberships, ['organization', 'type', 'number', 'startYear', 'endYear', 'current']),
-    practiceLocations: plain(p.practiceLocations, ['hospital', 'area', 'address', 'city', 'state', 'country', 'phone']),
+    practiceLocations: plain(p.practiceLocations, ['hospital', 'designation', 'area', 'address', 'city', 'state', 'country', 'phone']),
     publications: plain(p.publications, ['title', 'journal', 'authors', 'year', 'description', 'url']),
     links: plain(p.links, ['label', 'url']),
   };
+}
+
+// The doctor's WhatsApp number. When they said it is the same as their
+// registered phone number, that number is used instead of a second copy.
+function whatsappOf(user) {
+  const w = user.whatsapp || {};
+  return (w.sameAsPhone ? user.phone : w.number) || '';
 }
 
 function visibilityOf(user) {
@@ -165,11 +189,14 @@ function visibilityOf(user) {
   const sections = v.sections || {};
   return {
     directory: v.directory !== false,
+    portfolio: v.portfolio !== false,
     publicListing: Boolean(v.publicListing),
     showEmail: Boolean(v.showEmail),
     showPhone: Boolean(v.showPhone),
+    showWhatsapp: v.showWhatsapp !== false,
     showWorkContact: v.showWorkContact !== false,
     showRegistration: Boolean(v.showRegistration),
+    showBloodGroup: Boolean(v.showBloodGroup),
     sections: Object.fromEntries(PROFILE_SECTIONS.map((key) => [key, sections[key] !== false])),
   };
 }
@@ -184,6 +211,8 @@ function memberProfileBody(user, visibility) {
   // Workplace contact details travel in `contact`, and only when allowed.
   body.workEmail = '';
   body.workPhone = '';
+  // Private unless the doctor opted in. No section switch can reveal it.
+  if (!visibility.showBloodGroup) body.bloodGroup = '';
 
   if (!visibility.showWorkContact) body.practiceLocations = body.practiceLocations.map((l) => ({ ...l, phone: '' }));
   if (!visibility.showRegistration) {
@@ -213,6 +242,7 @@ function serializeSelf(user) {
     name: user.name,
     email: user.email,
     phone: user.phone,
+    whatsapp: { number: whatsappOf(user), sameAsPhone: Boolean(user.whatsapp && user.whatsapp.sameAsPhone) },
     profile: profileBody(user),
     visibility: visibilityOf(user),
     featured: Boolean(user.featured),
@@ -263,8 +293,9 @@ function serializeDoctorProfile(user, viewer) {
   const admin = isAdmin(viewer);
   const visibility = visibilityOf(user);
 
-  if (!visibility.directory && !self && !admin) {
-    // The doctor opted out of the directory: other members only see a name card.
+  if ((!visibility.directory || !visibility.portfolio) && !self && !admin) {
+    // The doctor opted out of the directory, or keeps the portfolio to
+    // themselves: other members only see a name card.
     const p = user.profile || {};
     return {
       id: String(user._id),
@@ -284,17 +315,24 @@ function serializeDoctorProfile(user, viewer) {
   const contact = {};
   if (visibility.showEmail || self || admin) contact.email = user.email;
   if (visibility.showPhone || self || admin) contact.phone = user.phone;
+  const whatsapp = whatsappOf(user);
+  if (whatsapp && (visibility.showWhatsapp || self || admin)) contact.whatsapp = whatsapp;
   if (visibility.showWorkContact || self || admin) {
     if (p.workEmail) contact.workEmail = p.workEmail;
     if (p.workPhone) contact.workPhone = p.workPhone;
   }
 
+  // The portfolio shows each repeated section in display order (most recent or
+  // highest first); the stored order, which the profile form edits, is untouched.
+  const profile = orderProfile(self || admin ? profileBody(user) : memberProfileBody(user, visibility));
   const out = {
     id: String(user._id),
     name: user.name,
     limited: false,
     isMine: self,
-    profile: self || admin ? profileBody(user) : memberProfileBody(user, visibility),
+    profile,
+    // Derived from what this viewer may see, so a hidden section reveals nothing here.
+    summary: { experience: experienceSummary(profile.experience) },
     contact,
     memberSince: user.createdAt,
   };
@@ -521,6 +559,7 @@ module.exports = {
   moderationInfo,
   profileCompletion,
   requiredProfileIssues,
+  whatsappOf,
   pollState,
   serializeSelf,
   serializeDoctorCard,

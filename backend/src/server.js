@@ -8,6 +8,7 @@ async function start() {
   const { connectDatabase, disconnectDatabase } = require('./config/db');
   const { createApp } = require('./app');
   const { startJobs } = require('./services/jobs.service');
+  const { attachRealtime, closeRealtime } = require('./realtime/gateway');
 
   await connectDatabase(env.mongoUri);
   const app = createApp();
@@ -19,6 +20,8 @@ async function start() {
   const server = app.listen(env.port, () => {
     logger.info(`MKCGSPANDAN API listening on port ${env.port} (${env.nodeEnv})`);
   });
+  // Real-time chat shares the HTTP server and port (path /socket.io).
+  const io = attachRealtime(server);
   const stopJobs = env.jobsEnabled ? startJobs() : () => {};
 
   let shuttingDown = false;
@@ -27,6 +30,7 @@ async function start() {
     shuttingDown = true;
     logger.info(`${signal} received — shutting down`);
     stopJobs();
+    await closeRealtime(io).catch(() => {});
     server.close(async () => {
       await disconnectDatabase().catch(() => {});
       process.exit(0);

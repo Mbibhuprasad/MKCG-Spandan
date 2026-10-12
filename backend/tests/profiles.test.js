@@ -188,7 +188,7 @@ describe('profile wizard', () => {
     expect(me.body.data.profile.education[0]).toMatchObject({ degree: 'MBBS', fieldOfStudy: 'Medicine and Surgery', startYear: 1998, year: 2003 });
     expect(me.body.data.profile.credentials[0]).toMatchObject({ title: 'DM (Cardiology)', registration: 'State Medical Council 12345' });
 
-    expect((await back.patch('/api/v1/doctors/me', { wizardStep: 11 })).status).toBe(400);
+    expect((await back.patch('/api/v1/doctors/me', { wizardStep: 9 })).status).toBe(400);
     expect((await back.patch('/api/v1/doctors/me', { wizardStep: -1 })).status).toBe(400);
   });
 
@@ -326,7 +326,7 @@ describe('profile wizard', () => {
     const doctor = await registerDoctor(ctx.app); // registered without specialization or city
 
     // Submitting without the required fields is refused, names the fields, and saves nothing.
-    const refused = await doctor.patch('/api/v1/doctors/me', { profile: { bio: 'Lost on purpose.' }, wizardStep: 9, submit: true });
+    const refused = await doctor.patch('/api/v1/doctors/me', { profile: { bio: 'Lost on purpose.' }, wizardStep: 8, submit: true });
     expect(refused.status).toBe(400);
     expect(refused.body.error.code).toBe('VALIDATION_ERROR');
     expect(Object.keys(refused.body.error.details).sort()).toEqual(['profile.city', 'profile.specialization']);
@@ -336,8 +336,8 @@ describe('profile wizard', () => {
     expect(stored.profile.bio).toBe('');
 
     // Saving the required fields as a draft still does not complete the profile.
-    const draft = await doctor.patch('/api/v1/doctors/me', { profile: { specialization: 'Paediatrics', city: 'Sambalpur' }, wizardStep: 9 });
-    expect(draft.body.data.profileCompletion).toMatchObject({ isComplete: false, requiredMissing: [], resumeStep: 9 });
+    const draft = await doctor.patch('/api/v1/doctors/me', { profile: { specialization: 'Paediatrics', city: 'Sambalpur' }, wizardStep: 8 });
+    expect(draft.body.data.profileCompletion).toMatchObject({ isComplete: false, requiredMissing: [], resumeStep: 8 });
 
     const done = await doctor.patch('/api/v1/doctors/me', { submit: true });
     expect(done.status).toBe(200);

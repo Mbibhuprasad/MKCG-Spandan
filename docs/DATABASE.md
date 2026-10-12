@@ -50,10 +50,10 @@ Added by `plugins/moderation.js` to `Post`, `Blog`, `Comment`, `Memory`, `Event`
 | `passwordHash` | bcrypt hash, `select: false` |
 | `passwordChangedAt`, `lastLoginAt` | Dates |
 | `policyAcceptance` | `{ version, acceptedAt }` |
-| `profile` | See [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md): photo `{ media → Media, url, thumbUrl }`, professionalTitle, headline, address, specialization, subspecialty, fieldOfWork, expertise[], procedures[], practiceArea, designation, hospital, city, state, country, workAddress, workEmail, workPhone, practiceLocations[], batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], credentials[], experience[], fellowships[], achievements[] (awards, each with an optional `image { media → Media, url, thumbUrl }`), memberships[], publications[], links[] |
+| `profile` | See [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md): photo `{ media → Media, url, thumbUrl }`, professionalTitle, headline, bloodGroup, address, specialization, subspecialty, fieldOfWork, expertise[], procedures[], practiceArea, designation, hospital, city, state, country, workAddress, workEmail, workPhone, practiceLocations[], batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], credentials[], experience[], fellowships[], achievements[] (awards, each with an optional `image { media → Media, url, thumbUrl }`), memberships[], publications[], links[] |
 | `profilePromptDismissedAt` | Date |
-| `profileWizard` | `{ step (0–10, default 0), completedAt (Date, default null) }` — where the doctor left the profile wizard and when they submitted it. Written only by `PATCH /doctors/me`; `completedAt` is never taken from the request |
-| `visibility` | `{ directory (default true), publicListing (false), showEmail (false), showPhone (false), showWorkContact (true), showRegistration (false), sections{ education, qualifications, experience, fellowships, achievements, memberships, publications, gallery, links } (true each) }` |
+| `profileWizard` | `{ step (default 0), layout (default 1), completedAt (Date, default null) }` — where the doctor left the profile wizard and when they submitted it. `layout` says which step order `step` refers to: `1` = the former eleven-step wizard (0–10), `2` = the current nine steps (0–8); the API writes `2` whenever it saves a position and translates a `1` position on read. Written only by `PATCH /doctors/me`; `completedAt` is never taken from the request |
+| `visibility` | `{ directory (default true), portfolio (true), publicListing (false), showEmail (false), showPhone (false), showWhatsapp (true), showWorkContact (true), showRegistration (false), showBloodGroup (false), sections{ education, qualifications, experience, fellowships, achievements, memberships, publications, gallery, links } (true each) }` |
 | `featured` | Boolean, set by admins only |
 | `suspension` | `{ reason, at, by → User }` |
 
@@ -62,8 +62,11 @@ The profile wizard added fields to this model without renaming or removing any: 
 `details`), `experience[]` (`employmentType`, `state`) and `achievements[]` (`issuer`), `profileWizard`, and three
 `visibility` keys. A later change added `fieldOfWork`, `expertise[]`, `procedures[]`, `practiceArea`, `practiceLocations[]`,
 `memberships[]`, `level` and `certification` on education entries, `authors` and `description` on publications, the
-award `image`, two more `visibility.sections` keys, and `Memory.showInCommunity`. All have defaults, so documents
-written before the changes load unchanged and need no migration. The only data step is optional: publishing content
+award `image`, two more `visibility.sections` keys, and `Memory.showInCommunity`. The nine-step profile form added
+`bloodGroup`, `designation` on practice locations, two education levels (`HIGHER_SECONDARY`, `SECONDARY`),
+`profileWizard.layout`, and the `portfolio` and `showBloodGroup` visibility keys. All have defaults, so documents
+written before the changes load unchanged and need no migration. Specialization options are configuration
+(`backend/src/config/specialties.js`), not a collection. The only data step is optional: publishing content
 that was still waiting for the approval that no longer exists (`npm run content:publish-pending`, see
 [CONTENT_MODERATION.md](CONTENT_MODERATION.md)).
 

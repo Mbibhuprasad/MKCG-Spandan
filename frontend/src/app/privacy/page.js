@@ -47,7 +47,8 @@ const sections = [
           <Term>Profile details you choose to add.</Term> Profile photo, professional title, specialization,
           subspecialty, designation, hospital or clinic, city and state, batch year, years of experience, biography,
           qualifications, interests, languages, education, professional experience, achievements, publications and
-          professional links. All of these are optional.
+          professional links. You may also add your blood group; it stays private — visible only to you and the
+          administrators — unless you choose to show it to members. All of these are optional.
         </P>
         <P>
           <Term>What you contribute.</Term> Posts, blogs, comments, memories (photos and videos with their titles and

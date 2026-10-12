@@ -104,14 +104,19 @@ export const EMPLOYMENT_TYPES = [
   { value: 'OTHER', label: 'Other' },
 ];
 
+// Highest first — the order the portfolio lists education in.
 export const DEGREE_LEVELS = [
-  { value: 'UNDERGRADUATE', label: 'Undergraduate (e.g. MBBS, BDS)' },
-  { value: 'POSTGRADUATE', label: 'Postgraduate (e.g. MD, MS, DNB)' },
   { value: 'SUPER_SPECIALITY', label: 'Super-speciality (e.g. DM, MCh)' },
   { value: 'DOCTORATE', label: 'Doctorate (PhD)' },
+  { value: 'POSTGRADUATE', label: 'Postgraduate (e.g. MD, MS, DNB)' },
   { value: 'DIPLOMA', label: 'Diploma' },
+  { value: 'UNDERGRADUATE', label: 'Undergraduate (e.g. MBBS, BDS)' },
+  { value: 'HIGHER_SECONDARY', label: 'Higher secondary (+2 / 12th)' },
+  { value: 'SECONDARY', label: 'Secondary (10th)' },
   { value: 'OTHER', label: 'Other' },
 ];
+
+export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export const CREDENTIAL_TYPES = [
   { value: 'DEGREE', label: 'Professional degree' },
@@ -125,7 +130,7 @@ export const CREDENTIAL_TYPES = [
 // Portfolio sections a doctor can hide from other members (keys are the API's).
 export const PROFILE_SECTIONS = [
   { key: 'experience', label: 'Work experience' },
-  { key: 'education', label: 'Education and degrees' },
+  { key: 'education', label: 'Education' },
   { key: 'qualifications', label: 'Professional qualifications and certifications' },
   { key: 'fellowships', label: 'Fellowships and postdoctoral certification' },
   { key: 'achievements', label: 'Awards' },
@@ -135,59 +140,8 @@ export const PROFILE_SECTIONS = [
   { key: 'links', label: 'Professional links' },
 ];
 
-// Suggestions only — the profile accepts any specialization a doctor types.
-export const SPECIALIZATIONS = [
-  'Anaesthesiology',
-  'Anatomy',
-  'Biochemistry',
-  'Cardiology',
-  'Cardiothoracic and Vascular Surgery',
-  'Community Medicine',
-  'Critical Care Medicine',
-  'Dentistry',
-  'Dermatology',
-  'Emergency Medicine',
-  'Endocrinology',
-  'ENT (Otorhinolaryngology)',
-  'Family Medicine',
-  'Forensic Medicine',
-  'Gastroenterology',
-  'General Medicine',
-  'General Practice',
-  'General Surgery',
-  'Geriatrics',
-  'Haematology',
-  'Hospital Administration',
-  'Infectious Diseases',
-  'Microbiology',
-  'Neonatology',
-  'Nephrology',
-  'Neurology',
-  'Neurosurgery',
-  'Nuclear Medicine',
-  'Obstetrics and Gynaecology',
-  'Oncology (Medical)',
-  'Oncology (Radiation)',
-  'Oncology (Surgical)',
-  'Ophthalmology',
-  'Orthopaedics',
-  'Paediatric Surgery',
-  'Paediatrics',
-  'Palliative Medicine',
-  'Pathology',
-  'Pharmacology',
-  'Physical Medicine and Rehabilitation',
-  'Physiology',
-  'Plastic and Reconstructive Surgery',
-  'Psychiatry',
-  'Public Health',
-  'Pulmonology',
-  'Radiology',
-  'Rheumatology',
-  'Sports Medicine',
-  'Transfusion Medicine',
-  'Urology',
-];
+// Specializations and subspecializations are not listed here: the profile form
+// reads them from the API (see lib/specialties.js).
 
 export const INDIAN_STATES = [
   'Andhra Pradesh',

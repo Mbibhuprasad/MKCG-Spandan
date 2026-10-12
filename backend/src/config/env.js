@@ -47,6 +47,7 @@ const schema = z.object({
   RATE_LIMIT_REGISTER_MAX: int(10, 1, 1000000),
   RATE_LIMIT_WRITE_MAX: int(90, 1, 1000000),
   RATE_LIMIT_UPLOAD_MAX: int(40, 1, 1000000),
+  RATE_LIMIT_CHAT_MAX: int(60, 1, 1000000),
   JOBS_ENABLED: bool(true),
   // Secret that must accompany POST /admin-register. Unset = admin registration disabled.
   ADMIN_REGISTER_KEY: optionalString.refine((v) => v === undefined || v.length >= 16, 'must be at least 16 characters long'),
@@ -126,6 +127,7 @@ function loadEnv(source = process.env) {
       registerMax: e.RATE_LIMIT_REGISTER_MAX,
       writeMax: e.RATE_LIMIT_WRITE_MAX,
       uploadMax: e.RATE_LIMIT_UPLOAD_MAX,
+      chatMax: e.RATE_LIMIT_CHAT_MAX, // chat messages per member per minute
     }),
     jobsEnabled: e.JOBS_ENABLED,
     adminRegisterKey: e.ADMIN_REGISTER_KEY,

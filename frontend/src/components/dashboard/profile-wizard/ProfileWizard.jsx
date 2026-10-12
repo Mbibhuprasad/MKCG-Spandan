@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Eye, Save, Send } from 'lucide-react';
 import { api, formErrors } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
-import { SPECIALIZATIONS } from '@/lib/constants';
+import { useSpecialties } from '@/lib/specialties';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import Avatar from '@/components/ui/Avatar';
@@ -21,6 +21,7 @@ import {
   LAST_STEP,
   LIST_LIMITS,
   STEPS,
+  adoptStored,
   countErrorsByStep,
   mergeSlices,
   stepIndex,
@@ -36,7 +37,8 @@ import ReviewStep from './ReviewStep';
 import SuccessScreen from './SuccessScreen';
 
 const EASE = [0.22, 1, 0.36, 1];
-const FORM_STEPS = STEPS.slice(0, -1); // every step that owns fields (all but the review)
+const STEP_IDS = STEPS.map((s) => s.id);
+const SUMMARY_STEPS = STEPS.slice(0, -1); // the steps summarised on the last one
 
 // For year ranges the message sits on the end field, so editing the start clears it too.
 const RANGE_END = { education: 'year', experience: 'endYear', fellowships: 'endYear', memberships: 'endYear' };
@@ -44,16 +46,6 @@ const RANGE_END = { education: 'year', experience: 'endYear', fellowships: 'endY
 const snapshot = (payload, ids) => Object.fromEntries(ids.map((id) => [id, JSON.stringify(stepSlice(payload, id))]));
 
 const clampStep = (value) => Math.max(0, Math.min(LAST_STEP, Number.isInteger(value) ? value : 0));
-
-// Suggestions for the specialization field: the common list plus whatever
-// members have already entered, without case-only duplicates.
-function mergeOptions(...lists) {
-  const seen = new Map();
-  for (const option of lists.flat()) {
-    if (option && !seen.has(option.toLowerCase())) seen.set(option.toLowerCase(), option);
-  }
-  return [...seen.values()].sort((a, b) => a.localeCompare(b));
-}
 
 const panelVariants = {
   enter: (direction) => ({ opacity: 0, x: direction * 28 }),
@@ -111,14 +103,15 @@ export default function ProfileWizard() {
   const profileComplete = Boolean(completion.isComplete);
   // Administrators are not listed in the directory: nothing is mandatory for them.
   const strict = !isAdmin;
-  const ownedSteps = useMemo(() => FORM_STEPS.map((s) => s.id).filter((id) => !(isAdmin && id === 'visibility')), [isAdmin]);
+  // The last step owns the visibility settings, which do not apply to administrators.
+  const ownedSteps = useMemo(() => STEP_IDS.filter((id) => !(isAdmin && id === 'review')), [isAdmin]);
 
   const [initial] = useState(() => {
     const form = toForm(user);
     const resume = clampStep(completion.resumeStep);
     return {
       form,
-      saved: snapshot(toPayload(form), FORM_STEPS.map((s) => s.id)),
+      saved: snapshot(toPayload(form), STEP_IDS),
       step: profileComplete ? 0 : resume,
       reached: profileComplete ? LAST_STEP : resume,
       resumed: !profileComplete && resume > 0,
@@ -144,14 +137,12 @@ export default function ProfileWizard() {
   const lock = useRef(false);
   const pendingFocus = useRef(null);
 
+  // Specialization and subspecialization options come from the API's catalogue;
+  // the cities are the ones listed doctors already use.
+  const catalogue = useSpecialties();
   const filters = useApi('/doctors/filters');
-  const suggestions = useMemo(
-    () => ({
-      specializations: mergeOptions(SPECIALIZATIONS, (filters.data && filters.data.specializations) || []),
-      cities: (filters.data && filters.data.cities) || [],
-    }),
-    [filters.data]
-  );
+  const suggestions = useMemo(() => ({ cities: (filters.data && filters.data.cities) || [] }), [filters.data]);
+  const checks = { strict, isListedSubspecialty: catalogue.isListed };
 
   const payload = useMemo(() => toPayload(form), [form]);
   const dirtyIds = useMemo(
@@ -239,6 +230,10 @@ export default function ProfileWizard() {
     setForm((f) => ({ ...f, [key]: value }));
     clearError(errorKey);
   };
+  const setValues = (values, ...errorKeys) => {
+    setForm((f) => ({ ...f, ...values }));
+    errorKeys.forEach(clearError);
+  };
   const setItem = (name, index, key, value) => {
     setForm((f) => ({ ...f, [name]: f[name].map((item, i) => (i === index ? { ...item, [key]: value } : item)) }));
     clearError(`profile.${name}.${index}.${key}`);
@@ -253,8 +248,9 @@ export default function ProfileWizard() {
     user,
     isAdmin,
     suggestions,
+    catalogue,
     err: (key) => errors[key],
-    // Errors reported for a whole list (e.g. "profile.interests" or "profile.interests.3").
+    // Errors reported for a whole list (e.g. "profile.expertise" or "profile.expertise.3").
     listErr: (prefix) => {
       const key = Object.keys(errors).find((k) => errors[k] && (k === prefix || (k.startsWith(`${prefix}.`) && k.split('.').length === 3)));
       return key ? errors[key] : undefined;
@@ -265,6 +261,7 @@ export default function ProfileWizard() {
       error: errors[errorKey],
     }),
     setValue,
+    setValues,
     item: (name, index, key) => ({
       value: form[name][index][key],
       onChange: (event) => setItem(name, index, key, event.target.value),
@@ -339,7 +336,7 @@ export default function ProfileWizard() {
     const found = {};
     let firstInvalid = -1;
     for (const index of indexes) {
-      const stepErrors = validateStep(form, STEPS[index].id, { strict });
+      const stepErrors = validateStep(form, STEPS[index].id, checks);
       if (Object.keys(stepErrors).length && firstInvalid < 0) firstInvalid = index;
       Object.assign(found, stepErrors);
     }
@@ -365,9 +362,16 @@ export default function ProfileWizard() {
   }
 
   async function persist(ids, extra) {
+    const sent = form;
     const { data } = await api.patch('/doctors/me', { ...mergeSlices(payload, ids), ...extra });
     setUser(data);
-    setSaved((prev) => ({ ...prev, ...snapshot(payload, ids) }));
+    if (ids.includes('expertise')) {
+      // The API tidies typed specialties ("spine surgery" → "Spine Surgery"): show them as stored.
+      setForm((f) => adoptStored(f, sent, data));
+      setSaved((prev) => ({ ...prev, ...snapshot(toPayload(adoptStored(sent, sent, data)), ids) }));
+    } else {
+      setSaved((prev) => ({ ...prev, ...snapshot(payload, ids) }));
+    }
     return data;
   }
 
@@ -382,7 +386,7 @@ export default function ProfileWizard() {
     fail(parsed.message, indexes.length ? Math.min(...indexes) : step, indexes.length > 0);
   }
 
-  const looseErrors = (id) => validateStep(form, id, { strict: false });
+  const looseErrors = (id) => validateStep(form, id, { ...checks, strict: false });
 
   function advance(target) {
     return run('next', async () => {
@@ -433,7 +437,7 @@ export default function ProfileWizard() {
 
   function submit() {
     return run('submit', async () => {
-      const firstInvalid = validateSteps(FORM_STEPS.map((_, index) => index));
+      const firstInvalid = validateSteps(STEPS.map((_, index) => index));
       if (firstInvalid >= 0) {
         fail('Please complete the highlighted fields before submitting.', firstInvalid);
         return;
@@ -560,15 +564,13 @@ export default function ProfileWizard() {
                       )}
                     </AnimatePresence>
 
-                    {isLast ? (
+                    <StepBody w={w} />
+                    {isLast && (
                       <ReviewStep
                         form={form}
-                        isAdmin={isAdmin}
-                        problems={FORM_STEPS.map((s) => Object.values(validateStep(form, s.id, { strict })))}
+                        problems={SUMMARY_STEPS.map((s) => Object.values(validateStep(form, s.id, checks)))}
                         onEdit={(index) => show(index)}
                       />
-                    ) : (
-                      <StepBody w={w} />
                     )}
                   </StepPanel>
                 </AnimatePresence>

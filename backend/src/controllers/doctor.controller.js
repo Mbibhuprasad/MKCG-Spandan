@@ -4,7 +4,8 @@ const ApiError = require('../utils/ApiError');
 const { ok, pageMeta } = require('../utils/respond');
 const { paging } = require('../utils/pagination');
 const { escapeRegex } = require('../utils/text');
-const { ROLES, ACCOUNT_STATUS } = require('../config/constants');
+const { ROLES, ACCOUNT_STATUS, PROFILE_WIZARD_LAYOUT } = require('../config/constants');
+const { buildCatalogue, isListedSubspecialty } = require('../services/specialty.service');
 const { claimMedia, destroyMedia, unclaim, syncMedia } = require('../services/media.service');
 const cloud = require('../services/cloudinary.service');
 const {
@@ -47,6 +48,18 @@ async function filters(_req, res) {
   const tidy = (values) =>
     [...new Map(values.filter(Boolean).map((v) => [v.toLowerCase(), v])).values()].sort((a, b) => a.localeCompare(b));
   return ok(res, { specializations: tidy(specializations), cities: tidy(cities) });
+}
+
+// Options for the specialization and subspecialization fields: the predefined
+// catalogue plus what listed doctors typed themselves, each typed
+// subspecialization under the specialization it was saved with.
+async function specialties(req, res) {
+  const pairs = await User.aggregate([
+    { $match: { ...directoryFilter(), 'profile.specialization': { $nin: ['', null] } } },
+    { $group: { _id: { specialization: '$profile.specialization', subspecialty: '$profile.subspecialty' } } },
+    { $limit: 2000 },
+  ]);
+  return ok(res, { specializations: buildCatalogue(pairs.map((pair) => pair._id), req.valid.query.q) });
 }
 
 // Public homepage: only doctors who consented to a public listing AND were
@@ -96,14 +109,28 @@ async function attachAwardImages(user, awards) {
 }
 
 async function updateMe(req, res) {
-  const { name, profile, visibility, dismissProfilePrompt, wizardStep, submit } = req.valid.body;
+  const { name, whatsapp, profile, visibility, dismissProfilePrompt, wizardStep, submit } = req.valid.body;
   const user = req.user;
 
   if (name !== undefined) user.name = name;
+  if (whatsapp) {
+    // The registered phone number is never stored a second time.
+    const sameAsPhone = whatsapp.sameAsPhone || whatsapp.number === user.phone;
+    user.whatsapp = { sameAsPhone, number: sameAsPhone ? '' : whatsapp.number };
+  }
   // Award images are handled just before saving (below), so nothing is claimed
   // if the request turns out to be refused.
   const { achievements: awards, ...fields } = profile || {};
   if (profile) {
+    // A subspecialization belongs to its specialization. When only the
+    // specialization changes, the old subspecialization is kept if it is also an
+    // option of the new one and dropped otherwise — it is never carried over
+    // silently. A request that names both is the doctor's explicit choice.
+    const changesSpecialization =
+      fields.specialization !== undefined && fields.specialization.toLowerCase() !== (user.profile.specialization || '').toLowerCase();
+    if (changesSpecialization && fields.subspecialty === undefined && !isListedSubspecialty(fields.specialization, user.profile.subspecialty)) {
+      fields.subspecialty = '';
+    }
     // Assign field by field: the photo sub-document is managed separately.
     for (const [key, value] of Object.entries(fields)) user.profile[key] = value;
     if (awards) user.profile.achievements = awards.map(({ imageId: _imageId, ...award }) => award); // for the checks below
@@ -114,7 +141,10 @@ async function updateMe(req, res) {
     for (const [key, value] of Object.entries(sections || {})) user.visibility.sections[key] = value;
   }
   if (dismissProfilePrompt === true) user.profilePromptDismissedAt = new Date();
-  if (wizardStep !== undefined) user.profileWizard.step = wizardStep;
+  if (wizardStep !== undefined) {
+    user.profileWizard.step = wizardStep;
+    user.profileWizard.layout = PROFILE_WIZARD_LAYOUT;
+  }
 
   // Final submission of the profile wizard: the required fields are checked
   // against the profile as it would be stored, and nothing is saved if any is
@@ -186,4 +216,4 @@ async function removePhoto(req, res) {
   return ok(res, serializeSelf(user));
 }
 
-module.exports = { list, filters, featured, getOne, getMe, updateMe, setPhoto, removePhoto };
+module.exports = { list, filters, specialties, featured, getOne, getMe, updateMe, setPhoto, removePhoto };

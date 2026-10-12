@@ -21,8 +21,11 @@ export function YearField(props) {
  * Searchable text input with suggestions (ARIA combobox). The doctor may pick
  * a suggestion or keep whatever they typed, so no specialty or city is ever
  * excluded by the list.
+ *   keywords(option) → other names the option is also found by (optional)
+ * On leaving the field, a typed value that matches an option apart from
+ * capitals takes the option's spelling.
  */
-export function ComboField({ label, value, onChange, options = [], error, hint, required, optional, className, ...inputProps }) {
+export function ComboField({ label, value, onChange, options = [], keywords, error, hint, required, optional, className, ...inputProps }) {
   const listId = useId();
   const listRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -30,15 +33,17 @@ export function ComboField({ label, value, onChange, options = [], error, hint, 
   const [active, setActive] = useState(-1);
 
   const query = value.trim().toLowerCase();
+  const searchText = (option) => (keywords ? `${option} ${keywords(option)}` : option).toLowerCase();
   // Until the doctor types, the whole list is offered so they can browse it.
   const matches =
     !typed || !query
       ? options
       : [
           ...options.filter((o) => o.toLowerCase().startsWith(query)),
-          ...options.filter((o) => !o.toLowerCase().startsWith(query) && o.toLowerCase().includes(query)),
+          ...options.filter((o) => !o.toLowerCase().startsWith(query) && searchText(o).includes(query)),
         ];
   const showList = open && options.length > 0;
+  const listed = options.find((o) => o.toLowerCase() === query);
 
   useEffect(() => {
     if (!showList || active < 0 || !listRef.current) return;
@@ -100,7 +105,10 @@ export function ComboField({ label, value, onChange, options = [], error, hint, 
             }}
             onClick={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            onBlur={close}
+            onBlur={() => {
+              if (listed && listed !== value) onChange(listed);
+              close();
+            }}
           />
           <button
             type="button"
@@ -123,7 +131,7 @@ export function ComboField({ label, value, onChange, options = [], error, hint, 
           >
             {showList && matches.length === 0 && (
               <li role="presentation" className="px-3 py-2 text-sm text-muted">
-                No suggestion matches — your own wording is fine.
+                Nothing in the list matches — your own wording will be saved.
               </li>
             )}
             {showList &&
@@ -150,6 +158,11 @@ export function ComboField({ label, value, onChange, options = [], error, hint, 
                   </li>
                 );
               })}
+            {showList && typed && query && !listed && matches.length > 0 && (
+              <li role="presentation" className="mt-1 border-t border-line px-3 pb-1 pt-2 text-xs text-muted">
+                Not in the list? Keep typing — “{value.trim()}” will be saved as your own entry.
+              </li>
+            )}
           </ul>
         </div>
       )}

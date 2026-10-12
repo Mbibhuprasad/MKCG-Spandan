@@ -28,6 +28,7 @@ Object.assign(process.env, {
   RATE_LIMIT_REGISTER_MAX: process.env.TEST_RATE_LIMIT_REGISTER_MAX || '100000',
   RATE_LIMIT_WRITE_MAX: '100000',
   RATE_LIMIT_UPLOAD_MAX: '100000',
+  RATE_LIMIT_CHAT_MAX: process.env.TEST_RATE_LIMIT_CHAT_MAX || '100000',
   JOBS_ENABLED: 'false',
   // Set explicitly (not deleted) so values from a developer's backend/.env,
   // which dotenv would otherwise load, can never change test behaviour.

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const Session = require('../models/Session');
 const { getEnv } = require('../config/env');
+const realtime = require('../realtime/hub');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -75,12 +76,14 @@ function clearSessionCookie(res) {
 
 async function endSession(sessionId) {
   await Session.deleteOne({ _id: sessionId });
+  realtime.dropSession(sessionId); // open chat connections end with the session
 }
 
 async function endAllSessions(userId, exceptSessionId) {
   const filter = { user: userId };
   if (exceptSessionId) filter._id = { $ne: exceptSessionId };
   await Session.deleteMany(filter);
+  realtime.dropUser(userId, exceptSessionId);
 }
 
 module.exports = {

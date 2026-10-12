@@ -11,6 +11,7 @@ const { ACCOUNT_STATUS } = require('../config/constants');
 const content = require('./content.service');
 const { destroyMedia } = require('./media.service');
 const { endAllSessions } = require('./session.service');
+const { removeUserChatData } = require('./chat.service');
 
 // Permanently deletes a doctor and everything they own.
 //
@@ -19,6 +20,7 @@ const { endAllSessions } = require('./session.service');
 //   • all content the doctor authored (posts, blogs, memories, events, polls,
 //     comments) is removed together with its dependants;
 //   • their likes, votes, RSVPs and reports are removed and counters corrected;
+//   • their one-to-one conversations, chat messages and chat memberships are removed;
 //   • the audit log keeps a minimal record (id + name) of the deletion.
 //
 // No multi-document transaction is used (not every MongoDB deployment supports
@@ -62,6 +64,7 @@ async function deleteDoctorCascade(doctor) {
   await Rsvp.deleteMany({ user: userId });
   await Report.deleteMany({ reporter: userId });
   await Notification.deleteMany({ user: userId });
+  await removeUserChatData(userId);
 
   const media = await Media.find({ owner: userId }).select('_id').lean();
   await destroyMedia(media.map((m) => m._id));

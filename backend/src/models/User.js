@@ -4,9 +4,10 @@ const {
   ACCOUNT_STATUS,
   EMPLOYMENT_TYPES,
   DEGREE_LEVELS,
+  BLOOD_GROUPS,
   CREDENTIAL_TYPES,
   PROFILE_SECTIONS,
-  PROFILE_WIZARD_STEPS,
+  PROFILE_WIZARD_LEGACY_STEP_MAP,
 } = require('../config/constants');
 
 const { Schema } = mongoose;
@@ -112,6 +113,7 @@ const membershipSchema = new Schema(
 const practiceLocationSchema = new Schema(
   {
     hospital: { type: String, trim: true, maxlength: 160, required: true },
+    designation: { type: String, trim: true, maxlength: 120, default: '' },
     area: { type: String, trim: true, maxlength: 160, default: '' },
     address: { type: String, trim: true, maxlength: 240, default: '' },
     city: { type: String, trim: true, maxlength: 80, default: '' },
@@ -138,8 +140,10 @@ const profileSchema = new Schema(
       thumbUrl: { type: String, default: '' },
     },
     professionalTitle: { type: String, trim: true, maxlength: 120, default: '' },
-    headline: { type: String, trim: true, maxlength: 160, default: '' }, // no longer collected by the profile form
-    address: { type: String, trim: true, maxlength: 240, default: '' }, // entered in the basic profile step
+    headline: { type: String, trim: true, maxlength: 160, default: '' },
+    // Optional and private: other members see it only with visibility.showBloodGroup.
+    bloodGroup: { type: String, enum: ['', ...BLOOD_GROUPS], default: '' },
+    address: { type: String, trim: true, maxlength: 240, default: '' }, // area or locality, entered in the basic profile step
     specialization: { type: String, trim: true, maxlength: 80, default: '' },
     subspecialty: { type: String, trim: true, maxlength: 80, default: '' },
     fieldOfWork: { type: String, trim: true, maxlength: 120, default: '' },
@@ -159,7 +163,7 @@ const profileSchema = new Schema(
     yearsOfExperience: { type: Number, min: 0, max: 80, default: null },
     bio: { type: String, trim: true, maxlength: 1200, default: '' },
     qualifications: { type: [{ type: String, trim: true, maxlength: 80 }], default: [] },
-    interests: { type: [{ type: String, trim: true, maxlength: 60 }], default: [] },
+    interests: { type: [{ type: String, trim: true, maxlength: 60 }], default: [] }, // no longer collected by the profile form
     languages: { type: [{ type: String, trim: true, maxlength: 40 }], default: [] },
     education: { type: [educationSchema], default: [] },
     credentials: { type: [credentialSchema], default: [] },
@@ -184,6 +188,13 @@ const userSchema = new Schema(
     passwordHash: { type: String, required: true, select: false },
     passwordChangedAt: { type: Date, default: null },
 
+    // WhatsApp number for the member contact feature (required before one-to-one
+    // chat). `sameAsPhone` reuses the registered phone number instead of storing it twice.
+    whatsapp: {
+      sameAsPhone: { type: Boolean, default: false },
+      number: { type: String, trim: true, maxlength: 16, default: '' },
+    },
+
     policyAcceptance: {
       version: { type: String, default: '' },
       acceptedAt: { type: Date, default: null },
@@ -194,17 +205,24 @@ const userSchema = new Schema(
     // Profile wizard: where the doctor left off, and when they submitted it.
     // Only the profile endpoint sets these; `completedAt` is never client-supplied.
     profileWizard: {
-      step: { type: Number, min: 0, max: PROFILE_WIZARD_STEPS - 1, default: 0 },
+      // The upper bound still admits positions saved by the former 11-step wizard.
+      step: { type: Number, min: 0, max: PROFILE_WIZARD_LEGACY_STEP_MAP.length - 1, default: 0 },
+      // Which step order `step` refers to (see PROFILE_WIZARD_LAYOUT). Accounts
+      // that have not saved a position since the steps were reorganised stay on 1.
+      layout: { type: Number, default: 1 },
       completedAt: { type: Date, default: null },
     },
 
     visibility: {
       directory: { type: Boolean, default: true }, // listed in the member directory
+      portfolio: { type: Boolean, default: true }, // full portfolio open to members (otherwise a name card only)
       publicListing: { type: Boolean, default: false }, // consent to appear on the public homepage
       showEmail: { type: Boolean, default: false }, // email visible to members
       showPhone: { type: Boolean, default: false }, // phone visible to members
+      showWhatsapp: { type: Boolean, default: true }, // WhatsApp number visible to members (contact action in chat)
       showWorkContact: { type: Boolean, default: true }, // workplace email / phone visible to members
       showRegistration: { type: Boolean, default: false }, // registration details visible to members
+      showBloodGroup: { type: Boolean, default: false }, // blood group visible to members
       // Portfolio sections shown to other members (the doctor and admins always see all).
       sections: Object.fromEntries(PROFILE_SECTIONS.map((key) => [key, { type: Boolean, default: true }])),
     },

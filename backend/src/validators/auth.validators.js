@@ -1,5 +1,6 @@
 const { z, line, optionalLine } = require('./common');
 const { normalizeEmail, normalizePhone } = require('../utils/text');
+const { normalizeSpecialization } = require('../services/specialty.service');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -33,7 +34,7 @@ const register = z
     acceptPolicies: z
       .boolean()
       .refine((v) => v === true, 'Please accept the Terms, Privacy Policy and Community Guidelines.'),
-    specialization: optionalLine(80, 'Specialization'),
+    specialization: line(0, 80, 'Specialization').transform(normalizeSpecialization).optional(),
     city: optionalLine(80, 'City'),
   })
   .refine((d) => d.password === d.confirmPassword, { path: ['confirmPassword'], message: 'Passwords do not match.' });
