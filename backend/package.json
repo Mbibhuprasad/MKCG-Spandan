@@ -1,0 +1,47 @@
+{
+  "name": "mkcgspandan-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MKCGSPANDAN REST API (Express + MongoDB)",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "dev:memory": "node src/scripts/devMemory.js",
+    "start": "node src/server.js",
+    "admin:create": "node src/scripts/createAdmin.js",
+    "admin:set-password": "node src/scripts/setAdminPassword.js",
+    "media:cleanup": "node src/scripts/cleanupMedia.js",
+    "test": "jest --runInBand",
+    "lint": "eslint .",
+    "audit:deps": "npm audit --omit=dev"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "markdown-it": "^15.0.2",
+    "mongoose": "^9.11.1",
+    "morgan": "^1.12.1",
+    "multer": "^2.4.0",
+    "slugify": "^1.6.9",
+    "xss": "^1.0.15",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "eslint": "^10.12.0",
+    "globals": "^17.0.0",
+    "jest": "^30.5.2",
+    "mongodb-memory-server": "^11.3.0",
+    "supertest": "^7.3.1"
+  }
+}
