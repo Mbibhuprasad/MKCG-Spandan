@@ -38,7 +38,7 @@ export default function HomeMemories() {
             <h3 className="text-xl font-bold text-fg">The gallery opens once you are inside</h3>
             <p className="mt-2 max-w-xl text-[0.95rem] leading-relaxed text-fg-soft">
               Photos and videos of college days, convocations and reunions are shared only with signed-in members. Each
-              upload is reviewed by an administrator, stored privately, and never shown on public pages.
+              upload is stored privately and never shown on public pages.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-3">

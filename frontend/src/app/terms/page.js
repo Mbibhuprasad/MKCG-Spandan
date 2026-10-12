@@ -103,7 +103,7 @@ const sections = [
               directory are shown to signed-in members.
             </>,
             <>
-              <Term>Public:</Term> approved blogs can be read by anyone and may appear in search engines, together
+              <Term>Public:</Term> blogs can be read by anyone and may appear in search engines, together
               with the author&apos;s name, professional title, specialization and profile photo.
             </>,
             <>
@@ -126,22 +126,22 @@ const sections = [
     content: (
       <>
         <P>
-          Everything a doctor submits starts as &ldquo;awaiting review&rdquo; and is visible only to its author and
-          to administrators. An administrator approves or rejects each submission. Only approved content is shown to
-          the community.
+          Content is published as soon as its author saves it: there is no approval step. You are responsible for
+          what you publish. Administrators do not review content beforehand; they act on reports and on what they
+          come across.
         </P>
         <List
           items={[
-            'If you edit approved content, it returns to review before it is shown again.',
-            'A poll can no longer be edited once it has been published or has received votes.',
-            'Administrators may reject a submission, or remove content that was previously approved, and may record a reason.',
+            'Edits to your content are visible immediately.',
+            'A poll can no longer be edited once it has received votes.',
+            'Administrators may remove any content and may record a reason; the author is notified.',
             'Members can report content they believe breaks the Community Guidelines. Reports are confidential.',
             'Sensitive administrative actions are recorded in an audit log.',
           ]}
         />
         <P>
-          Review is carried out by people and is not instantaneous. Approval of a submission is not an endorsement of
-          its accuracy.
+          Because content is not reviewed before publication, its presence on the platform is not an endorsement of
+          its accuracy, and inappropriate content may be visible until it is reported and removed.
         </P>
       </>
     ),

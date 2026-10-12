@@ -1,5 +1,5 @@
-// One registry for every moderated content type, so likes, comments, reports,
-// moderation and deletion follow the same rules everywhere.
+// One registry for every community content type, so likes, comments, reports,
+// publication and deletion follow the same rules everywhere.
 const Post = require('../models/Post');
 const Blog = require('../models/Blog');
 const Comment = require('../models/Comment');
@@ -34,8 +34,10 @@ const ownerId = (type, doc) => idOf(doc[entry(type).ownerField]);
 const isOwner = (type, doc, user) => Boolean(user && ownerId(type, doc) === String(user._id));
 const isAdmin = (user) => Boolean(user && user.role === ROLES.ADMIN);
 
-// Pending and rejected content exists only for its owner and for admins.
-// Everyone else gets the same 404 as for a missing item.
+// Everything is published when it is created. The only hidden items are ones
+// left pending or rejected by the former approval workflow: those exist only
+// for their owner and for admins, and everyone else gets the same 404 as for a
+// missing item.
 function canView(type, doc, viewer) {
   return doc.moderationStatus === MODERATION.APPROVED || isOwner(type, doc, viewer) || isAdmin(viewer);
 }
@@ -58,24 +60,23 @@ async function loadManageable(type, id, user, { adminAllowed = false } = {}) {
   throw ApiError.forbidden(`You can only manage your own ${entry(type).label}s.`);
 }
 
-// New submissions by doctors always start PENDING. Admin-authored content is
-// published immediately. The status is decided here, never by the client.
-function initialModeration(user) {
-  if (isAdmin(user)) {
-    const now = new Date();
-    return { moderationStatus: MODERATION.APPROVED, reviewedAt: now, reviewedBy: user._id, publishedAt: now };
-  }
-  return { moderationStatus: MODERATION.PENDING };
+// New content is published as soon as it has been validated and saved — no
+// administrator has to approve it. The state is decided here, never by the client.
+function publishedState() {
+  return { moderationStatus: MODERATION.APPROVED, publishedAt: new Date() };
 }
 
-// After an owner edits their content it must be reviewed again.
-function resetModerationAfterEdit(doc, user) {
-  if (isAdmin(user)) return;
-  doc.moderationStatus = MODERATION.PENDING;
-  doc.submittedAt = new Date();
-  doc.reviewedAt = null;
-  doc.reviewedBy = null;
-  doc.rejectionReason = '';
+// Editing keeps content published. An item that was still hidden by the former
+// approval workflow is published when its owner saves it again.
+// Returns true when the item has just become visible.
+function publishAfterEdit(doc) {
+  const wasHidden = doc.moderationStatus !== MODERATION.APPROVED;
+  if (wasHidden) {
+    doc.moderationStatus = MODERATION.APPROVED;
+    doc.rejectionReason = '';
+  }
+  if (!doc.publishedAt) doc.publishedAt = new Date();
+  return wasHidden;
 }
 
 async function linkFor(type, doc) {
@@ -166,8 +167,8 @@ module.exports = {
   canView,
   loadVisible,
   loadManageable,
-  initialModeration,
-  resetModerationAfterEdit,
+  publishedState,
+  publishAfterEdit,
   linkFor,
   titleOf,
   deleteContent,

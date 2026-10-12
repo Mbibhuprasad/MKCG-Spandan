@@ -36,7 +36,7 @@ export default function RsvpPanel({ event, onUpdated }) {
 
   const approved = !event.moderation || event.moderation.status === 'APPROVED';
   let closedReason = '';
-  if (!approved) closedReason = 'RSVPs open once an administrator has approved this.';
+  if (!approved) closedReason = 'RSVPs are not available because this is not published.';
   else if (!event.rsvpEnabled) closedReason = 'The organiser is not collecting RSVPs here.';
   else if (event.isPast) closedReason = 'This has already taken place.';
   else if (event.rsvpDeadline && new Date(event.rsvpDeadline).getTime() < now) {

@@ -5,6 +5,7 @@ const { ok, created, pageMeta } = require('../utils/respond');
 const { paging } = require('../utils/pagination');
 const { MODERATION } = require('../config/constants');
 const content = require('../services/content.service');
+const { announce } = require('../services/moderation.service');
 const { serializePoll, pollState, AUTHOR_FIELDS } = require('../services/serializers');
 
 const YEAR_MS = 366 * 24 * 60 * 60 * 1000;
@@ -100,20 +101,18 @@ async function create(req, res) {
     resultsVisibility: data.resultsVisibility,
     startsAt,
     endsAt: data.endsAt,
-    ...content.initialModeration(req.user),
+    ...content.publishedState(),
   });
+  await announce('poll', poll);
   await poll.populate('creator', AUTHOR_FIELDS);
   const [item] = await present([poll], req.user);
   return created(res, item);
 }
 
-// A poll can only be edited before it is published and before anyone has
-// voted, so the options people voted on can never change underneath them.
+// A poll can only be edited before anyone has voted, so the options people
+// voted on can never change underneath them.
 async function update(req, res) {
   const poll = await content.loadManageable('poll', req.valid.params.id, req.user);
-  if (poll.moderationStatus === MODERATION.APPROVED) {
-    throw ApiError.conflict('A published poll can no longer be edited. You can delete it and create a new one.', undefined, 'POLL_LOCKED');
-  }
   if (await Vote.exists({ poll: poll._id })) {
     throw ApiError.conflict('This poll already has votes and can no longer be edited.', undefined, 'POLL_LOCKED');
   }
@@ -126,7 +125,7 @@ async function update(req, res) {
   if (data.startsAt !== undefined) poll.startsAt = data.startsAt || new Date();
   if (data.endsAt !== undefined) poll.endsAt = data.endsAt;
   assertWindow(poll.startsAt, poll.endsAt);
-  content.resetModerationAfterEdit(poll, req.user);
+  content.publishAfterEdit(poll);
   await poll.save();
 
   await poll.populate('creator', AUTHOR_FIELDS);
@@ -145,7 +144,7 @@ async function vote(req, res) {
   const poll = await content.loadVisible('poll', req.valid.params.id, req.user);
 
   if (poll.moderationStatus !== MODERATION.APPROVED) {
-    throw ApiError.conflict('Voting opens once the poll has been approved.', undefined, 'NOT_PUBLISHED');
+    throw ApiError.conflict('This poll is not available for voting.', undefined, 'NOT_PUBLISHED');
   }
   const state = pollState(poll);
   if (state === 'UPCOMING') throw ApiError.conflict('Voting has not opened yet.', undefined, 'POLL_NOT_OPEN');

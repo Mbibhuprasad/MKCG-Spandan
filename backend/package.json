@@ -14,6 +14,7 @@
     "admin:create": "node src/scripts/createAdmin.js",
     "admin:set-password": "node src/scripts/setAdminPassword.js",
     "media:cleanup": "node src/scripts/cleanupMedia.js",
+    "content:publish-pending": "node src/scripts/publishPending.js",
     "test": "jest --runInBand",
     "lint": "eslint .",
     "audit:deps": "npm audit --omit=dev"

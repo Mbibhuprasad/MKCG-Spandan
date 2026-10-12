@@ -16,7 +16,6 @@ const { setupTestApp, registerDoctor, createAdmin, createClient, PNG, PASSWORD, 
 const ctx = setupTestApp();
 
 let admin;
-const approve = (queue, id) => admin.patch(`/api/v1/admin/moderation/${queue}/${id}`, { action: 'approve' });
 
 beforeAll(async () => {
   admin = await createAdmin(ctx.app);
@@ -32,7 +31,6 @@ describe('access control', () => {
     ['patch', `/api/v1/admin/doctors/${ID}/visibility`, { featured: true }],
     ['delete', `/api/v1/admin/doctors/${ID}`],
     ['get', '/api/v1/admin/moderation/posts'],
-    ['patch', `/api/v1/admin/moderation/posts/${ID}`, { action: 'approve' }],
     ['delete', `/api/v1/admin/moderation/posts/${ID}`],
     ['get', '/api/v1/admin/reports'],
     ['patch', `/api/v1/admin/reports/${ID}`, { status: 'RESOLVED' }],
@@ -73,15 +71,16 @@ describe('dashboard statistics', () => {
   test('counts come from real data', async () => {
     const before = (await admin.get('/api/v1/admin/stats')).body.data;
     const doctor = await registerDoctor(ctx.app);
-    await doctor.post('/api/v1/posts', { body: 'Pending post one' });
-    await doctor.post('/api/v1/posts', { body: 'Pending post two' });
-    await doctor.post('/api/v1/polls', { question: 'A pending poll question?', options: ['A', 'B'], endsAt: inFuture(3) });
+    await doctor.post('/api/v1/posts', { body: 'Post one' });
+    await doctor.post('/api/v1/posts', { body: 'Post two' });
+    await doctor.post('/api/v1/polls', { question: 'A poll question?', options: ['A', 'B'], endsAt: inFuture(3) });
 
     const after = (await admin.get('/api/v1/admin/stats')).body.data;
     expect(after.doctors.active).toBe(before.doctors.active + 1);
-    expect(after.pending.posts).toBe(before.pending.posts + 2);
-    expect(after.pending.polls).toBe(before.pending.polls + 1);
-    expect(Object.keys(after.pending).sort()).toEqual(['blogs', 'comments', 'events', 'memories', 'polls', 'posts', 'visit-plans']);
+    expect(after.content.posts).toBe(before.content.posts + 2);
+    expect(after.content.polls).toBe(before.content.polls + 1);
+    expect(after.hiddenLegacyItems).toBe(0); // nothing waits for approval
+    expect(Object.keys(after.content).sort()).toEqual(['blogs', 'comments', 'events', 'memories', 'polls', 'posts', 'visit-plans']);
   });
 });
 
@@ -136,24 +135,19 @@ describe('doctor management', () => {
     // Content owned by the doctor who will be deleted.
     const upload = await leaving.upload('post', PNG);
     const ownPost = await leaving.post('/api/v1/posts', { body: 'My own post', mediaIds: [upload.body.data.id] });
-    await approve('posts', ownPost.body.data.id);
     const photo = await leaving.upload('profile', PNG);
     await leaving.put('/api/v1/doctors/me/photo', { mediaId: photo.body.data.id });
 
     // Their footprint on someone else's content.
     const otherPost = await staying.post('/api/v1/posts', { body: 'A post by the doctor who stays' });
     const otherPostId = otherPost.body.data.id;
-    await approve('posts', otherPostId);
     await leaving.put(`/api/v1/likes/post/${otherPostId}`);
-    const comment = await leaving.post('/api/v1/comments', { targetType: 'post', targetId: otherPostId, body: 'Great news!' });
-    await approve('comments', comment.body.data.id);
+    await leaving.post('/api/v1/comments', { targetType: 'post', targetId: otherPostId, body: 'Great news!' });
 
     const poll = await staying.post('/api/v1/polls', { question: 'A poll by the staying doctor?', options: ['A', 'B'], endsAt: inFuture(5), resultsVisibility: 'ALWAYS' });
-    await approve('polls', poll.body.data.id);
     await leaving.post(`/api/v1/polls/${poll.body.data.id}/vote`, { optionIds: [poll.body.data.options[0].id] });
 
     const event = await staying.post('/api/v1/events', { title: 'Dinner in town', description: 'Dinner for those nearby.', eventType: 'DINNER', city: 'Cuttack', startsAt: inFuture(9) });
-    await approve('events', event.body.data.id);
     await leaving.put(`/api/v1/events/${event.body.data.id}/rsvp`, { status: 'GOING' });
 
     // And the staying doctor liked the leaving doctor's post.
@@ -202,7 +196,7 @@ describe('audit log', () => {
     const res = await admin.get('/api/v1/admin/audit-logs?limit=50');
     expect(res.status).toBe(200);
     const actions = res.body.data.map((l) => l.action);
-    expect(actions).toEqual(expect.arrayContaining(['DOCTOR_SUSPENDED', 'DOCTOR_REACTIVATED', 'DOCTOR_DELETED', 'CONTENT_APPROVED', 'ADMIN_BOOTSTRAPPED']));
+    expect(actions).toEqual(expect.arrayContaining(['DOCTOR_SUSPENDED', 'DOCTOR_REACTIVATED', 'DOCTOR_DELETED', 'ADMIN_BOOTSTRAPPED']));
     expect(res.body.meta.total).toBeGreaterThanOrEqual(actions.length);
   });
 });

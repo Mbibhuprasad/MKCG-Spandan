@@ -124,7 +124,7 @@ export const SUBMISSION_TYPES = [
     viewHref: () => '/community?tab=polls',
     // A published poll can no longer be edited (the API refuses it too).
     editHref: (item) =>
-      item.moderation && item.moderation.status !== 'APPROVED' ? `/dashboard/create/poll?edit=${item.id}` : null,
+      item.totalVoters ? null : `/dashboard/create/poll?edit=${item.id}`, // editable until the first vote
     createHref: '/dashboard/create/poll',
     createLabel: 'Start a poll',
     emptyText: 'Let the batch vote on dates, venues, activities or budgets.',

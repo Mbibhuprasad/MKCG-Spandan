@@ -159,7 +159,7 @@ export default function PostCard({ post, defaultCommentsOpen = false, onDeleted 
       </div>
 
       {!approved && (
-        <p className="mt-2 text-xs text-muted">Likes and comments open once the post has been approved.</p>
+        <p className="mt-2 text-xs text-muted">Likes and comments are available once the post is published.</p>
       )}
 
       {approved && showComments && (

@@ -6,7 +6,7 @@ const { loadEnv } = require('../src/config/env');
 const { renderMarkdown } = require('../src/services/markdown.service');
 const { normalizePhone } = require('../src/utils/text');
 const { sendEventReminders } = require('../src/services/jobs.service');
-const { setupTestApp, registerDoctor, createAdmin, createClient, ORIGIN, LONG_BODY, inFuture } = require('./helpers/harness');
+const { setupTestApp, registerDoctor, createClient, ORIGIN, LONG_BODY, inFuture } = require('./helpers/harness');
 
 const ctx = setupTestApp();
 
@@ -60,7 +60,6 @@ describe('injection and input handling', () => {
     expect(html).toContain('href="https://example.org/article"');
     expect(html).toContain('rel="noopener noreferrer nofollow"');
 
-    const admin = await createAdmin(ctx.app);
     const author = await registerDoctor(ctx.app);
     const created = await author.post('/api/v1/blogs', {
       title: 'A post with hostile markup',
@@ -69,7 +68,6 @@ describe('injection and input handling', () => {
       category: 'Other',
     });
     expect(created.status).toBe(201);
-    await admin.patch(`/api/v1/admin/moderation/blogs/${created.body.data.id}`, { action: 'approve' });
     const published = await request(ctx.app).get(`/api/v1/blogs/slug/${created.body.data.slug}`);
     expect(published.body.data.bodyHtml).not.toMatch(/<script|<img|<iframe|href="javascript:/i);
   });
@@ -204,7 +202,6 @@ describe('notifications', () => {
   });
 
   test('event reminders are generated once for attendees', async () => {
-    const admin = await createAdmin(ctx.app);
     const organiser = await registerDoctor(ctx.app);
     const guest = await registerDoctor(ctx.app);
     const bystander = await registerDoctor(ctx.app);
@@ -217,7 +214,6 @@ describe('notifications', () => {
       startsAt: inFuture(1),
     });
     const eventId = event.body.data.id;
-    await admin.patch(`/api/v1/admin/moderation/events/${eventId}`, { action: 'approve' });
     await guest.put(`/api/v1/events/${eventId}/rsvp`, { status: 'GOING' });
 
     await sendEventReminders();

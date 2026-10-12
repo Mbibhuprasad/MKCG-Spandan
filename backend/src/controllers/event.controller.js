@@ -7,6 +7,7 @@ const { ok, created, pageMeta } = require('../utils/respond');
 const { paging } = require('../utils/pagination');
 const { MODERATION } = require('../config/constants');
 const content = require('../services/content.service');
+const { announce } = require('../services/moderation.service');
 const { claimMedia, unclaim, destroyMedia } = require('../services/media.service');
 const { serializeEvent, serializeEventPublic, authorSummary, AUTHOR_FIELDS } = require('../services/serializers');
 
@@ -105,7 +106,11 @@ async function getOne(req, res) {
   const event = await content.loadVisible('event', req.valid.params.id, req.user);
   await event.populate(POPULATE);
   const [item] = await present([event], req.user);
-  item.memoryCount = await Memory.countDocuments({ event: event._id, moderationStatus: MODERATION.APPROVED });
+  item.memoryCount = await Memory.countDocuments({
+    event: event._id,
+    moderationStatus: MODERATION.APPROVED,
+    showInCommunity: { $ne: false },
+  });
   return ok(res, item);
 }
 
@@ -137,12 +142,13 @@ async function create(req, res) {
       rsvpDeadline: data.rsvpDeadline,
       capacity: data.capacity,
       showOnPublicSite: data.showOnPublicSite,
-      ...content.initialModeration(req.user),
+      ...content.publishedState(),
     });
   } catch (err) {
     await unclaim(claimed);
     throw err;
   }
+  await announce('event', event);
 
   await event.populate(POPULATE);
   const [item] = await present([event], req.user);
@@ -171,7 +177,7 @@ async function update(req, res) {
     event.cover = data.coverId || null;
   }
   if (datesChanged) event.reminderSentAt = null;
-  content.resetModerationAfterEdit(event, req.user);
+  content.publishAfterEdit(event);
 
   try {
     await event.save();
@@ -197,7 +203,7 @@ async function remove(req, res) {
 async function loadOpenEvent(id, viewer) {
   const event = await content.loadVisible('event', id, viewer);
   if (event.moderationStatus !== MODERATION.APPROVED) {
-    throw ApiError.conflict('RSVPs open once the event has been approved.', undefined, 'NOT_PUBLISHED');
+    throw ApiError.conflict('This event is not available for RSVPs.', undefined, 'NOT_PUBLISHED');
   }
   return event;
 }

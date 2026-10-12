@@ -96,7 +96,7 @@ const MODERATION_STYLE = {
   REJECTED: { tone: 'danger', icon: CircleX },
 };
 
-/** Moderation status of a submission (shown to its author and to admins). */
+/** Publication status of an item (shown to its author and to admins). */
 export function ModerationBadge({ status, className }) {
   const style = MODERATION_STYLE[status];
   if (!style) return null;
@@ -107,7 +107,7 @@ export function ModerationBadge({ status, className }) {
   );
 }
 
-/** Explains the review step to an author right after they submit something. */
+/** Shown to an author on an item the former approval workflow left hidden. */
 export function ModerationNotice({ moderation, className }) {
   if (!moderation || moderation.status === 'APPROVED') return null;
   const pending = moderation.status === 'PENDING';
@@ -119,10 +119,10 @@ export function ModerationNotice({ moderation, className }) {
         className
       )}
     >
-      <p className="font-semibold">{pending ? 'Awaiting admin review' : 'Not approved'}</p>
+      <p className="font-semibold">Not published</p>
       <p className="mt-0.5 text-[0.8rem] opacity-90">
         {pending
-          ? 'Only you can see this until an administrator approves it.'
+          ? 'Only you can see this. Edit and save it to publish it.'
           : moderation.rejectionReason
             ? `Reason: ${moderation.rejectionReason}`
             : 'You can edit it and submit it again.'}

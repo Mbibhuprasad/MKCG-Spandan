@@ -118,4 +118,11 @@ export function yearsLabel(years) {
   return years === 1 ? '1 year of experience' : `${years} years of experience`;
 }
 
+// "2015 – Present", "2012 – 2014" or just "2019" when only one year is known.
+export function yearRange(start, end, current = false) {
+  const to = current ? 'Present' : end;
+  if (start && to) return `${start} – ${to}`;
+  return String(start || to || '');
+}
+
 export const cn = (...parts) => parts.filter(Boolean).join(' ');

@@ -41,7 +41,7 @@ export default function AuditLog() {
         <EmptyState
           icon={History}
           title="No admin actions recorded yet"
-          description="Approvals, rejections, deletions and account changes will be listed here as they happen."
+          description="Content deletions and account changes will be listed here as they happen."
         />
       ) : (
         <>

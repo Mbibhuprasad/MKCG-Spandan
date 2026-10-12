@@ -29,6 +29,7 @@ import { ModerationBadge, Skeleton } from '@/components/ui/Feedback';
 import AuthorLine from '@/components/content/AuthorLine';
 import EventCard from '@/components/cards/EventCard';
 import CompletionBar from './CompletionBar';
+import { STEPS as PROFILE_STEPS } from './profile-wizard/model';
 import { SUBMISSION_TYPES, snippet, submissionTypeByKey } from './submissionTypes';
 
 const quickActions = [
@@ -178,9 +179,14 @@ export default function DashboardOverview() {
   if (!user) return null;
   const completion = user.profileCompletion || { percent: 0, isComplete: false, missing: [] };
   const showPrompt = !completion.isComplete && !user.profilePromptDismissed;
+  // The wizard remembers the step the doctor reached (0-based) so they can pick up where they left off.
+  const resumeStep = completion.resumeStep || 0;
+  const requiredMissing = completion.requiredMissing || [];
   const profile = user.profile || {};
   const location = [profile.city, profile.state].filter(Boolean).join(', ');
   const totals = summary.data ? summary.data.totals : null;
+  // Only non-zero for items the former approval workflow left unpublished.
+  const hiddenTotal = totals ? totals.PENDING + totals.REJECTED : 0;
 
   return (
     <div className="space-y-6">
@@ -205,22 +211,23 @@ export default function DashboardOverview() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
               <h2 id="complete-profile-heading" className="font-display text-xl font-semibold text-fg sm:text-2xl">
-                Complete Your Doctor Profile
+                Complete Your Professional Profile
               </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-fg-soft">
-                A complete profile helps batchmates find and recognise you. You can do this now or later — the community is
-                already open to you.
+                A short step-by-step form builds your portfolio and helps batchmates find and recognise you. You can do
+                this now or later — the community is already open to you, and your progress is saved along the way.
               </p>
-              {completion.missing.length > 0 && (
-                <p className="mt-2 text-xs text-muted">Still to add: {completion.missing.slice(0, 5).join(', ')}
-                  {completion.missing.length > 5 ? ` and ${completion.missing.length - 5} more` : ''}.
-                </p>
-              )}
+              <p className="mt-2 text-xs text-muted">
+                {resumeStep > 0
+                  ? `You have reached step ${resumeStep + 1} of ${PROFILE_STEPS.length}.`
+                  : `${PROFILE_STEPS.length} short steps — most of them optional.`}
+                {requiredMissing.length > 0 ? ` Required: ${requiredMissing.join(', ')}.` : ' Review and submit to finish.'}
+              </p>
               <CompletionBar percent={completion.percent} className="mt-4 max-w-md" />
             </div>
             <div className="flex flex-wrap gap-3">
               <Button href="/dashboard/profile" icon={UserRound}>
-                Complete profile
+                {resumeStep > 0 ? 'Continue profile' : 'Complete profile'}
               </Button>
               <Button variant="secondary" onClick={dismissPrompt} loading={dismissing}>
                 Skip for now
@@ -240,8 +247,8 @@ export default function DashboardOverview() {
           </div>
         ) : (
           <>
-            <StatTile icon={Clock} tone="warn" label="Awaiting review" value={totals.PENDING} href="/dashboard/submissions" />
-            <StatTile icon={CircleCheck} tone="leaf" label="Approved submissions" value={totals.APPROVED} href="/dashboard/submissions" />
+            <StatTile icon={CircleCheck} tone="leaf" label="Published by you" value={totals.APPROVED} href="/dashboard/submissions" />
+            <StatTile icon={Clock} tone="warn" label="Events you are going to" value={summary.data.myUpcomingRsvps} href="/events" />
             <StatTile icon={CalendarDays} label="Upcoming events" value={summary.data.upcomingEvents} href="/events" />
             <StatTile icon={Bell} label="Unread notifications" value={summary.data.unreadNotifications} href="/dashboard/notifications" />
           </>
@@ -275,21 +282,20 @@ export default function DashboardOverview() {
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[22rem] text-sm">
-                    <caption className="sr-only">Moderation status of your submissions by type</caption>
+                    <caption className="sr-only">What you have published, by type</caption>
                     <thead>
                       <tr className="text-left text-xs font-semibold text-muted">
                         <th scope="col" className="pb-2 font-semibold">
                           Type
                         </th>
                         <th scope="col" className="pb-2 text-center font-semibold">
-                          Awaiting review
+                          Published
                         </th>
-                        <th scope="col" className="pb-2 text-center font-semibold">
-                          Approved
-                        </th>
-                        <th scope="col" className="pb-2 text-center font-semibold">
-                          Not approved
-                        </th>
+                        {hiddenTotal > 0 && (
+                          <th scope="col" className="pb-2 text-center font-semibold">
+                            Not published
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
@@ -303,20 +309,23 @@ export default function DashboardOverview() {
                                 {type.plural}
                               </Link>
                             </th>
-                            <td className={cn('py-2.5 text-center font-semibold', counts.PENDING ? 'text-warn' : 'text-muted')}>{counts.PENDING}</td>
                             <td className={cn('py-2.5 text-center font-semibold', counts.APPROVED ? 'text-leaf-strong' : 'text-muted')}>{counts.APPROVED}</td>
-                            <td className={cn('py-2.5 text-center font-semibold', counts.REJECTED ? 'text-danger' : 'text-muted')}>{counts.REJECTED}</td>
+                            {hiddenTotal > 0 && (
+                              <td className={cn('py-2.5 text-center font-semibold', counts.PENDING + counts.REJECTED ? 'text-warn' : 'text-muted')}>
+                                {counts.PENDING + counts.REJECTED}
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
-                {!isAdmin && (
-                  <p className="mt-3 text-xs text-muted">
-                    Everything you submit is reviewed by an administrator before other members can see it.
-                  </p>
-                )}
+                <p className="mt-3 text-xs text-muted">
+                  {hiddenTotal > 0
+                    ? 'Items marked “not published” were left hidden by the old review process. Edit and save one to publish it.'
+                    : 'Everything you share is published to the community straight away.'}
+                </p>
               </>
             )}
           </Panel>
@@ -397,10 +406,12 @@ export default function DashboardOverview() {
             <CompletionBar percent={completion.percent} className="mt-5" />
             <p className="mt-2 text-xs text-muted">
               {completion.isComplete
-                ? 'Your profile is in good shape.'
+                ? completion.missing.length
+                  ? `Complete. You could still add: ${completion.missing.slice(0, 3).join(', ')}${completion.missing.length > 3 ? '…' : ''}`
+                  : 'Your profile is complete.'
                 : completion.missing.length
                   ? `To add: ${completion.missing.slice(0, 3).join(', ')}${completion.missing.length > 3 ? '…' : ''}`
-                  : 'A few details are still missing.'}
+                  : 'Review and submit your profile to finish.'}
             </p>
             <Button href={`/doctors/${user.id}`} variant="secondary" size="sm" className="mt-4 w-full">
               Preview my profile
@@ -444,7 +455,7 @@ export default function DashboardOverview() {
             ) : notifications.error ? (
               <PanelError onRetry={notifications.reload} />
             ) : (notifications.data || []).length === 0 ? (
-              <PanelEmpty icon={Bell}>Nothing yet. Approvals, new events and polls will show up here.</PanelEmpty>
+              <PanelEmpty icon={Bell}>Nothing yet. Comments, new events and polls will show up here.</PanelEmpty>
             ) : (
               <ul className="divide-y divide-line">
                 {notifications.data.map((n) => (

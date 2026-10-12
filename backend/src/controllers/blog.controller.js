@@ -13,10 +13,12 @@ const { serializeBlogSummary, serializeBlogDetail, AUTHOR_FIELDS } = require('..
 
 const POPULATE = [{ path: 'author', select: AUTHOR_FIELDS }, { path: 'cover' }];
 
-// Public directory: approved blogs only.
+// Public directory of published blogs. `author` narrows it to one doctor's
+// blogs — the same records, shown on that doctor's portfolio.
 async function list(req, res) {
-  const { q, category, tag, page, limit } = req.valid.query;
+  const { q, category, tag, author, page, limit } = req.valid.query;
   const filter = { moderationStatus: MODERATION.APPROVED };
+  if (author) filter.author = author;
   if (category) filter.category = category;
   if (tag) filter.tags = tag;
   if (q) filter.title = { $regex: escapeRegex(q), $options: 'i' };
@@ -59,8 +61,8 @@ async function mine(req, res) {
   return ok(res, blogs.map((b) => serializeBlogSummary(b, { viewer: req.user })), pageMeta({ page, limit, total }));
 }
 
-// Public for approved blogs. The author and admins can also preview an
-// unpublished blog; everyone else receives a plain 404.
+// Public. A blog still hidden by the former approval workflow is only shown to
+// its author and to admins; everyone else receives a plain 404.
 async function getBySlug(req, res) {
   const blog = await Blog.findOne({ slug: req.valid.params.slug }).populate(POPULATE);
   if (!blog || !content.canView('blog', blog, req.user)) throw ApiError.notFound('That blog could not be found.');
@@ -96,7 +98,7 @@ async function create(req, res) {
       category,
       tags,
       cover: claimed[0] || null,
-      ...content.initialModeration(req.user),
+      ...content.publishedState(),
     });
   } catch (err) {
     await unclaim(claimed);
@@ -129,7 +131,7 @@ async function update(req, res) {
     blog.bodyHtml = renderMarkdown(body);
     blog.readingMinutes = readingMinutes(body);
   }
-  content.resetModerationAfterEdit(blog, req.user);
+  content.publishAfterEdit(blog);
 
   try {
     await blog.save();

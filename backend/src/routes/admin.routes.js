@@ -21,8 +21,8 @@ module.exports = function adminRoutes(limiters) {
   router.patch('/doctors/:id/visibility', write, byId, validate({ body: v.doctorVisibilityBody }), admin.setDoctorVisibility);
   router.delete('/doctors/:id', write, byId, validate({ body: v.deleteBody }), admin.deleteDoctor);
 
+  // Content management: admins can see and delete anything. Nothing needs approving.
   router.get('/moderation/:queue', validate({ params: v.queueParams, query: v.queueQuery }), admin.listQueue);
-  router.patch('/moderation/:queue/:id', write, validate({ params: v.queueItemParams, body: v.reviewBody }), admin.reviewItem);
   router.delete('/moderation/:queue/:id', write, validate({ params: v.queueItemParams, body: v.deleteBody }), admin.deleteItem);
 
   router.get('/reports', validate({ query: v.reportListQuery }), admin.listReports);

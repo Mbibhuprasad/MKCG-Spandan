@@ -6,7 +6,6 @@ import { Eye, Pencil, Plus, Send, X } from 'lucide-react';
 import { api, formErrors } from '@/lib/api';
 import { BLOG_CATEGORIES, UPLOAD_LIMITS } from '@/lib/constants';
 import { cn } from '@/lib/format';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import Button from '@/components/ui/Button';
 import { Badge, ModerationBadge, ModerationNotice } from '@/components/ui/Feedback';
@@ -119,9 +118,16 @@ function SavedPreview({ blog, onEdit }) {
   );
 }
 
-function BlogFormFields({ initial }) {
+/**
+ * The blog form itself. Used as a page (create / edit) and, with `embedded`,
+ * inside a dialog on the profile. Both save through the same /blogs API, so a
+ * blog written from the profile is the very same record the Blogs page lists.
+ *
+ *   embedded  — no page heading; `onSaved(blog)` and `onCancel()` replace the
+ *               preview screen and the Cancel link
+ */
+export function BlogFormFields({ initial, embedded = false, onSaved, onCancel }) {
   const toast = useToast();
-  const { isAdmin } = useAuth();
   const coverLabelId = useId();
 
   // Once saved, further saves update the same blog.
@@ -182,10 +188,13 @@ function BlogFormFields({ initial }) {
       setTags(data.tags);
       setTagDraft('');
       setCover(data.cover ? [data.cover] : []);
+      toast.success(editing ? 'Blog updated.' : 'Blog published.');
+      if (onSaved) {
+        onSaved(data);
+        return;
+      }
       setSaved(data);
       window.scrollTo({ top: 0 });
-      if (data.moderation && data.moderation.status === 'APPROVED') toast.success('Blog published.');
-      else toast.info('Blog submitted. It will be published once an admin approves it.');
     } catch (error) {
       const parsed = formErrors(error);
       setErrors(parsed.fieldErrors);
@@ -198,22 +207,24 @@ function BlogFormFields({ initial }) {
   if (saved) return <SavedPreview blog={saved} onEdit={() => setSaved(null)} />;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-semibold text-fg">{editing ? 'Edit your blog' : 'Write a blog'}</h1>
-      <p className="mt-2 text-fg-soft">
-        Share clinical perspectives, career lessons, research notes or batch stories in a longer article.
-      </p>
+    <div className={embedded ? undefined : 'mx-auto max-w-3xl'}>
+      {!embedded && (
+        <>
+          <h1 className="font-display text-3xl font-semibold text-fg">{editing ? 'Edit your blog' : 'Write a blog'}</h1>
+          <p className="mt-2 text-fg-soft">
+            Share clinical perspectives, career lessons, research notes or batch stories in a longer article.
+          </p>
+        </>
+      )}
 
-      <form onSubmit={handleSubmit} noValidate className="card mt-6 space-y-5 p-5 sm:p-6">
+      <form onSubmit={handleSubmit} noValidate className={embedded ? 'space-y-5' : 'card mt-6 space-y-5 p-5 sm:p-6'}>
         <FormMessage tone="info">
-          {isAdmin
-            ? 'As an administrator, your blog is published immediately.'
-            : editing
-              ? 'After you save, the blog goes back to an administrator for review and is hidden from readers until it is approved again.'
-              : 'Your blog is reviewed by an administrator before it is published. You can follow its status under My submissions.'}
+          {editing
+            ? 'Your changes are public as soon as you save.'
+            : 'Your blog is published as soon as you save it: on the Blogs page and on your portfolio.'}
         </FormMessage>
         <FormMessage tone="warn">
-          Approved blogs are public: anyone can read them and search engines may index them. Never include
+          Blogs are public: anyone can read them and search engines may index them. Never include
           patient-identifiable information, reports, prescriptions or other confidential clinical details.
         </FormMessage>
         <FormMessage>{message}</FormMessage>
@@ -363,7 +374,7 @@ function BlogFormFields({ initial }) {
             </p>
           ) : (
             <p className="text-xs text-muted">
-              A wide image works best (JPG, PNG or WebP, up to {UPLOAD_LIMITS.imageMb} MB). The cover is public once the blog is approved.
+              A wide image works best (JPG, PNG or WebP, up to {UPLOAD_LIMITS.imageMb} MB). The cover is public, like the blog.
             </p>
           )}
         </div>
@@ -397,11 +408,17 @@ function BlogFormFields({ initial }) {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-5">
-          <Button href={editing ? '/dashboard/submissions' : '/dashboard/create'} variant="secondary">
-            Cancel
-          </Button>
+          {onCancel ? (
+            <Button variant="secondary" onClick={onCancel} disabled={busy}>
+              Cancel
+            </Button>
+          ) : (
+            <Button href={editing ? '/dashboard/submissions' : '/dashboard/create'} variant="secondary">
+              Cancel
+            </Button>
+          )}
           <Button type="submit" loading={busy} disabled={uploading} icon={Send}>
-            {uploading ? 'Uploading image…' : editing ? 'Save and preview' : isAdmin ? 'Publish blog' : 'Submit for review'}
+            {uploading ? 'Uploading image…' : editing ? (embedded ? 'Save changes' : 'Save and preview') : 'Publish blog'}
           </Button>
         </div>
       </form>

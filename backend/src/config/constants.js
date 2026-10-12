@@ -44,7 +44,42 @@ const MEDIA_PURPOSES = Object.freeze({
   post: { kinds: ['image'], deliveryType: 'authenticated', folder: 'posts' },
   event: { kinds: ['image'], deliveryType: 'authenticated', folder: 'events' },
   memory: { kinds: ['image', 'video'], deliveryType: 'authenticated', folder: 'memories' },
+  // Award photos and certificates shown on a doctor's portfolio (same delivery as profile photos).
+  award: { kinds: ['image'], deliveryType: 'upload', folder: 'awards' },
 });
+
+// Doctor profile: values offered by the profile wizard. '' always means "not stated".
+const EMPLOYMENT_TYPES = Object.freeze([
+  'FULL_TIME',
+  'PART_TIME',
+  'VISITING',
+  'HONORARY',
+  'PRIVATE_PRACTICE',
+  'TRAINING',
+  'ACADEMIC',
+  'OTHER',
+]);
+
+// Level of an academic degree (education entries).
+const DEGREE_LEVELS = Object.freeze(['UNDERGRADUATE', 'POSTGRADUATE', 'SUPER_SPECIALITY', 'DOCTORATE', 'DIPLOMA', 'OTHER']);
+
+const CREDENTIAL_TYPES = Object.freeze(['DEGREE', 'DIPLOMA', 'BOARD_CERTIFICATION', 'MEMBERSHIP', 'LICENCE', 'OTHER']);
+
+// Portfolio sections a doctor may hide from other members.
+const PROFILE_SECTIONS = Object.freeze([
+  'education',
+  'qualifications',
+  'experience',
+  'fellowships',
+  'achievements',
+  'memberships',
+  'publications',
+  'gallery',
+  'links',
+]);
+
+// Number of steps in the profile wizard (used to validate the saved resume position).
+const PROFILE_WIZARD_STEPS = 11;
 
 const LIMITS = Object.freeze({
   postMedia: 4,
@@ -69,6 +104,11 @@ module.exports = {
   REPORT_REASONS,
   REPORT_STATUS,
   MEDIA_PURPOSES,
+  EMPLOYMENT_TYPES,
+  DEGREE_LEVELS,
+  CREDENTIAL_TYPES,
+  PROFILE_SECTIONS,
+  PROFILE_WIZARD_STEPS,
   LIMITS,
   POLICY_VERSION,
 };

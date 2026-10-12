@@ -14,7 +14,7 @@ const options = [
     href: '/dashboard/create/blog',
     icon: BookOpen,
     title: 'Write a blog',
-    text: 'Publish a longer article. Approved blogs are visible to the public.',
+    text: 'Publish a longer article. Blogs are visible to the public and appear on your portfolio.',
   },
   {
     href: '/dashboard/create/memory',
@@ -47,8 +47,7 @@ export default function CreateIndexPage() {
     <div>
       <h1 className="font-display text-3xl font-semibold text-fg">What would you like to share?</h1>
       <p className="mt-2 max-w-2xl text-fg-soft">
-        Everything you submit is reviewed by an administrator before the community can see it. You can follow the status
-        under{' '}
+        Whatever you share is published to the community straight away. You can edit or delete it later under{' '}
         <Link href="/dashboard/submissions" className="font-semibold text-brand-ink hover:underline">
           My submissions
         </Link>

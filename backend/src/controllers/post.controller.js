@@ -15,7 +15,7 @@ async function present(posts, viewer) {
   return posts.map((p) => serializePost(p, { viewer, likedIds: liked }));
 }
 
-// Community feed: approved posts only, for every viewer.
+// Community feed: every published post, for every viewer.
 async function feed(req, res) {
   const { type, page, limit } = req.valid.query;
   const filter = { moderationStatus: MODERATION.APPROVED };
@@ -28,7 +28,7 @@ async function feed(req, res) {
   return ok(res, await present(posts, req.user), pageMeta({ page, limit, total }));
 }
 
-// The author's own submissions in every moderation state.
+// Everything the author has posted.
 async function mine(req, res) {
   const { page, limit } = req.valid.query;
   const filter = { author: req.user._id };
@@ -60,7 +60,7 @@ async function create(req, res) {
       type,
       body,
       media,
-      ...content.initialModeration(req.user),
+      ...content.publishedState(),
     });
   } catch (err) {
     await unclaim(media);
@@ -91,7 +91,7 @@ async function update(req, res) {
   }
   if (type !== undefined) post.type = type;
   if (body !== undefined) post.body = body;
-  content.resetModerationAfterEdit(post, req.user);
+  content.publishAfterEdit(post);
 
   try {
     await post.save();

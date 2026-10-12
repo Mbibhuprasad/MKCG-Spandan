@@ -6,7 +6,6 @@ import { Send } from 'lucide-react';
 import { api, formErrors } from '@/lib/api';
 import { POST_TYPES, UPLOAD_LIMITS } from '@/lib/constants';
 import { cn } from '@/lib/format';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import Button from '@/components/ui/Button';
 import { FormMessage, SelectField, TextAreaField } from '@/components/ui/Form';
@@ -18,7 +17,6 @@ const MAX_BODY = 5000;
 function PostFormFields({ initial }) {
   const router = useRouter();
   const toast = useToast();
-  const { isAdmin } = useAuth();
   const editing = Boolean(initial);
   const photosLabelId = useId();
 
@@ -45,15 +43,9 @@ function PostFormFields({ initial }) {
     setBusy(true);
     try {
       const payload = { type, body: text, mediaIds: media.map((m) => m.id) };
-      const { data } = editing ? await api.patch(`/posts/${initial.id}`, payload) : await api.post('/posts', payload);
-      const published = data.moderation && data.moderation.status === 'APPROVED';
-      if (published) {
-        toast.success(editing ? 'Post updated.' : 'Post published.');
-        router.push('/community');
-      } else {
-        toast.info('Post submitted. It will appear in the feed once an admin approves it.');
-        router.push('/dashboard/submissions');
-      }
+      await (editing ? api.patch(`/posts/${initial.id}`, payload) : api.post('/posts', payload));
+      toast.success(editing ? 'Post updated.' : 'Post published.');
+      router.push('/community');
     } catch (error) {
       const parsed = formErrors(error);
       setErrors(parsed.fieldErrors);
@@ -71,11 +63,9 @@ function PostFormFields({ initial }) {
 
       <form onSubmit={handleSubmit} noValidate className="card mt-6 space-y-5 p-5 sm:p-6">
         <FormMessage tone="info">
-          {isAdmin
-            ? 'As an administrator, your post is published to the community immediately.'
-            : editing
-              ? 'After you save, the post goes back to an administrator for review. Until it is approved again, only you can see it.'
-              : 'Your post is reviewed by an administrator before the community can see it. You can follow its status under My submissions.'}
+          {editing
+            ? 'Your changes are visible to the community as soon as you save.'
+            : 'Your post is published to the community as soon as you share it. You can edit or delete it later under My submissions.'}
         </FormMessage>
         <FormMessage>{message}</FormMessage>
 
@@ -145,7 +135,7 @@ function PostFormFields({ initial }) {
             Cancel
           </Button>
           <Button type="submit" loading={busy} disabled={uploading} icon={Send}>
-            {uploading ? 'Uploading photos…' : editing ? 'Save changes' : isAdmin ? 'Publish post' : 'Submit for review'}
+            {uploading ? 'Uploading photos…' : editing ? 'Save changes' : 'Publish post'}
           </Button>
         </div>
       </form>

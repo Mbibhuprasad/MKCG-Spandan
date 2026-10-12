@@ -7,13 +7,15 @@ const { ok, created, pageMeta } = require('../utils/respond');
 const { paging } = require('../utils/pagination');
 const { MODERATION } = require('../config/constants');
 const content = require('../services/content.service');
+const { announce } = require('../services/moderation.service');
 const { serializeComment, AUTHOR_FIELDS } = require('../services/serializers');
 
-// Interactions are only possible on content that is published.
+// Interactions are only possible on content that is published (an item still
+// hidden by the former approval workflow cannot be liked, commented on or reported).
 async function loadApprovedTarget(type, id, viewer) {
   const target = await content.loadVisible(type, id, viewer);
   if (target.moderationStatus !== MODERATION.APPROVED) {
-    throw ApiError.conflict('This is only possible once the content has been approved.', undefined, 'NOT_PUBLISHED');
+    throw ApiError.conflict('This is not possible because the content is not published.', undefined, 'NOT_PUBLISHED');
   }
   return target;
 }
@@ -52,7 +54,7 @@ async function unlike(req, res) {
 
 /* ── Comments ── */
 
-// Approved comments for everyone, plus the viewer's own pending/rejected ones.
+// Published comments for everyone, plus any of the viewer's own that are still hidden.
 async function listComments(req, res) {
   const { targetType, targetId, page, limit } = req.valid.query;
   await content.loadVisible(targetType, targetId, req.user);
@@ -87,11 +89,10 @@ async function createComment(req, res) {
   if (!commentable) throw ApiError.badRequest('Comments are not available here.');
   await loadApprovedTarget(targetType, targetId, req.user);
 
-  const moderation = content.initialModeration(req.user);
-  const comment = await Comment.create({ author: req.user._id, targetType, target: targetId, body, ...moderation });
-  if (moderation.moderationStatus === MODERATION.APPROVED) {
-    await Model.updateOne({ _id: targetId }, { $inc: { commentCount: 1 } });
-  }
+  // Comments appear in the thread straight away.
+  const comment = await Comment.create({ author: req.user._id, targetType, target: targetId, body, ...content.publishedState() });
+  await Model.updateOne({ _id: targetId }, { $inc: { commentCount: 1 } });
+  await announce('comment', comment);
 
   await comment.populate('author', AUTHOR_FIELDS);
   return created(res, serializeComment(comment, { viewer: req.user }));
@@ -99,17 +100,13 @@ async function createComment(req, res) {
 
 async function updateComment(req, res) {
   const comment = await content.loadManageable('comment', req.valid.params.id, req.user);
-  const wasApproved = comment.moderationStatus === MODERATION.APPROVED;
-
   comment.body = req.valid.body.body;
-  content.resetModerationAfterEdit(comment, req.user);
+  const becameVisible = content.publishAfterEdit(comment);
   await comment.save();
 
-  // An edited comment leaves the public thread until it is reviewed again.
-  if (wasApproved && comment.moderationStatus !== MODERATION.APPROVED) {
-    await content
-      .entry(comment.targetType)
-      .Model.updateOne({ _id: comment.target, commentCount: { $gt: 0 } }, { $inc: { commentCount: -1 } });
+  // A comment that was hidden by the former approval workflow joins the thread now.
+  if (becameVisible) {
+    await content.entry(comment.targetType).Model.updateOne({ _id: comment.target }, { $inc: { commentCount: 1 } });
   }
 
   await comment.populate('author', AUTHOR_FIELDS);

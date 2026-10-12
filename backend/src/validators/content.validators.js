@@ -89,6 +89,7 @@ const blogListQuery = z.object({
   q: z.string().trim().max(80).optional(),
   category: z.enum(BLOG_CATEGORIES).optional(),
   tag: z.string().trim().toLowerCase().max(30).optional(),
+  author: objectId.optional(), // one doctor's blogs (their portfolio)
   page,
   limit: limit(9, 30),
 });
@@ -123,6 +124,7 @@ const createMemory = z.object({
   eventId: nullableId.default(null),
   memoryDate: memoryDate.default(null),
   mediaIds: mediaIds(LIMITS.memoryMedia).min(1, 'Add at least one photo or video.'),
+  showInCommunity: z.boolean().default(true),
 });
 
 const updateMemory = z
@@ -132,10 +134,12 @@ const updateMemory = z
     eventId: nullableId,
     memoryDate,
     mediaIds: mediaIds(LIMITS.memoryMedia).min(1, 'Add at least one photo or video.'),
+    showInCommunity: z.boolean(),
   })
   .partial();
 
-const memoryListQuery = z.object({ eventId: objectId.optional(), page, limit: limit(12, 36) });
+// `owner` asks for one doctor's portfolio gallery instead of the community list.
+const memoryListQuery = z.object({ eventId: objectId.optional(), owner: objectId.optional(), page, limit: limit(12, 36) });
 
 const memoryDownloadParams = z.object({ id: objectId, mediaId: objectId });
 

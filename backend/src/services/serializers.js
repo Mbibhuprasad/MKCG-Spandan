@@ -1,7 +1,7 @@
 // Explicit output shapes. Controllers never send Mongoose documents directly,
 // so internal fields (password hashes, sessions, Cloudinary ids, moderation
 // internals of other people's content) cannot leak by accident.
-const { ROLES, MODERATION } = require('../config/constants');
+const { ROLES, MODERATION, PROFILE_SECTIONS } = require('../config/constants');
 const { serializeMedia } = require('./media.service');
 
 const AUTHOR_FIELDS = 'name role status profile.professionalTitle profile.specialization profile.photo';
@@ -46,23 +46,54 @@ const mediaOne = (m) => (m && m.publicId ? serializeMedia(m) : null);
 
 /* ───────────── Users ───────────── */
 
+// What the profile wizard requires before it can be submitted. Keys match the
+// request body, so the web form can attach each message to its field.
+// Administrators are never listed in the directory, so only their name is required.
+const REQUIRED_PROFILE_FIELDS = [
+  ['name', 'Full name', (user) => Boolean(user.name && user.name.trim().length >= 2)],
+  ['profile.specialization', 'Primary specialization', (user, p) => user.role === ROLES.ADMIN || Boolean(p.specialization)],
+  ['profile.city', 'City', (user, p) => user.role === ROLES.ADMIN || Boolean(p.city)],
+];
+
+function requiredProfileIssues(user) {
+  const p = user.profile || {};
+  const issues = {};
+  for (const [key, label, present] of REQUIRED_PROFILE_FIELDS) {
+    if (!present(user, p)) issues[key] = `${label} is required.`;
+  }
+  return issues;
+}
+
+// `percent` and `missing` describe how much of the portfolio is filled in.
+// `isComplete` is the wizard's status: it turns true only once the doctor has
+// submitted the wizard (a timestamp written by the API after a successful
+// save) and stays true only while the required fields are still present.
 function profileCompletion(user) {
   const p = user.profile || {};
+  const wizard = user.profileWizard || {};
+  const required = requiredProfileIssues(user);
+  const requiredMissing = REQUIRED_PROFILE_FIELDS.filter(([key]) => required[key]).map(([, label]) => label);
   const checks = [
     ['Profile photo', Boolean(p.photo && p.photo.url)],
     ['Professional title', Boolean(p.professionalTitle || p.designation)],
     ['Specialization', Boolean(p.specialization)],
     ['Hospital or clinic', Boolean(p.hospital)],
     ['City', Boolean(p.city)],
-    ['Years of experience', p.yearsOfExperience !== null && p.yearsOfExperience !== undefined],
     ['Short biography', Boolean(p.bio)],
     ['Medical education', Boolean(p.education && p.education.length)],
-    ['Qualifications', Boolean(p.qualifications && p.qualifications.length)],
+    ['Qualifications', Boolean((p.qualifications && p.qualifications.length) || (p.credentials && p.credentials.length))],
     ['Professional experience', Boolean(p.experience && p.experience.length)],
   ];
   const done = checks.filter(([, ok]) => ok).length;
   const percent = Math.round((done / checks.length) * 100);
-  return { percent, isComplete: percent >= 70, missing: checks.filter(([, ok]) => !ok).map(([label]) => label) };
+  return {
+    percent,
+    isComplete: Boolean(wizard.completedAt) && requiredMissing.length === 0,
+    missing: checks.filter(([, ok]) => !ok).map(([label]) => label),
+    requiredMissing,
+    completedAt: wizard.completedAt || null,
+    resumeStep: wizard.step || 0,
+  };
 }
 
 function profileBody(user) {
@@ -76,34 +107,101 @@ function profileBody(user) {
   return {
     photoUrl: (p.photo && p.photo.url) || '',
     professionalTitle: p.professionalTitle || '',
+    headline: p.headline || '',
+    address: p.address || '',
     specialization: p.specialization || '',
     subspecialty: p.subspecialty || '',
+    fieldOfWork: p.fieldOfWork || '',
+    expertise: [...(p.expertise || [])],
+    procedures: [...(p.procedures || [])],
+    practiceArea: p.practiceArea || '',
     designation: p.designation || '',
     hospital: p.hospital || '',
     city: p.city || '',
     state: p.state || '',
+    country: p.country || '',
+    workAddress: p.workAddress || '',
+    workEmail: p.workEmail || '',
+    workPhone: p.workPhone || '',
     batchYear: p.batchYear ?? null,
     yearsOfExperience: p.yearsOfExperience ?? null,
     bio: p.bio || '',
     qualifications: [...(p.qualifications || [])],
     interests: [...(p.interests || [])],
     languages: [...(p.languages || [])],
-    education: plain(p.education, ['degree', 'institution', 'year']),
-    experience: plain(p.experience, ['role', 'organization', 'city', 'startYear', 'endYear', 'current', 'description']),
-    achievements: plain(p.achievements, ['title', 'year', 'description']),
-    publications: plain(p.publications, ['title', 'journal', 'year', 'url']),
+    education: plain(p.education, ['degree', 'level', 'institution', 'fieldOfStudy', 'startYear', 'year', 'certification', 'details']),
+    credentials: plain(p.credentials, ['title', 'type', 'institution', 'year', 'registration', 'details']),
+    experience: plain(p.experience, [
+      'role',
+      'organization',
+      'employmentType',
+      'city',
+      'state',
+      'startYear',
+      'endYear',
+      'current',
+      'description',
+    ]),
+    fellowships: plain(p.fellowships, ['title', 'institution', 'specialty', 'startYear', 'endYear', 'certificate', 'description']),
+    achievements: (p.achievements || []).map((item) => ({
+      id: String(item._id),
+      title: item.title,
+      issuer: item.issuer || '',
+      year: item.year ?? null,
+      description: item.description || '',
+      imageId: item.image && item.image.media ? String(item.image.media) : null,
+      imageUrl: (item.image && item.image.url) || '',
+      imageThumbUrl: (item.image && item.image.thumbUrl) || '',
+    })),
+    memberships: plain(p.memberships, ['organization', 'type', 'number', 'startYear', 'endYear', 'current']),
+    practiceLocations: plain(p.practiceLocations, ['hospital', 'area', 'address', 'city', 'state', 'country', 'phone']),
+    publications: plain(p.publications, ['title', 'journal', 'authors', 'year', 'description', 'url']),
     links: plain(p.links, ['label', 'url']),
   };
 }
 
 function visibilityOf(user) {
   const v = user.visibility || {};
+  const sections = v.sections || {};
   return {
     directory: v.directory !== false,
     publicListing: Boolean(v.publicListing),
     showEmail: Boolean(v.showEmail),
     showPhone: Boolean(v.showPhone),
+    showWorkContact: v.showWorkContact !== false,
+    showRegistration: Boolean(v.showRegistration),
+    sections: Object.fromEntries(PROFILE_SECTIONS.map((key) => [key, sections[key] !== false])),
   };
+}
+
+// The profile as another member may see it. The doctor's visibility choices are
+// applied here, on the server, so hidden details never leave the API — the web
+// app has nothing to hide because it never receives them.
+function memberProfileBody(user, visibility) {
+  const body = profileBody(user);
+  const { sections } = visibility;
+
+  // Workplace contact details travel in `contact`, and only when allowed.
+  body.workEmail = '';
+  body.workPhone = '';
+
+  if (!visibility.showWorkContact) body.practiceLocations = body.practiceLocations.map((l) => ({ ...l, phone: '' }));
+  if (!visibility.showRegistration) {
+    body.credentials = body.credentials.map((c) => ({ ...c, registration: '' }));
+    body.memberships = body.memberships.map((m) => ({ ...m, number: '' }));
+  }
+  if (!sections.education) body.education = [];
+  if (!sections.qualifications) {
+    body.qualifications = [];
+    body.credentials = [];
+  }
+  if (!sections.experience) body.experience = [];
+  if (!sections.fellowships) body.fellowships = [];
+  if (!sections.achievements) body.achievements = [];
+  if (!sections.memberships) body.memberships = [];
+  if (!sections.publications) body.publications = [];
+  if (!sections.links) body.links = [];
+  return body;
 }
 
 // The signed-in user's own account.
@@ -182,16 +280,21 @@ function serializeDoctorProfile(user, viewer) {
     };
   }
 
+  const p = user.profile || {};
   const contact = {};
   if (visibility.showEmail || self || admin) contact.email = user.email;
   if (visibility.showPhone || self || admin) contact.phone = user.phone;
+  if (visibility.showWorkContact || self || admin) {
+    if (p.workEmail) contact.workEmail = p.workEmail;
+    if (p.workPhone) contact.workPhone = p.workPhone;
+  }
 
   const out = {
     id: String(user._id),
     name: user.name,
     limited: false,
     isMine: self,
-    profile: profileBody(user),
+    profile: self || admin ? profileBody(user) : memberProfileBody(user, visibility),
     contact,
     memberSince: user.createdAt,
   };
@@ -291,6 +394,7 @@ function serializeMemory(memory, { viewer, likedIds } = {}) {
     title: memory.title,
     caption: memory.caption,
     memoryDate: memory.memoryDate,
+    showInCommunity: memory.showInCommunity !== false,
     event,
     media: mediaList(memory.media),
     owner: authorSummary(memory.owner),
@@ -416,6 +520,7 @@ module.exports = {
   authorSummary,
   moderationInfo,
   profileCompletion,
+  requiredProfileIssues,
   pollState,
   serializeSelf,
   serializeDoctorCard,

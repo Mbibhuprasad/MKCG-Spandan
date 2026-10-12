@@ -11,6 +11,9 @@ const memorySchema = new Schema(
     caption: { type: String, default: '', maxlength: 1500 },
     event: { type: Schema.Types.ObjectId, ref: 'Event', default: null },
     memoryDate: { type: Date, default: null },
+    // Every memory belongs to its owner's portfolio gallery. This decides whether
+    // it is also listed in the community Memories section.
+    showInCommunity: { type: Boolean, default: true },
     media: {
       type: [{ type: Schema.Types.ObjectId, ref: 'Media' }],
       validate: [
@@ -29,5 +32,6 @@ memorySchema.index({ moderationStatus: 1, publishedAt: -1 });
 memorySchema.index({ moderationStatus: 1, event: 1, publishedAt: -1 });
 memorySchema.index({ moderationStatus: 1, submittedAt: 1 });
 memorySchema.index({ owner: 1, createdAt: -1 });
+memorySchema.index({ owner: 1, moderationStatus: 1, publishedAt: -1 });
 
 module.exports = mongoose.model('Memory', memorySchema);

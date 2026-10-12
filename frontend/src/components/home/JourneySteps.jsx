@@ -19,7 +19,7 @@ const steps = [
   {
     icon: MessagesSquare,
     title: 'Share and reconnect',
-    text: 'Post updates, write blogs and add memories. An administrator reviews submissions so the space stays respectful.',
+    text: 'Post updates, write blogs and add memories. What you share is published straight away; members can report anything that is not respectful.',
   },
   {
     icon: PartyPopper,

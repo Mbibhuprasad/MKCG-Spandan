@@ -34,12 +34,8 @@ function CommentEditor({ comment, onClose, onSaved }) {
     setBusy(true);
     setError('');
     try {
-      const { data } = await api.patch(`/comments/${comment.id}`, { body: text });
-      toast[data.moderation && data.moderation.status === 'APPROVED' ? 'success' : 'info'](
-        data.moderation && data.moderation.status === 'APPROVED'
-          ? 'Comment updated.'
-          : 'Comment updated. It will be reviewed again before others can see it.'
-      );
+      await api.patch(`/comments/${comment.id}`, { body: text });
+      toast.success('Comment updated.');
       onSaved();
     } catch (err) {
       const parsed = formErrors(err);
@@ -132,22 +128,24 @@ function SubmissionList({ type, onChanged }) {
                   <div className="min-w-0">
                     <h3 className="line-clamp-2 break-words text-[0.95rem] font-semibold text-fg">{title}</h3>
                     <p className="mt-1 text-xs text-muted">
-                      {[type.meta(item), `Submitted ${formatDate(moderation.submittedAt || item.createdAt)}`].filter(Boolean).join(' · ')}
+                      {[type.meta(item), `Shared ${formatDate(item.createdAt || moderation.submittedAt)}`].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                 </div>
-                <ModerationBadge status={moderation.status} className="w-fit shrink-0" />
+                {/* Everything is published on creation; a badge only marks items the old review process left hidden. */}
+                {!approved && <ModerationBadge status={moderation.status} className="w-fit shrink-0" />}
               </div>
 
               {moderation.status === 'PENDING' && (
                 <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
-                  Only you can see this until an administrator approves it.
+                  Only you can see this — it was left unpublished by the old review process.{' '}
+                  {type.key === 'comment' || editHref ? 'Edit and save it to publish it.' : ''}
                 </p>
               )}
               {moderation.status === 'REJECTED' && (
                 <p className="mt-3 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
-                  {moderation.rejectionReason ? `Reason: ${moderation.rejectionReason}` : 'This was not approved.'}{' '}
-                  {type.key === 'comment' || editHref ? 'You can edit it and it will be reviewed again.' : ''}
+                  {moderation.rejectionReason ? `Not published. Reason given: ${moderation.rejectionReason}` : 'This was not published.'}{' '}
+                  {type.key === 'comment' || editHref ? 'Edit and save it to publish it.' : ''}
                 </p>
               )}
 
@@ -218,7 +216,7 @@ function SubmissionList({ type, onChanged }) {
   );
 }
 
-/** "My submissions": everything the doctor has submitted, with its review status. */
+/** "My submissions": everything the doctor has shared, to view, edit or delete. */
 export default function Submissions() {
   const router = useRouter();
   const params = useSearchParams();
@@ -238,8 +236,8 @@ export default function Submissions() {
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-fg">My submissions</h1>
           <p className="mt-2 max-w-2xl text-fg-soft">
-            Everything you have shared and where it stands. Submissions are reviewed by an administrator before the
-            community can see them; editing an item sends it for review again.
+            Everything you have shared. It is all published to the community as soon as you save it; here you can
+            view, edit or delete each item.
           </p>
         </div>
         <Button href="/dashboard/create" icon={Plus}>

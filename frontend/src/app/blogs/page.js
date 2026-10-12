@@ -66,8 +66,9 @@ export default async function BlogsPage({ searchParams }) {
   const hasFilters = Boolean(q || category || tag);
 
   const [list, taxonomy] = await Promise.all([
-    publicFetch('/blogs', { query: { q, category, tag, page, limit: PAGE_SIZE } }),
-    publicFetch('/blogs/taxonomy', { revalidate: 300 }),
+    // Not cached: a blog is public the moment its author saves it, and gone the moment it is deleted.
+    publicFetch('/blogs', { query: { q, category, tag, page, limit: PAGE_SIZE }, revalidate: 0 }),
+    publicFetch('/blogs/taxonomy', { revalidate: 60 }),
   ]);
 
   const blogs = list.ok ? list.data : [];
@@ -80,7 +81,7 @@ export default async function BlogsPage({ searchParams }) {
       <PageHeader
         eyebrow="Blogs"
         title="Reflections from a life in medicine"
-        description="Articles written by members on practice, careers, research, teaching, wellbeing and the stories a batch shares. Every blog is reviewed before it is published."
+        description="Articles written by members on practice, careers, research, teaching, wellbeing and the stories a batch shares."
         actions={
           <Button href="/dashboard/create/blog" icon={PenLine}>
             Write a blog
@@ -194,7 +195,7 @@ export default async function BlogsPage({ searchParams }) {
               <EmptyState
                 icon={BookOpen}
                 title="No blogs have been published yet"
-                description="When a member's blog is approved by an administrator it will appear here. Members can be the first to write one."
+                description="Blogs appear here as soon as members publish them. Members can be the first to write one."
                 action={
                   <Button href="/dashboard/create/blog" icon={PenLine}>
                     Write a blog

@@ -8,7 +8,7 @@ import { cn } from '@/lib/format';
 const items = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/doctors', label: 'Doctors', icon: UsersRound },
-  { href: '/admin/moderation', label: 'Moderation', icon: ClipboardList },
+  { href: '/admin/moderation', label: 'Content', icon: ClipboardList },
   { href: '/admin/reports', label: 'Reports', icon: Flag },
   { href: '/admin/audit-log', label: 'Audit log', icon: History },
 ];

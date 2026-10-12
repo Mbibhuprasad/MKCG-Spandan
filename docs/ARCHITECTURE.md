@@ -20,7 +20,7 @@ Browser ──HTTPS──▶ Next.js (frontend/)  ──/api/v1/* rewrite──�
 | Folder | Responsibility |
 | --- | --- |
 | `config/` | `env.js` validates environment variables with Zod and exposes a frozen config; `db.js` connects Mongoose; `cloudinary.js` lazily configures the SDK; `constants.js` holds roles, statuses, enums, upload purposes, limits and the policy version |
-| `models/` | Mongoose schemas and indexes. `plugins/moderation.js` adds the shared moderation fields |
+| `models/` | Mongoose schemas and indexes. `plugins/moderation.js` adds the shared publication fields |
 | `middleware/` | `auth.js` (session resolution, CSRF, role guard), `security.js` (origin guard, operator-key rejection), `rateLimiters.js`, `validate.js` (Zod → `req.valid`), `upload.js` (Multer memory storage), `errorHandler.js` |
 | `validators/` | Zod schemas for every body, query string and route parameter |
 | `controllers/` | HTTP handlers. They read only `req.valid` and `req.user`, call services, and return serialised data |
@@ -36,8 +36,9 @@ Browser ──HTTPS──▶ Next.js (frontend/)  ──/api/v1/* rewrite──�
 | --- | --- |
 | `session.service.js` | Creates/ends sessions, signs and verifies the JWT, derives and checks the CSRF token, cookie options |
 | `adminBootstrap.service.js` | Idempotent creation of the first admin; explicit password rotation |
-| `content.service.js` | **Content registry**: one table mapping `post`, `blog`, `memory`, `event`, `poll`, `comment` to model, owner field and capabilities; visibility (`canView`, `loadVisible`), ownership (`loadManageable`), initial moderation state, reset-after-edit, links, cascade deletion |
-| `moderation.service.js` | Approve / reject with compare-and-set, counter maintenance, notifications, audit entries; admin removal |
+| `content.service.js` | **Content registry**: one table mapping `post`, `blog`, `memory`, `event`, `poll`, `comment` to model, owner field and capabilities; visibility (`canView`, `loadVisible`), ownership (`loadManageable`), publishing on create (`publishedState`) and on edit (`publishAfterEdit`), links, cascade deletion |
+| `moderation.service.js` | Announcements when something is published (event, poll, comment) and admin removal with notification and audit entry. There is no approve / reject |
+| `legacyContent.service.js` | One-off, idempotent publication of content left `PENDING` by the former approval workflow (`npm run content:publish-pending`) |
 | `media.service.js` | Upload validation and Cloudinary upload, claiming uploads for content, syncing on edit, destruction, orphan cleanup, media serialisation |
 | `cloudinary.service.js` | The only module that calls the Cloudinary SDK: upload stream, destroy, signed delivery URLs, short-lived download URLs |
 | `markdown.service.js` | Markdown → sanitised HTML, reading time, slugs |
@@ -68,18 +69,19 @@ the **session** and the **user** from MongoDB, refuses non-`ACTIVE` accounts, an
 state-changing methods — verifies the `X-CSRF-Token` header. Role and status always come from the database, never
 from the token or the request.
 
-### The content registry and moderation plugin
+### The content registry and publication fields
 
-All moderated models use `moderationPlugin`, which adds `moderationStatus` (`PENDING` / `APPROVED` / `REJECTED`),
-`submittedAt`, `reviewedAt`, `reviewedBy`, `rejectionReason` and `publishedAt`.
+All content models use `moderationPlugin`, which adds `moderationStatus` (`APPROVED` for everything created now;
+`PENDING` / `REJECTED` only on records from the former approval workflow), `submittedAt`, `reviewedAt`, `reviewedBy`,
+`rejectionReason` and `publishedAt`.
 
 `content.service.js` then gives every content type identical behaviour:
 
-- `initialModeration(user)` — `PENDING` for doctors, `APPROVED` for admins. The status is never read from the request.
-- `canView` / `loadVisible` — approved content is visible to members; unapproved content exists only for its owner and
+- `publishedState()` — new content is published as soon as it is saved. The status is never read from the request.
+- `canView` / `loadVisible` — published content is visible to members; a record still hidden by the former workflow exists only for its owner and
   admins, and everyone else receives the same `404` as for a missing item.
 - `loadManageable` — only the owner can edit; the owner or (where allowed) an admin can delete.
-- `resetModerationAfterEdit` — a doctor's edit returns the item to `PENDING`.
+- `publishAfterEdit` — an edit keeps the item published (and publishes a still-hidden legacy item).
 - `deleteContent` — removes the item and everything that depends on it.
 
 Likes, comments and reports are implemented once (`interaction.controller.js`) against this registry, so there is no
@@ -91,7 +93,7 @@ per-page variant of the logic. See [CONTENT_MODERATION.md](CONTENT_MODERATION.md
 
 | Job | Interval | Effect |
 | --- | --- | --- |
-| Event reminders | every 30 min (first run 15 s after boot) | Notifies the organiser and members who RSVP'd Going/Maybe about approved events starting within 48 hours. A dedupe key makes each reminder at-most-once |
+| Event reminders | every 30 min (first run 15 s after boot) | Notifies the organiser and members who RSVP'd Going/Maybe about events starting within 48 hours. A dedupe key makes each reminder at-most-once |
 | Orphan media cleanup | every 6 h | Deletes uploads never attached to content and older than 24 h, from Cloudinary and MongoDB |
 
 Both are idempotent, so running several API instances is safe, but they are not distributed-locked.
@@ -115,7 +117,7 @@ Both are idempotent, so running several API instances is safe, but they are not 
 | Route | Audience | Rendering |
 | --- | --- | --- |
 | `/`, `/about`, `/terms`, `/privacy`, `/community-guidelines` | Public, indexable | Server components; the homepage reads public endpoints only |
-| `/blogs`, `/blogs/[slug]` | Public for approved blogs | Server-rendered for SEO; likes and comments are client-side and member-only |
+| `/blogs`, `/blogs/[slug]` | Public | Server-rendered for SEO and not cached, so a new, edited or deleted blog shows at once; likes and comments are client-side and member-only |
 | `/login`, `/register` | Public | Client forms |
 | `/doctors`, `/doctors/[id]`, `/memories`, `/community`, `/community/posts/[id]`, `/events`, `/events/[id]` | Members | Page shell + `MemberGate`; data is fetched in the browser with the session cookie |
 | `/dashboard`, `/dashboard/profile`, `/dashboard/submissions`, `/dashboard/notifications`, `/dashboard/create/{post,blog,memory,event,poll}` | Signed-in users | `dashboard/layout.js` wraps everything in `RequireAuth`; `noindex` |
@@ -176,7 +178,7 @@ Nothing essential depends on Next.js server actions or browser-only behaviour:
 | Logout | `POST /auth/logout` with the bearer token deletes the server-side session |
 | Uploads | `multipart/form-data` to `POST /api/v1/media` with fields `purpose` then `file`; use the returned `id` in `mediaIds` / `coverId` / `PUT /doctors/me/photo` |
 | Media display | Use the `url` / `thumbUrl` values returned by the API; request a download link from `GET /memories/:id/media/:mediaId/download` when needed |
-| Permissions and moderation | Identical — all enforced in the API |
+| Permissions and publishing rules | Identical — all enforced in the API |
 
 Store the token in the platform's secure storage (Keychain / Keystore). Building the mobile app is out of scope for
 this project.

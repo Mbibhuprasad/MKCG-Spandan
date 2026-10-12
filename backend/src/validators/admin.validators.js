@@ -1,8 +1,8 @@
 const { z, objectId, line, text, page, limit, moderationStatusFilter } = require('./common');
 const { ACCOUNT_STATUS, REPORT_STATUS } = require('../config/constants');
 
-// URL segment → content type (+ optional filter). Visit plans are events with
-// eventType VISIT_PLAN, reviewed in their own queue.
+// URL segment → content type (+ optional filter) for the admin content lists.
+// Visit plans are events with eventType VISIT_PLAN and have their own list.
 const MODERATION_QUEUES = Object.freeze({
   posts: { type: 'post', filter: {} },
   blogs: { type: 'blog', filter: {} },
@@ -16,13 +16,9 @@ const MODERATION_QUEUES = Object.freeze({
 const queueParams = z.object({ queue: z.enum(Object.keys(MODERATION_QUEUES)) });
 const queueItemParams = z.object({ queue: z.enum(Object.keys(MODERATION_QUEUES)), id: objectId });
 
-const queueQuery = z.object({ status: moderationStatusFilter.default('PENDING'), page, limit: limit(10, 30) });
-
-const reviewBody = z
-  .object({
-    action: z.enum(['approve', 'reject']),
-    reason: text(0, 500, 'Reason').default(''),
-  });
+// `status` only matters for records left over from the former approval workflow
+// (PENDING / REJECTED are hidden from members); new content is always APPROVED.
+const queueQuery = z.object({ status: moderationStatusFilter.default('ALL'), page, limit: limit(10, 30) });
 
 const deleteBody = z.object({ reason: text(0, 500, 'Reason').default('') });
 
@@ -54,7 +50,6 @@ module.exports = {
   queueParams,
   queueItemParams,
   queueQuery,
-  reviewBody,
   deleteBody,
   doctorListQuery,
   doctorStatusBody,

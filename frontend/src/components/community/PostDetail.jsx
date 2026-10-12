@@ -28,7 +28,7 @@ export default function PostDetail({ id }) {
           <EmptyState
             icon={SearchX}
             title="This post is not available"
-            description="It may have been removed, or it is still awaiting review and only visible to its author."
+            description="It may have been removed."
             action={
               <Button href="/community" variant="secondary">
                 Go to the community feed

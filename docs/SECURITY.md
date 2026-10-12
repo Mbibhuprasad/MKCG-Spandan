@@ -6,7 +6,7 @@ penetration test, dependency monitoring, and a legal review of its policies.
 
 ## Principles
 
-- The backend is the only authority. Roles, account status, ownership, moderation status and identifiers supplied by
+- The backend is the only authority. Roles, account status, ownership, publication state and identifiers supplied by
   a client are never trusted.
 - Deny by default: unpublished content and other people's private data return `404`, not a hint that they exist.
 - Secrets exist only in server-side environment variables.
@@ -49,7 +49,7 @@ Details: [AUTHENTICATION.md](AUTHENTICATION.md).
 | Role-based access | `requireAdmin` on the entire `/admin` router (`backend/src/routes/admin.routes.js`) |
 | Resource-level ownership | `loadManageable` / `isOwner` in `backend/src/services/content.service.js`; ownership fields are set from `req.user` only |
 | Visibility of unpublished content | `canView` / `loadVisible` — owner and admin only, `404` otherwise |
-| Moderation cannot be bypassed | `moderationStatus` is assigned by `initialModeration()`; no validator accepts it; only `moderation.service.js` (behind admin routes) changes it; an edit by a doctor resets it to `PENDING` |
+| Publishing cannot be abused to impersonate or escalate | Content is published on creation, so the control is on *who* and *what*: the owner is always the authenticated user (no validator accepts `author`, `userId`, `role`, `moderationStatus` or `publishedAt`), every write passes authentication, CSRF, validation, sanitisation and the per-user rate limit, only the owner may edit, and only the owner or an admin may delete |
 | Upload ownership | `claimMedia` attaches an upload only if it belongs to the caller, has the right purpose and is unattached. Clients cannot submit URLs or Cloudinary ids |
 
 ### Input handling
@@ -96,7 +96,6 @@ Details: [CLOUDINARY.md](CLOUDINARY.md).
 | Duplicate RSVPs | Unique index `(event, user)` with an upsert |
 | Duplicate reports / notifications | Unique indexes on `(reporter, targetType, target)` and `(user, dedupeKey)` |
 | Repeated submits in the UI | Buttons are disabled while a request runs (`loading` prop, `useAction`) |
-| Concurrent moderation | Compare-and-set on the previous status |
 
 ### Data exposure
 
@@ -113,7 +112,7 @@ Details: [CLOUDINARY.md](CLOUDINARY.md).
 ### Audit and accountability
 
 `AuditLog` records sensitive administrative actions: admin bootstrap and password rotation, doctor suspension,
-reactivation, visibility changes and deletion, content approval, rejection and deletion, and report resolution.
+reactivation, visibility changes and deletion, content deletion, and report resolution.
 Entries hold the actor, action, target id and a short summary — never passwords or full content. Admins read them at
 `GET /admin/audit-logs`.
 
@@ -157,7 +156,7 @@ results.
   URL can share it. Only the original-file download links are time-limited.
 - **EXIF metadata** (including GPS position) in original photos is not stripped from the stored original.
 - **Uploads are buffered in memory** (up to `MAX_VIDEO_MB` per request) — size the server accordingly.
-- **Suspension does not unpublish** content the doctor already published; an admin must reject or delete it.
+- **Suspension does not unpublish** content the doctor already published; an admin must delete it.
 - **No malware scanning** of uploads beyond type validation.
 - **No email/SMS**, therefore no email verification, password reset, login alerts or multi-factor authentication.
 - **Event capacity** is checked before the RSVP is written, not atomically; two simultaneous RSVPs can exceed it by

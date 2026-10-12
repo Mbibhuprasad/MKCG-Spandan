@@ -216,7 +216,7 @@ function MemoryViewer({ memory, fresh, onDeleted }) {
             <CommentSection targetType="memory" targetId={memory.id} />
           </div>
         ) : (
-          <p className="text-sm text-muted">Likes and comments open once this memory has been approved.</p>
+          <p className="text-sm text-muted">Likes and comments are available once this memory is published.</p>
         )}
       </div>
 
@@ -251,7 +251,7 @@ export default function MemoryLightbox({ memoryId, preview, onClose, onDeleted }
           title="This memory is not available"
           message={
             detail.error.status === 404
-              ? 'It may have been removed, or it has not been approved yet.'
+              ? 'It may have been removed.'
               : detail.error.message
           }
           onRetry={detail.error.status === 404 ? undefined : detail.reload}

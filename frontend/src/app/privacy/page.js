@@ -24,7 +24,7 @@ const sections = [
         <List
           items={[
             'Only the information needed to run a members’ community is collected.',
-            'Member content is shown to signed-in members only. The exceptions — approved blogs and opt-in public listings — are listed below.',
+            'Member content is shown to signed-in members only. The exceptions — blogs and opt-in public listings — are listed below.',
             'Your email address and phone number are hidden from other members unless you switch them on.',
             'The platform contains no advertising and does not sell or rent member information.',
             'Patient information must never be uploaded.',
@@ -74,8 +74,8 @@ const sections = [
         items={[
           'to create your account, sign you in and keep your session secure;',
           'to show your profile and contributions to the audiences described in this policy;',
-          'to let administrators review submissions, handle reports and manage accounts;',
-          'to send in-app notifications — for example when a submission is approved, an event is published or a gathering you RSVP’d to is approaching;',
+          'to let administrators handle reports, remove content that breaks the guidelines and manage accounts;',
+          'to send in-app notifications — for example when someone comments on what you shared, an event is published or a gathering you RSVP’d to is approaching;',
           'to protect the community against abuse, such as repeated sign-in attempts.',
         ]}
       />
@@ -88,7 +88,7 @@ const sections = [
       <>
         <P>
           <Term>Other members</Term> (signed-in doctors) can see your name, profile photo and professional profile,
-          and your approved posts, comments, memories, events, visit plans and polls. They see your email address or
+          and your posts, comments, memories, events, visit plans and polls. They see your email address or
           phone number only if you enable &ldquo;show email&rdquo; or &ldquo;show phone&rdquo; in your profile
           settings.
         </P>
@@ -102,17 +102,19 @@ const sections = [
         </P>
         <List
           items={[
-            'blogs that an administrator has approved, with the author’s name, professional title, specialization and profile photo;',
+            'blogs, with the author’s name, professional title, specialization and profile photo;',
             'a short homepage card (name, title, specialization, city and photo) — only if you enable public listing and an administrator chooses to feature your profile;',
             'a brief mention of an upcoming event (title, type, city and dates) — only if its organiser enables it. Venues, descriptions and attendee lists are never public.',
           ]}
         />
         <P>
           <Term>Administrators</Term> can see all accounts, including email addresses and phone numbers, and all
-          submissions including those awaiting review or rejected.
+          content.
         </P>
         <P>
-          <Term>Unpublished submissions</Term> — pending or rejected — are visible only to you and to administrators.
+          <Term>Portfolio-only gallery items</Term> — memories you chose not to show in the community Memories
+          section — appear only in the gallery on your portfolio, and not at all to other members if you hide that
+          gallery or your directory listing.
           Poll ballots are not shown to other members; only totals are displayed, according to each poll&apos;s
           result settings.
         </P>
@@ -228,8 +230,8 @@ const sections = [
         <P>
           Measures built into the platform include hashed passwords, sessions that can be revoked on the server,
           protection against cross-site request forgery, rate limits on sign-in and registration, checks on the real
-          type and size of uploaded files, permission checks on every request, and review of submissions before they
-          are published.
+          type and size of uploaded files, permission checks on every request, member reporting and administrator
+          removal of content.
         </P>
         <P>
           No system is perfectly secure. Use a strong, unique password, and tell the administrators promptly if you

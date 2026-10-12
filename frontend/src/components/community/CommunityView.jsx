@@ -105,7 +105,7 @@ function FeedTab() {
         <EmptyState
           icon={MessageCircle}
           title={type ? 'No posts of this type yet' : 'No posts yet'}
-          description="Posts appear here once an administrator has approved them. Be the first to share something with the community."
+          description="Posts appear here as soon as members share them. Be the first to share something with the community."
           action={
             <Button href="/dashboard/create/post" icon={PenLine}>
               Create a post
@@ -170,7 +170,7 @@ function PollsTab() {
         <EmptyState
           icon={Vote}
           title={state === 'closed' ? 'No closed polls' : state === 'open' ? 'No active polls right now' : 'No polls yet'}
-          description="Polls help the batch decide on reunion dates, venues, activities and budgets. Published polls appear here after admin approval."
+          description="Polls help the batch decide on reunion dates, venues, activities and budgets. New polls appear here as soon as they are published."
           action={
             <Button href="/dashboard/create/poll" icon={Plus}>
               Start a poll

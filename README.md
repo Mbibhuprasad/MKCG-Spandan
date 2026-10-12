@@ -4,15 +4,15 @@
 
 MKCGSPANDAN is a private online community for doctors and medical batchmates. Members reconnect through a doctor
 directory and professional portfolios, share posts, blogs and memories (photos and videos), organise reunions and
-visit plans, and vote in polls. Everything a doctor submits is reviewed by an administrator before the rest of the
-community can see it.
+visit plans, and vote in polls. What a doctor shares is published to the community at once;
+administrators can delete content, act on reports and manage doctor accounts.
 
 It is a members' community — not a hospital, patient-management or medical-advice system.
 
 - Two application roles only: `ADMIN` and `DOCTOR`. There is no super-admin.
 - Doctor registration needs **no** approval: a doctor is signed in immediately after registering.
-- Doctor-created posts, blogs, comments, memories, events, visit plans and polls start as `PENDING` and are published
-  only after admin approval.
+- Doctor-created posts, blogs, comments, memories, events, visit plans and polls are **published immediately** —
+  there is no approval step. Admins can delete any content and any doctor account.
 - All images and videos are stored in Cloudinary; MongoDB stores metadata only; nothing is written to the server's disk.
 
 ## Technology
@@ -149,7 +149,7 @@ binary on first use and replace the Cloudinary SDK with a test double. See [docs
 | [docs/ROLES_AND_PERMISSIONS.md](docs/ROLES_AND_PERMISSIONS.md) | `ADMIN` / `DOCTOR` permission matrix and what visitors can see |
 | [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) | Registration, login, sessions, CSRF, suspension, admin bootstrap |
 | [docs/SECURITY.md](docs/SECURITY.md) | Implemented security controls and their limits |
-| [docs/CONTENT_MODERATION.md](docs/CONTENT_MODERATION.md) | Moderation lifecycle, visibility rules, reports |
+| [docs/CONTENT_MODERATION.md](docs/CONTENT_MODERATION.md) | Publishing without approval, visibility rules, admin deletion, reports |
 | [docs/DATABASE.md](docs/DATABASE.md) | Models, relationships, indexes, deletion behaviour, backups |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Every environment variable |
 | [docs/TESTING.md](docs/TESTING.md) | Automated tests and the manual acceptance checklist |

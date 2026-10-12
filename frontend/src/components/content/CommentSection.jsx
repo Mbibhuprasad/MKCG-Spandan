@@ -18,12 +18,12 @@ const PAGE_SIZE = 10;
 /**
  * Comment thread for any commentable item (targetType: 'post' | 'blog' | 'memory' | 'event').
  *
- * Members see approved comments plus their own comments that are still awaiting
- * review. A doctor's new comment is submitted for approval; nobody else sees it
- * until an administrator approves it.
+ * A new comment joins the thread as soon as it is posted — there is no review
+ * step. (A badge is only shown on a member's own comment that the former
+ * approval workflow left hidden.)
  */
 export default function CommentSection({ targetType, targetId, canComment = true, onCountChange }) {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const toast = useToast();
   const [page, setPage] = useState(1);
   const [body, setBody] = useState('');
@@ -47,11 +47,9 @@ export default function CommentSection({ targetType, targetId, canComment = true
     try {
       const { data: created } = await api.post('/comments', { targetType, targetId, body: text });
       setBody('');
-      if (created.moderation && created.moderation.status === 'APPROVED') {
+      if (!created.moderation || created.moderation.status === 'APPROVED') {
         toast.success('Comment posted.');
         if (onCountChange) onCountChange(1);
-      } else {
-        toast.info('Comment submitted. It will appear once an admin approves it.');
       }
       if (page === 1) reload();
       else setPage(1);
@@ -95,7 +93,7 @@ export default function CommentSection({ targetType, targetId, canComment = true
           <FormMessage>{error}</FormMessage>
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted">
-              {isAdmin ? 'Admin comments are published immediately.' : 'Comments appear after admin approval.'}
+              Your comment appears straight away. Please keep it respectful.
             </p>
             <Button type="submit" size="sm" loading={busy} disabled={!body.trim()}>
               Comment

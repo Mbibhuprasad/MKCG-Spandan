@@ -94,7 +94,7 @@ export default function NotificationsList() {
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-fg">Notifications</h1>
           <p className="mt-2 text-fg-soft" aria-live="polite">
-            {meta ? (unreadCount ? `You have ${unreadCount} unread ${unreadCount === 1 ? 'notification' : 'notifications'}.` : 'You are all caught up.') : 'Approvals, events, polls and account updates.'}
+            {meta ? (unreadCount ? `You have ${unreadCount} unread ${unreadCount === 1 ? 'notification' : 'notifications'}.` : 'You are all caught up.') : 'Comments, events, polls and account updates.'}
           </p>
         </div>
         <Button variant="secondary" icon={CheckCheck} onClick={markAllRead} loading={markingAll} disabled={!unreadCount}>
@@ -129,7 +129,7 @@ export default function NotificationsList() {
             description={
               filter === 'unread'
                 ? 'You have read everything.'
-                : 'You will be notified here when your submissions are reviewed, when events and polls are published and about changes to your account.'
+                : 'You will be notified here about comments on what you share, new events and polls, and changes to your account.'
             }
             action={
               filter === 'unread' ? (

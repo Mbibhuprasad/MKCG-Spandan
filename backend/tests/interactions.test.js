@@ -3,6 +3,7 @@ const Vote = require('../src/models/Vote');
 const Rsvp = require('../src/models/Rsvp');
 const Poll = require('../src/models/Poll');
 const Report = require('../src/models/Report');
+const Post = require('../src/models/Post');
 const { setupTestApp, registerDoctor, createAdmin, inFuture } = require('./helpers/harness');
 
 const ctx = setupTestApp();
@@ -12,15 +13,13 @@ let alice;
 let bob;
 let carol;
 
-const approve = (queue, id) => admin.patch(`/api/v1/admin/moderation/${queue}/${id}`, { action: 'approve' });
 
-async function approvedPost(client, body = 'A post for interaction tests') {
+async function newPost(client, body = 'A post for interaction tests') {
   const res = await client.post('/api/v1/posts', { body });
-  await approve('posts', res.body.data.id);
   return res.body.data.id;
 }
 
-async function approvedPoll(client, overrides = {}) {
+async function newPoll(client, overrides = {}) {
   const res = await client.post('/api/v1/polls', {
     question: 'Where should we hold the reunion dinner?',
     options: ['Seafood place', 'Rooftop grill', 'Hotel banquet'],
@@ -28,7 +27,6 @@ async function approvedPoll(client, overrides = {}) {
     ...overrides,
   });
   if (res.status !== 201) throw new Error(JSON.stringify(res.body));
-  await approve('polls', res.body.data.id);
   return res.body.data;
 }
 
@@ -41,7 +39,7 @@ beforeAll(async () => {
 
 describe('likes', () => {
   test('one like per doctor: repeated and simultaneous requests count once', async () => {
-    const postId = await approvedPost(alice);
+    const postId = await newPost(alice);
 
     const first = await bob.put(`/api/v1/likes/post/${postId}`);
     expect(first.body.data).toEqual({ liked: true, likeCount: 1 });
@@ -63,7 +61,7 @@ describe('likes', () => {
   });
 
   test('unlike is idempotent and the count never goes negative', async () => {
-    const postId = await approvedPost(alice);
+    const postId = await newPost(alice);
     await bob.put(`/api/v1/likes/post/${postId}`);
     expect((await bob.delete(`/api/v1/likes/post/${postId}`)).body.data).toEqual({ liked: false, likeCount: 0 });
     expect((await bob.delete(`/api/v1/likes/post/${postId}`)).body.data).toEqual({ liked: false, likeCount: 0 });
@@ -72,8 +70,9 @@ describe('likes', () => {
   });
 
   test('unpublished content cannot be liked, and unsupported targets are rejected', async () => {
-    const pending = await alice.post('/api/v1/posts', { body: 'Still pending' });
-    const id = pending.body.data.id;
+    // A record left pending by the former approval workflow (the API no longer creates these).
+    const pending = await Post.create({ author: alice.user.id, body: 'Still pending', moderationStatus: 'PENDING', publishedAt: null });
+    const id = String(pending._id);
     expect((await bob.put(`/api/v1/likes/post/${id}`)).status).toBe(404);
     expect((await alice.put(`/api/v1/likes/post/${id}`)).status).toBe(409);
     expect((await bob.put(`/api/v1/likes/poll/${id}`)).status).toBe(400);
@@ -87,7 +86,6 @@ describe('likes', () => {
       body: 'x'.repeat(40) + ' A year in a district hospital teaches resourcefulness, patience and humility. '.repeat(4),
       category: 'Career & Growth',
     });
-    await approve('blogs', blog.body.data.id);
     const liked = await bob.put(`/api/v1/likes/blog/${blog.body.data.id}`);
     expect(liked.body.data).toEqual({ liked: true, likeCount: 1 });
     const detail = await bob.get(`/api/v1/blogs/slug/${blog.body.data.slug}`);
@@ -97,7 +95,7 @@ describe('likes', () => {
 
 describe('poll voting', () => {
   test('one ballot per doctor, even under simultaneous requests', async () => {
-    const poll = await approvedPoll(alice);
+    const poll = await newPoll(alice);
     const [a, b] = poll.options;
 
     const results = await Promise.all(
@@ -114,8 +112,8 @@ describe('poll voting', () => {
   });
 
   test('validates options and the single-choice rule on the server', async () => {
-    const poll = await approvedPoll(alice);
-    const other = await approvedPoll(alice, { question: 'A second, unrelated question?' });
+    const poll = await newPoll(alice);
+    const other = await newPoll(alice, { question: 'A second, unrelated question?' });
 
     expect((await bob.post(`/api/v1/polls/${poll.id}/vote`, { optionIds: [] })).status).toBe(400);
     expect((await bob.post(`/api/v1/polls/${poll.id}/vote`, { optionIds: [other.options[0].id] })).status).toBe(400);
@@ -124,7 +122,7 @@ describe('poll voting', () => {
   });
 
   test('multi-choice polls accept several options on a single ballot', async () => {
-    const poll = await approvedPoll(alice, { allowMultiple: true, resultsVisibility: 'ALWAYS' });
+    const poll = await newPoll(alice, { allowMultiple: true, resultsVisibility: 'ALWAYS' });
     const res = await bob.post(`/api/v1/polls/${poll.id}/vote`, { optionIds: [poll.options[0].id, poll.options[2].id] });
     expect(res.status).toBe(201);
     await carol.post(`/api/v1/polls/${poll.id}/vote`, { optionIds: [poll.options[0].id] });
@@ -136,7 +134,7 @@ describe('poll voting', () => {
   });
 
   test('results follow the visibility rule and are computed from real ballots', async () => {
-    const afterVote = await approvedPoll(alice, { resultsVisibility: 'AFTER_VOTE' });
+    const afterVote = await newPoll(alice, { resultsVisibility: 'AFTER_VOTE' });
     const before = await bob.get(`/api/v1/polls/${afterVote.id}`);
     expect(before.body.data.resultsVisible).toBe(false);
     expect(before.body.data.totalVoters).toBeNull();
@@ -149,7 +147,7 @@ describe('poll voting', () => {
     // Someone who has not voted still cannot see them.
     expect((await carol.get(`/api/v1/polls/${afterVote.id}`)).body.data.resultsVisible).toBe(false);
 
-    const afterClose = await approvedPoll(alice, { resultsVisibility: 'AFTER_CLOSE' });
+    const afterClose = await newPoll(alice, { resultsVisibility: 'AFTER_CLOSE' });
     const stillHidden = await bob.post(`/api/v1/polls/${afterClose.id}/vote`, { optionIds: [afterClose.options[0].id] });
     expect(stillHidden.body.data.resultsVisible).toBe(false);
     await Poll.updateOne({ _id: afterClose.id }, { $set: { endsAt: new Date(Date.now() - 1000) } });
@@ -160,7 +158,7 @@ describe('poll voting', () => {
   });
 
   test('closed and not-yet-open polls refuse votes', async () => {
-    const poll = await approvedPoll(alice);
+    const poll = await newPoll(alice);
     await Poll.updateOne({ _id: poll.id }, { $set: { endsAt: new Date(Date.now() - 1000) } });
     const late = await bob.post(`/api/v1/polls/${poll.id}/vote`, { optionIds: [poll.options[0].id] });
     expect(late.status).toBe(409);
@@ -168,7 +166,7 @@ describe('poll voting', () => {
     expect((await bob.get('/api/v1/polls?state=closed')).body.data.map((p) => p.id)).toContain(poll.id);
     expect((await bob.get('/api/v1/polls?state=open')).body.data.map((p) => p.id)).not.toContain(poll.id);
 
-    const upcoming = await approvedPoll(alice, { startsAt: inFuture(2), endsAt: inFuture(5) });
+    const upcoming = await newPoll(alice, { startsAt: inFuture(2), endsAt: inFuture(5) });
     const early = await bob.post(`/api/v1/polls/${upcoming.id}/vote`, { optionIds: [upcoming.options[0].id] });
     expect(early.status).toBe(409);
     expect(early.body.error.code).toBe('POLL_NOT_OPEN');
@@ -197,7 +195,6 @@ describe('event RSVPs', () => {
       capacity: 4,
     });
     eventId = res.body.data.id;
-    await approve('events', eventId);
   });
 
   test('a doctor has exactly one RSVP per event, however many requests are sent', async () => {
@@ -235,7 +232,7 @@ describe('event RSVPs', () => {
 
 describe('reports', () => {
   test('a member can report content once; reports reach the admin', async () => {
-    const postId = await approvedPost(alice, 'A post someone finds inappropriate');
+    const postId = await newPost(alice, 'A post someone finds inappropriate');
 
     const own = await alice.post('/api/v1/reports', { targetType: 'post', targetId: postId, reason: 'SPAM' });
     expect(own.status).toBe(400);
@@ -259,10 +256,9 @@ describe('reports', () => {
 
 describe('comment pagination', () => {
   test('large threads are paginated', async () => {
-    const postId = await approvedPost(alice, 'A busy thread');
+    const postId = await newPost(alice, 'A busy thread');
     for (let i = 0; i < 7; i += 1) {
-      const c = await bob.post('/api/v1/comments', { targetType: 'post', targetId: postId, body: `Comment number ${i + 1}` });
-      await approve('comments', c.body.data.id);
+      await bob.post('/api/v1/comments', { targetType: 'post', targetId: postId, body: `Comment number ${i + 1}` });
     }
     const page1 = await carol.get(`/api/v1/comments?targetType=post&targetId=${postId}&limit=5`);
     expect(page1.body.data).toHaveLength(5);

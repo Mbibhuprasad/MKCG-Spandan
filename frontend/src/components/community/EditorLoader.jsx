@@ -47,7 +47,7 @@ export default function EditorLoader({ resource, label, children }) {
     return (
       <EmptyState
         title={`You can only edit your own ${label}s`}
-        description="Administrators can approve, reject or delete submissions from the admin panel."
+        description="Administrators can delete content from the admin panel."
         action={back}
       />
     );

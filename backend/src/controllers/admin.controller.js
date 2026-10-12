@@ -21,46 +21,33 @@ const { notify } = require('../services/notification.service');
 const { audit } = require('../services/audit.service');
 const s = require('../services/serializers');
 
-const PENDING = { moderationStatus: MODERATION.PENDING };
+const HIDDEN = { moderationStatus: { $ne: MODERATION.APPROVED } };
 
 /* ── Dashboard ── */
 
 async function stats(_req, res) {
   const doctors = { role: ROLES.DOCTOR };
-  const [
-    activeDoctors,
-    suspendedDoctors,
-    pendingPosts,
-    pendingBlogs,
-    pendingComments,
-    pendingMemories,
-    pendingEvents,
-    pendingVisitPlans,
-    pendingPolls,
-    openReports,
-  ] = await Promise.all([
-    User.countDocuments({ ...doctors, status: ACCOUNT_STATUS.ACTIVE }),
-    User.countDocuments({ ...doctors, status: ACCOUNT_STATUS.SUSPENDED }),
-    Post.countDocuments(PENDING),
-    Blog.countDocuments(PENDING),
-    Comment.countDocuments(PENDING),
-    Memory.countDocuments(PENDING),
-    Event.countDocuments({ ...PENDING, eventType: { $ne: 'VISIT_PLAN' } }),
-    Event.countDocuments({ ...PENDING, eventType: 'VISIT_PLAN' }),
-    Poll.countDocuments(PENDING),
-    Report.countDocuments({ status: 'OPEN' }),
-  ]);
+  const visitPlan = { eventType: 'VISIT_PLAN' };
+  const otherEvent = { eventType: { $ne: 'VISIT_PLAN' } };
+  const [activeDoctors, suspendedDoctors, posts, blogs, comments, memories, events, visitPlans, polls, hidden, openReports] =
+    await Promise.all([
+      User.countDocuments({ ...doctors, status: ACCOUNT_STATUS.ACTIVE }),
+      User.countDocuments({ ...doctors, status: ACCOUNT_STATUS.SUSPENDED }),
+      Post.countDocuments(),
+      Blog.countDocuments(),
+      Comment.countDocuments(),
+      Memory.countDocuments(),
+      Event.countDocuments(otherEvent),
+      Event.countDocuments(visitPlan),
+      Poll.countDocuments(),
+      // Records still hidden by the former approval workflow (see scripts/publishPending.js).
+      Promise.all([Post, Blog, Comment, Memory, Event, Poll].map((Model) => Model.countDocuments(HIDDEN))),
+      Report.countDocuments({ status: 'OPEN' }),
+    ]);
   return ok(res, {
     doctors: { active: activeDoctors, suspended: suspendedDoctors },
-    pending: {
-      posts: pendingPosts,
-      blogs: pendingBlogs,
-      comments: pendingComments,
-      memories: pendingMemories,
-      events: pendingEvents,
-      'visit-plans': pendingVisitPlans,
-      polls: pendingPolls,
-    },
+    content: { posts, blogs, comments, memories, events, 'visit-plans': visitPlans, polls },
+    hiddenLegacyItems: hidden.reduce((sum, n) => sum + n, 0),
     openReports,
   });
 }
@@ -170,7 +157,7 @@ async function deleteDoctor(req, res) {
   return ok(res, { deleted: true });
 }
 
-/* ── Moderation queues ── */
+/* ── Content management (view and delete; nothing needs approving) ── */
 
 const QUEUE_POPULATE = {
   post: [{ path: 'author', select: s.AUTHOR_FIELDS }, { path: 'media' }],
@@ -226,8 +213,7 @@ async function listQueue(req, res) {
 
   const { Model } = content.entry(type);
   const { skip } = paging({ page, limit });
-  // Oldest first while pending (a fair queue); newest first otherwise.
-  const sort = status === 'PENDING' ? { submittedAt: 1, _id: 1 } : { submittedAt: -1, _id: -1 };
+  const sort = { createdAt: -1, _id: -1 };
   const [docs, total] = await Promise.all([
     Model.find(filter).sort(sort).skip(skip).limit(limit).populate(QUEUE_POPULATE[type]),
     Model.countDocuments(filter),
@@ -238,18 +224,8 @@ async function listQueue(req, res) {
 async function assertInQueue(queue, id) {
   const { type, filter } = MODERATION_QUEUES[queue];
   const exists = await content.entry(type).Model.exists({ _id: id, ...filter });
-  if (!exists) throw ApiError.notFound('That submission could not be found.');
+  if (!exists) throw ApiError.notFound('That item could not be found.');
   return type;
-}
-
-async function reviewItem(req, res) {
-  const { queue, id } = req.valid.params;
-  const { action, reason } = req.valid.body;
-  const type = await assertInQueue(queue, id);
-  const doc = await moderation.review({ type, id, action, reason, admin: req.user });
-  await doc.populate(QUEUE_POPULATE[type]);
-  const [item] = await serializeQueueItems(type, [doc], req.user);
-  return ok(res, item);
 }
 
 async function deleteItem(req, res) {
@@ -351,7 +327,6 @@ module.exports = {
   setDoctorVisibility,
   deleteDoctor,
   listQueue,
-  reviewItem,
   deleteItem,
   listReports,
   setReportStatus,

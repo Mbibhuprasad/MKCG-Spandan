@@ -2,14 +2,13 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { CircleCheck, Inbox } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { MODERATION_QUEUES } from '@/lib/constants';
 import { useToast } from '@/components/providers/ToastProvider';
-import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
-import { ConfirmDialog, Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Layout';
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/Feedback';
 import ModerationItem from './ModerationItem';
@@ -17,11 +16,12 @@ import { AdminHeader, FilterPills, ReasonField } from './shared';
 
 const QUEUE_KEYS = MODERATION_QUEUES.map((q) => q.key);
 
+// Everything is published when it is created. "Hidden" lists the few items the
+// former approval workflow left unpublished (they are visible only to their
+// authors and to administrators).
 const STATUS_OPTIONS = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'REJECTED', label: 'Rejected' },
   { value: 'ALL', label: 'All' },
+  { value: 'HIDDEN', label: 'Hidden (old approval system)' },
 ];
 const STATUS_VALUES = STATUS_OPTIONS.map((s) => s.value);
 
@@ -37,78 +37,40 @@ const NOUN = {
 
 const PAGE_SIZE = 10;
 
-function QueueList({ queue, status, onChanged }) {
+function ContentList({ queue, status, onChanged }) {
   const toast = useToast();
   const [page, setPage] = useState(1);
-  const { data, meta, loading, error, reload } = useApi(`/admin/moderation/${queue}`, { status, page, limit: PAGE_SIZE });
+  // The API filters by one stored status; old hidden items are almost always PENDING.
+  const { data, meta, loading, error, reload } = useApi(`/admin/moderation/${queue}`, {
+    status: status === 'HIDDEN' ? 'PENDING' : 'ALL',
+    page,
+    limit: PAGE_SIZE,
+  });
   const items = data || [];
   const noun = NOUN[queue];
 
-  const [busyId, setBusyId] = useState(null);
-  const [dialog, setDialog] = useState(null); // { type: 'reject' | 'delete', item }
+  const [target, setTarget] = useState(null); // the item about to be deleted
   const [reason, setReason] = useState('');
-  const [rejecting, setRejecting] = useState(false);
-
-  // After an action the item usually leaves the current view; step back a page
-  // if it was the last one on this page.
-  function refresh(leavesList) {
-    if (leavesList && items.length === 1 && page > 1) setPage((p) => p - 1);
-    else reload();
-    onChanged();
-  }
-
-  function openDialog(type, item) {
-    setReason('');
-    setDialog({ type, item });
-  }
-
-  async function approve(item) {
-    if (busyId) return;
-    setBusyId(item.id);
-    try {
-      await api.patch(`/admin/moderation/${queue}/${item.id}`, { action: 'approve' });
-      toast.success(`The ${noun} was approved and is now published.`);
-      refresh(status !== 'ALL');
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function reject() {
-    if (rejecting) return;
-    const item = dialog.item;
-    setRejecting(true);
-    try {
-      await api.patch(`/admin/moderation/${queue}/${item.id}`, { action: 'reject', reason });
-      toast.success(`The ${noun} was rejected. The author has been notified.`);
-      setDialog(null);
-      refresh(status !== 'ALL');
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setRejecting(false);
-    }
-  }
 
   async function remove() {
-    const item = dialog.item;
     try {
-      await api.delete(`/admin/moderation/${queue}/${item.id}`, { reason });
+      await api.delete(`/admin/moderation/${queue}/${target.id}`, { reason });
       toast.success(`The ${noun} was permanently deleted.`);
-      setDialog(null);
-      refresh(true);
+      setTarget(null);
+      // Step back a page if that was the last item on this one.
+      if (items.length === 1 && page > 1) setPage((p) => p - 1);
+      else reload();
+      onChanged();
     } catch (err) {
       toast.error(err.message);
     }
   }
 
-  if (error) return <ErrorState title="This queue could not be loaded" message={error.message} onRetry={reload} />;
+  if (error) return <ErrorState title="This list could not be loaded" message={error.message} onRetry={reload} />;
 
   if (loading && !data) {
     return (
-      <div className="space-y-4" role="status" aria-label="Loading submissions">
+      <div className="space-y-4" role="status" aria-label="Loading content">
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-48 w-full rounded-[1.125rem]" />
         ))}
@@ -117,15 +79,14 @@ function QueueList({ queue, status, onChanged }) {
   }
 
   if (items.length === 0) {
-    const pending = status === 'PENDING';
     return (
       <EmptyState
-        icon={pending ? CircleCheck : Inbox}
-        title={pending ? `No ${noun}s are waiting for review` : `No ${noun}s with this status`}
+        icon={Inbox}
+        title={status === 'HIDDEN' ? `No hidden ${noun}s` : `No ${noun}s yet`}
         description={
-          pending
-            ? `New ${noun}s submitted by doctors will appear here until you approve or reject them.`
-            : 'Try a different status filter.'
+          status === 'HIDDEN'
+            ? 'Nothing is left over from the old approval system here.'
+            : `${noun.charAt(0).toUpperCase()}${noun.slice(1)}s appear here as soon as doctors publish them.`
         }
       />
     );
@@ -134,8 +95,7 @@ function QueueList({ queue, status, onChanged }) {
   return (
     <>
       <p className="mb-4 text-sm text-muted" aria-live="polite">
-        {meta ? meta.total : items.length} {meta && meta.total === 1 ? noun : `${noun}s`}
-        {status === 'PENDING' ? ' — oldest first' : ''}
+        {meta ? meta.total : items.length} {meta && meta.total === 1 ? noun : `${noun}s`} — newest first
       </p>
       <ul className="space-y-5">
         {items.map((item) => (
@@ -143,49 +103,19 @@ function QueueList({ queue, status, onChanged }) {
             <ModerationItem
               queue={queue}
               item={item}
-              busy={busyId === item.id}
-              onApprove={approve}
-              onReject={(target) => openDialog('reject', target)}
-              onDelete={(target) => openDialog('delete', target)}
+              onDelete={(chosen) => {
+                setReason('');
+                setTarget(chosen);
+              }}
             />
           </li>
         ))}
       </ul>
       <Pagination className="mt-8" page={page} totalPages={meta ? meta.totalPages : 1} onPageChange={setPage} />
 
-      <Modal
-        open={Boolean(dialog && dialog.type === 'reject')}
-        onClose={() => !rejecting && setDialog(null)}
-        title={`Reject this ${noun}?`}
-        size="sm"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setDialog(null)} disabled={rejecting}>
-              Cancel
-            </Button>
-            <Button variant="danger" loading={rejecting} onClick={reject}>
-              Reject
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-sm leading-relaxed text-fg-soft">
-            It stays hidden from the community (or is unpublished if it was already approved). The author can still see
-            it, edit it and submit it again.
-          </p>
-          <ReasonField
-            value={reason}
-            onChange={setReason}
-            hint="Shared with the author so they know what to change."
-            placeholder="e.g. Please remove the patient details"
-          />
-        </div>
-      </Modal>
-
       <ConfirmDialog
-        open={Boolean(dialog && dialog.type === 'delete')}
-        onClose={() => setDialog(null)}
+        open={Boolean(target)}
+        onClose={() => setTarget(null)}
         onConfirm={remove}
         title={`Delete this ${noun} permanently?`}
         confirmLabel="Delete permanently"
@@ -193,7 +123,7 @@ function QueueList({ queue, status, onChanged }) {
         <div className="space-y-4">
           <p className="text-sm leading-relaxed text-fg-soft">
             The {noun} is removed for everyone together with its comments, likes, attached media and related records.
-            This cannot be undone. To simply hide it, reject it instead.
+            This cannot be undone.
           </p>
           <ReasonField value={reason} onChange={setReason} hint="Shared with the author and recorded in the audit log." />
         </div>
@@ -203,50 +133,53 @@ function QueueList({ queue, status, onChanged }) {
 }
 
 /**
- * Content review for administrators. The queue and status live in the URL
- * (?queue=posts&status=PENDING) so views can be linked from the dashboard and
- * from reports. Approve / reject / delete all call /admin routes, which verify
+ * Content management for administrators: see what doctors have published and
+ * delete anything that should not be there. Nothing needs approving — content
+ * is public to the community as soon as its author saves it.
+ *
+ * The content type lives in the URL (?queue=posts) so lists can be linked from
+ * the dashboard and from reports. Deleting calls an /admin route, which checks
  * the ADMIN role on the server regardless of what this page shows.
  */
 export default function ModerationQueue() {
   const router = useRouter();
   const params = useSearchParams();
   const queue = QUEUE_KEYS.includes(params.get('queue')) ? params.get('queue') : 'posts';
-  const status = STATUS_VALUES.includes(params.get('status')) ? params.get('status') : 'PENDING';
+  const status = STATUS_VALUES.includes(params.get('status')) ? params.get('status') : 'ALL';
 
   const stats = useApi('/admin/stats');
+  const hidden = stats.data ? stats.data.hiddenLegacyItems : 0;
 
   function go(nextQueue, nextStatus) {
     const query = new URLSearchParams({ queue: nextQueue });
-    if (nextStatus !== 'PENDING') query.set('status', nextStatus);
+    if (nextStatus !== 'ALL') query.set('status', nextStatus);
     router.replace(`/admin/moderation?${query.toString()}`, { scroll: false });
   }
 
   const tabs = MODERATION_QUEUES.map((q) => ({
     value: q.key,
     label: q.label,
-    count: stats.data ? stats.data.pending[q.key] : undefined,
+    count: stats.data ? stats.data.content[q.key] : undefined,
   }));
 
   return (
     <div>
       <AdminHeader
-        title="Content moderation"
-        description="Everything doctors submit waits here until you approve it. Numbers on the tabs show how many items are pending in each queue."
+        title="Community content"
+        description="Everything doctors share is published straight away. Use this page to look through it and to delete anything that breaks the community guidelines."
       />
 
-      <Tabs tabs={tabs} value={queue} onChange={(value) => go(value, status)} label="Moderation queues" />
+      <Tabs tabs={tabs} value={queue} onChange={(value) => go(value, status)} label="Content types" />
 
-      <FilterPills
-        className="my-5"
-        label="Status"
-        options={STATUS_OPTIONS}
-        value={status}
-        onChange={(value) => go(queue, value)}
-      />
+      {/* Only offered while something from the old approval system is still hidden. */}
+      {hidden > 0 || status === 'HIDDEN' ? (
+        <FilterPills className="my-5" label="Show" options={STATUS_OPTIONS} value={status} onChange={(value) => go(queue, value)} />
+      ) : (
+        <div className="my-5" />
+      )}
 
-      {/* Remounting per queue/status resets pagination and any open dialog. */}
-      <QueueList key={`${queue}:${status}`} queue={queue} status={status} onChanged={stats.reload} />
+      {/* Remounting per type/filter resets pagination and any open dialog. */}
+      <ContentList key={`${queue}:${status}`} queue={queue} status={status} onChanged={stats.reload} />
     </div>
   );
 }

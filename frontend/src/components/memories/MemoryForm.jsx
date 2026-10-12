@@ -8,10 +8,9 @@ import { api, formErrors } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { UPLOAD_LIMITS } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import Button from '@/components/ui/Button';
-import { Field, FormMessage, SelectField, TextAreaField, TextField } from '@/components/ui/Form';
+import { Checkbox, Field, FormMessage, SelectField, TextAreaField, TextField } from '@/components/ui/Form';
 import { ErrorState, ModerationNotice, PageLoader } from '@/components/ui/Feedback';
 import MediaUploader from '@/components/content/MediaUploader';
 
@@ -34,10 +33,17 @@ function validate(values, media) {
   return errors;
 }
 
-function MemoryFormInner({ initial, presetEventId }) {
+/**
+ * The memory form itself. Used as a page (create / edit) and, with `embedded`,
+ * inside a dialog — for example from the profile's gallery, where a memory is
+ * the doctor's gallery item. Either way it saves through the same /memories API.
+ *
+ *   embedded  — no page heading or back link; `onSaved(memory)` and `onCancel()`
+ *               replace the redirects
+ */
+export function MemoryFormInner({ initial, presetEventId = '', embedded = false, onSaved, onCancel }) {
   const router = useRouter();
   const toast = useToast();
-  const { isAdmin } = useAuth();
   const isEdit = Boolean(initial);
 
   const [values, setValues] = useState({
@@ -46,6 +52,7 @@ function MemoryFormInner({ initial, presetEventId }) {
     memoryDate: initial ? toDay(initial.memoryDate) : '',
     eventId: initial ? (initial.event ? initial.event.id : '') : presetEventId,
   });
+  const [showInCommunity, setShowInCommunity] = useState(initial ? initial.showInCommunity !== false : true);
   const [media, setMedia] = useState(initial ? initial.media || [] : []);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -53,7 +60,7 @@ function MemoryFormInner({ initial, presetEventId }) {
   const [busy, setBusy] = useState(false);
   const [maxDay] = useState(today);
 
-  // Approved events the memory can be linked to (most recent past events first).
+  // Events the memory can be linked to (most recent past events first).
   const past = useApi('/events', { scope: 'past', limit: 30 });
   const upcoming = useApi('/events', { scope: 'upcoming', limit: 30 });
   const eventOptions = [...(past.data || []), ...(upcoming.data || [])].map((e) => ({
@@ -85,20 +92,15 @@ function MemoryFormInner({ initial, presetEventId }) {
       memoryDate: values.memoryDate || null,
       eventId: values.eventId || null,
       mediaIds: media.map((m) => m.id),
+      showInCommunity,
     };
 
     setBusy(true);
     try {
       const { data } = isEdit ? await api.patch(`/memories/${initial.id}`, body) : await api.post('/memories', body);
-      const published = data.moderation && data.moderation.status === 'APPROVED';
-      toast.success(
-        published
-          ? 'Memory published.'
-          : isEdit
-            ? 'Changes saved. The memory will be reviewed again before it is visible.'
-            : 'Memory submitted. It will appear in the gallery once an admin approves it.'
-      );
-      router.push('/dashboard/submissions');
+      toast.success(isEdit ? 'Changes saved.' : 'Published. It is in your gallery now.');
+      if (onSaved) onSaved(data);
+      else router.push(data.showInCommunity === false ? '/dashboard/submissions?tab=memories' : `/memories?memory=${data.id}`);
     } catch (error) {
       const parsed = formErrors(error);
       setErrors(parsed.fieldErrors);
@@ -108,18 +110,22 @@ function MemoryFormInner({ initial, presetEventId }) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link href="/dashboard/create" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back
-      </Link>
-      <h1 className="mt-3 font-display text-3xl font-semibold text-fg">{isEdit ? 'Edit memory' : 'Share a memory'}</h1>
-      <p className="mt-2 text-fg-soft">
-        Upload photos or videos from college days, reunions and celebrations. Memories are visible to signed-in members
-        only.
-      </p>
+    <div className={embedded ? undefined : 'mx-auto max-w-3xl'}>
+      {!embedded && (
+        <>
+          <Link href="/dashboard/create" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back
+          </Link>
+          <h1 className="mt-3 font-display text-3xl font-semibold text-fg">{isEdit ? 'Edit memory' : 'Share a memory'}</h1>
+          <p className="mt-2 text-fg-soft">
+            Upload photos or videos from college days, reunions and celebrations. Memories are visible to signed-in
+            members only, and each one is also part of the gallery on your portfolio.
+          </p>
+        </>
+      )}
 
-      <form onSubmit={handleSubmit} noValidate className="card mt-6 space-y-5 p-5 sm:p-7">
+      <form onSubmit={handleSubmit} noValidate className={embedded ? 'space-y-5' : 'card mt-6 space-y-5 p-5 sm:p-7'}>
         {isEdit && <ModerationNotice moderation={initial.moderation} />}
         <FormMessage>{message}</FormMessage>
 
@@ -163,7 +169,7 @@ function MemoryFormInner({ initial, presetEventId }) {
             value={values.eventId}
             onChange={set('eventId')}
             error={errors.eventId}
-            hint={eventsLoading ? 'Loading events…' : eventOptions.length ? undefined : 'No approved events to link to yet.'}
+            hint={eventsLoading ? 'Loading events…' : eventOptions.length ? undefined : 'No events to link to yet.'}
             optional
           >
             <option value="">Not linked to an event</option>
@@ -202,6 +208,13 @@ function MemoryFormInner({ initial, presetEventId }) {
           )}
         </Field>
 
+        <Checkbox
+          label="Also show this in the community Memories section"
+          description="It always appears in the gallery on your portfolio. Untick this to keep it there only."
+          checked={showInCommunity}
+          onChange={(event) => setShowInCommunity(event.target.checked)}
+        />
+
         <div className="rounded-xl border border-warn/25 bg-warn-soft px-4 py-3 text-sm text-warn">
           <p className="flex items-center gap-2 font-semibold">
             <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -215,18 +228,20 @@ function MemoryFormInner({ initial, presetEventId }) {
 
         <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-relaxed text-muted">
-            {isAdmin
-              ? 'As an administrator, your memory is published immediately.'
-              : isEdit
-                ? 'Saving sends the memory back for admin review. Until it is approved again, only you can see it.'
-                : 'An administrator reviews every memory. Until it is approved, only you can see it.'}
+            {isEdit ? 'Your changes are visible as soon as you save.' : 'It is published to members as soon as you save it.'}
           </p>
           <div className="flex shrink-0 gap-3">
-            <Button href="/dashboard/submissions" variant="secondary">
-              Cancel
-            </Button>
+            {onCancel ? (
+              <Button variant="secondary" onClick={onCancel} disabled={busy}>
+                Cancel
+              </Button>
+            ) : (
+              <Button href="/dashboard/submissions" variant="secondary">
+                Cancel
+              </Button>
+            )}
             <Button type="submit" icon={Send} loading={busy} disabled={uploading}>
-              {uploading ? 'Uploading…' : isEdit ? 'Save changes' : isAdmin ? 'Publish memory' : 'Submit for review'}
+              {uploading ? 'Uploading…' : isEdit ? 'Save changes' : 'Publish'}
             </Button>
           </div>
         </div>

@@ -17,7 +17,7 @@ function NotFound({ signedIn, slug }) {
       <h1 className="font-display text-3xl font-semibold text-fg">We couldn&apos;t find that blog</h1>
       <p className="mt-3 max-w-md text-fg-soft">
         It may have been removed, or it may not have been published yet.
-        {!signedIn && ' If it is your own blog awaiting review, log in to preview it.'}
+        {!signedIn && ' If it is your own unpublished blog, log in to open it.'}
       </p>
       <div className="mt-7 flex flex-wrap justify-center gap-3">
         <Button href="/blogs">Browse all blogs</Button>

@@ -6,7 +6,6 @@ import { Lock, Plus, Send, Trash2 } from 'lucide-react';
 import { api, formErrors } from '@/lib/api';
 import { POLL_RESULTS_VISIBILITY } from '@/lib/constants';
 import { fromLocalInputValue, toLocalInputValue } from '@/lib/format';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import Button from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Feedback';
@@ -44,7 +43,6 @@ function validate({ question, options, startsAt, endsAt }) {
 function PollFormFields({ initial }) {
   const router = useRouter();
   const toast = useToast();
-  const { isAdmin } = useAuth();
   const optionsLegendId = useId();
   const editing = Boolean(initial);
 
@@ -91,14 +89,9 @@ function PollFormFields({ initial }) {
         startsAt: fromLocalInputValue(startsAt),
         endsAt: fromLocalInputValue(endsAt),
       };
-      const { data } = editing ? await api.patch(`/polls/${initial.id}`, payload) : await api.post('/polls', payload);
-      if (data.moderation && data.moderation.status === 'APPROVED') {
-        toast.success('Poll published.');
-        router.push('/community?tab=polls');
-      } else {
-        toast.info('Poll submitted. Voting opens once an admin approves it.');
-        router.push('/dashboard/submissions');
-      }
+      await (editing ? api.patch(`/polls/${initial.id}`, payload) : api.post('/polls', payload));
+      toast.success(editing ? 'Poll updated.' : 'Poll published.');
+      router.push('/community?tab=polls');
     } catch (error) {
       const parsed = formErrors(error);
       // The API reports option problems as "options" or "options.N".
@@ -109,12 +102,12 @@ function PollFormFields({ initial }) {
     }
   }
 
-  // Published polls are locked so the options people voted on can never change.
-  if (editing && initial.moderation && initial.moderation.status === 'APPROVED') {
+  // Once someone has voted, the poll is locked so the options can never change underneath them.
+  if (editing && initial.totalVoters > 0) {
     return (
       <EmptyState
         icon={Lock}
-        title="A published poll can no longer be edited"
+        title="This poll already has votes and can no longer be edited"
         description="This keeps the options members vote on from changing. You can delete the poll from My submissions and start a new one."
         action={
           <>
@@ -137,9 +130,8 @@ function PollFormFields({ initial }) {
 
       <form onSubmit={handleSubmit} noValidate className="card mt-6 space-y-5 p-5 sm:p-6">
         <FormMessage tone="info">
-          {isAdmin
-            ? 'As an administrator, your poll is published immediately. Published polls cannot be edited.'
-            : 'Your poll is reviewed by an administrator before members can vote. You can edit it until it is approved; after that it is locked.'}
+          Your poll opens to the community as soon as you publish it. You can edit it until the first vote is cast; after
+          that it is locked.
         </FormMessage>
         <FormMessage>{message}</FormMessage>
 
@@ -251,7 +243,7 @@ function PollFormFields({ initial }) {
               clearError('startsAt');
             }}
             error={errors.startsAt}
-            hint="Leave empty to open as soon as it is approved."
+            hint="Leave empty to open straight away."
           />
           <TextField
             label="Closes"
@@ -272,7 +264,7 @@ function PollFormFields({ initial }) {
             Cancel
           </Button>
           <Button type="submit" loading={busy} icon={Send}>
-            {editing ? 'Save changes' : isAdmin ? 'Publish poll' : 'Submit for review'}
+            {editing ? 'Save changes' : 'Publish poll'}
           </Button>
         </div>
       </form>
@@ -280,7 +272,7 @@ function PollFormFields({ initial }) {
   );
 }
 
-/** Start a poll, or edit one of your own (while it is not yet approved) with ?edit=ID. */
+/** Start a poll, or edit one of your own (until it has votes) with ?edit=ID. */
 export default function PollForm() {
   return (
     <EditorLoader resource="/polls" label="poll">

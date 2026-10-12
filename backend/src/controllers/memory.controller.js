@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 const Memory = require('../models/Memory');
 const Event = require('../models/Event');
+const User = require('../models/User');
 const Media = require('../models/Media');
 const ApiError = require('../utils/ApiError');
 const { ok, created, pageMeta } = require('../utils/respond');
 const { paging } = require('../utils/pagination');
-const { MODERATION } = require('../config/constants');
+const { MODERATION, ROLES } = require('../config/constants');
 const content = require('../services/content.service');
 const cloud = require('../services/cloudinary.service');
 const { claimMedia, unclaim, syncMedia, destroyMedia } = require('../services/media.service');
@@ -32,10 +33,31 @@ async function assertLinkableEvent(eventId, viewer) {
   }
 }
 
-// Members-only gallery of approved memories.
+// Memories listed in the community section (the default for every memory).
+const COMMUNITY = { showInCommunity: { $ne: false } };
+
+// May the viewer see the items a doctor keeps for their portfolio only? Yes for
+// the doctor and for admins; for other members only while the doctor is listed
+// in the directory and has not hidden the gallery section of the portfolio.
+async function canSeePortfolioGallery(ownerId, viewer) {
+  if (String(viewer._id) === String(ownerId) || viewer.role === ROLES.ADMIN) return true;
+  const owner = await User.findById(ownerId).select('visibility status');
+  if (!owner || owner.status !== 'ACTIVE') return false;
+  const v = owner.visibility || {};
+  return v.directory !== false && !(v.sections && v.sections.gallery === false);
+}
+
+// Members-only. Without `owner`: the community Memories section. With `owner`:
+// that doctor's portfolio gallery — the same records, never copies.
 async function list(req, res) {
-  const { eventId, page, limit } = req.valid.query;
+  const { eventId, owner, page, limit } = req.valid.query;
   const filter = { moderationStatus: MODERATION.APPROVED };
+  if (owner) {
+    filter.owner = owner;
+    if (!(await canSeePortfolioGallery(owner, req.user))) Object.assign(filter, COMMUNITY);
+  } else {
+    Object.assign(filter, COMMUNITY);
+  }
   if (eventId) filter.event = eventId;
   const { skip } = paging({ page, limit });
   const [memories, total] = await Promise.all([
@@ -47,7 +69,7 @@ async function list(req, res) {
 
 // Events that have at least one approved memory, for the gallery filter.
 async function eventFilters(_req, res) {
-  const ids = await Memory.distinct('event', { moderationStatus: MODERATION.APPROVED, event: { $ne: null } });
+  const ids = await Memory.distinct('event', { moderationStatus: MODERATION.APPROVED, ...COMMUNITY, event: { $ne: null } });
   const events = await Event.find({ _id: { $in: ids }, moderationStatus: MODERATION.APPROVED })
     .select('title startsAt')
     .sort({ startsAt: -1 })
@@ -66,15 +88,24 @@ async function mine(req, res) {
   return ok(res, await present(memories, req.user), pageMeta({ page, limit, total }));
 }
 
+// A portfolio-only memory is not served to members who may not see that gallery.
+async function loadViewable(id, viewer) {
+  const memory = await content.loadVisible('memory', id, viewer);
+  if (memory.showInCommunity === false && !(await canSeePortfolioGallery(memory.owner, viewer))) {
+    throw ApiError.notFound('That memory could not be found.');
+  }
+  return memory;
+}
+
 async function getOne(req, res) {
-  const memory = await content.loadVisible('memory', req.valid.params.id, req.user);
+  const memory = await loadViewable(req.valid.params.id, req.user);
   await memory.populate(POPULATE);
   const [item] = await present([memory], req.user);
   return ok(res, item);
 }
 
 async function create(req, res) {
-  const { title, caption, eventId, memoryDate, mediaIds } = req.valid.body;
+  const { title, caption, eventId, memoryDate, mediaIds, showInCommunity } = req.valid.body;
   await assertLinkableEvent(eventId, req.user);
 
   const id = new mongoose.Types.ObjectId();
@@ -90,7 +121,8 @@ async function create(req, res) {
       event: eventId,
       memoryDate,
       media,
-      ...content.initialModeration(req.user),
+      showInCommunity,
+      ...content.publishedState(),
     });
   } catch (err) {
     await unclaim(media);
@@ -103,7 +135,7 @@ async function create(req, res) {
 
 async function update(req, res) {
   const memory = await content.loadManageable('memory', req.valid.params.id, req.user);
-  const { title, caption, eventId, memoryDate, mediaIds } = req.valid.body;
+  const { title, caption, eventId, memoryDate, mediaIds, showInCommunity } = req.valid.body;
 
   if (eventId !== undefined) {
     await assertLinkableEvent(eventId, req.user);
@@ -127,7 +159,8 @@ async function update(req, res) {
   if (title !== undefined) memory.title = title;
   if (caption !== undefined) memory.caption = caption;
   if (memoryDate !== undefined) memory.memoryDate = memoryDate;
-  content.resetModerationAfterEdit(memory, req.user);
+  if (showInCommunity !== undefined) memory.showInCommunity = showInCommunity;
+  content.publishAfterEdit(memory);
 
   try {
     await memory.save();
@@ -152,7 +185,7 @@ async function remove(req, res) {
 // and is never stored.
 async function download(req, res) {
   const { id, mediaId } = req.valid.params;
-  const memory = await content.loadVisible('memory', id, req.user);
+  const memory = await loadViewable(id, req.user);
   if (!memory.media.some((m) => String(m) === mediaId)) throw ApiError.notFound('That file could not be found.');
   const media = await Media.findById(mediaId);
   if (!media) throw ApiError.notFound('That file could not be found.');

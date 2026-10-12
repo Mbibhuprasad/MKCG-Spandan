@@ -354,6 +354,15 @@
   }
 }
 
+/* Profile wizard entrance: its shell stays hidden until GSAP reveals it (see
+   ProfileWizard.jsx), so nothing flashes before the animation starts. Scoped to
+   visitors who accept motion — with reduced motion the shell is simply shown. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-wizard-enter] {
+    opacity: 0;
+  }
+}
+
 /* Native <dialog> backdrop used by Modal. */
 dialog::backdrop {
   background: rgb(8 12 20 / 0.55);

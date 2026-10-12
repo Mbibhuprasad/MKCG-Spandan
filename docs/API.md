@@ -70,8 +70,8 @@ limits are rejected with `400 VALIDATION_ERROR`.
 | 403 | `ORIGIN_NOT_ALLOWED` | State-changing request from a foreign origin |
 | 404 | `NOT_FOUND` | Missing item — also returned for unpublished content the caller may not see |
 | 409 | `ACCOUNT_EXISTS` | Email or phone already registered (`details.email` / `details.phone`) |
-| 409 | `CONFLICT` | Generic conflict (duplicate record, concurrent moderation, deleting an attached upload) |
-| 409 | `NOT_PUBLISHED` | Like / comment / report / RSVP / vote on content that is not approved |
+| 409 | `CONFLICT` | Generic conflict (duplicate record, deleting an attached upload) |
+| 409 | `NOT_PUBLISHED` | Like / comment / report / RSVP / vote on an item that is not published (only possible for records left hidden by the former approval workflow) |
 | 409 | `RSVP_CLOSED`, `EVENT_FULL` | RSVP not possible |
 | 409 | `POLL_LOCKED`, `POLL_NOT_OPEN`, `POLL_CLOSED`, `ALREADY_VOTED` | Poll rules |
 | 413 | `PAYLOAD_TOO_LARGE`, `FILE_TOO_LARGE` | JSON body or file over the limit |
@@ -97,7 +97,7 @@ Configured in `backend/src/middleware/rateLimiters.js`; maxima come from environ
 | Write | 90 | 5 min | User | Member create / update / delete / like / vote / RSVP routes |
 | Upload | 40 | 10 min | User | `POST /media` |
 
-Admin changes (status, visibility, delete, review, report status) also pass through the per-user write limiter; admin reads are covered by the global limiter.
+Admin changes (status, visibility, delete, report status) also pass through the per-user write limiter; admin reads are covered by the global limiter.
 
 ### Common objects
 
@@ -108,8 +108,10 @@ Admin changes (status, visibility, delete, review, report status) also pass thro
 **Media**: `{ id, resourceType: "image" | "video", format, width, height, duration, bytes, url, thumbUrl }`.
 `url` / `thumbUrl` are Cloudinary delivery URLs (signed for private assets).
 
-**Moderation** (only on items the caller owns, or for admins): every content object carries `isMine`, and when
-permitted `moderation: { status, submittedAt, reviewedAt, rejectionReason }`.
+**Publication state** (only on items the caller owns, or for admins): every content object carries `isMine`, and when
+permitted `moderation: { status, submittedAt, reviewedAt, rejectionReason }`. Content is published on creation, so
+`status` is `APPROVED` for everything created now; `PENDING` / `REJECTED` only occur on records from the former
+approval workflow (see [CONTENT_MODERATION.md](CONTENT_MODERATION.md)).
 
 ---
 
@@ -131,7 +133,7 @@ permitted `moderation: { status, submittedAt, reviewedAt, rejectionReason }`.
 | PATCH | `/auth/password` | Member | `currentPassword`, `newPassword` | `{ changed: true }`; every other session of the user is ended |
 
 `user` is the caller's own account: `id, role, status, name, email, phone, profile{…}, visibility{…}, featured,
-profileCompletion{ percent, isComplete, missing[] }, profilePromptDismissed, policyAcceptance{ version, acceptedAt },
+profileCompletion{ percent, isComplete, missing[], requiredMissing[], completedAt, resumeStep }, profilePromptDismissed, policyAcceptance{ version, acceptedAt },
 createdAt`.
 
 ## Doctors — `/doctors`
@@ -141,9 +143,9 @@ createdAt`.
 | GET | `/doctors/featured` | Public | — | Up to 8 cards `{ id, name, photoUrl, professionalTitle, specialization, city }` for active doctors who enabled *public listing* **and** were featured by an admin |
 | GET | `/doctors` | Member | `q` (name, ≤ 60), `specialization`, `city`, `page`, `limit` (12, max 48) | Directory cards `{ id, name, photoUrl, professionalTitle, specialization, designation, hospital, city, state, yearsOfExperience, batchYear }`, sorted by name. Only active doctors with directory visibility on |
 | GET | `/doctors/filters` | Member | — | `{ specializations[], cities[] }` present in the directory |
-| GET | `/doctors/:id` | Member | — | Portfolio `{ id, name, limited, isMine, profile{…}, contact{ email?, phone? }, memberSince, visibility? }`. `contact` follows the doctor's settings; `limited: true` (name, photo, title, specialization only) when the doctor opted out of the directory. `404` for suspended doctors (unless admin/self) |
+| GET | `/doctors/:id` | Member | — | Portfolio `{ id, name, limited, isMine, profile{…}, contact{ email?, phone?, workEmail?, workPhone? }, memberSince, visibility? }`. The doctor's visibility settings are applied by the API: sections they hid arrive empty, registration details arrive blank and `contact` holds only what they chose to show (the owner and admins always get everything, plus `visibility`). `limited: true` (name, photo, title, specialization only) when the doctor opted out of the directory. `404` for suspended doctors (unless admin/self) |
 | GET | `/doctors/me` | Member | — | Own account (same as `user` above) |
-| PATCH | `/doctors/me` | Member | Any of: `name`; `profile{ professionalTitle, specialization, subspecialty, designation, hospital, city, state, batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], experience[], achievements[], publications[], links[] }`; `visibility{ directory, publicListing, showEmail, showPhone }`; `dismissProfilePrompt: true` | Updated own account. Field limits are in [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md) |
+| PATCH | `/doctors/me` | Member | Any of: `name`; `profile{ professionalTitle, headline, address, specialization, subspecialty, fieldOfWork, expertise[], procedures[], practiceArea, designation, hospital, city, state, country, workAddress, workEmail, workPhone, practiceLocations[], batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], credentials[], experience[], fellowships[], achievements[] (awards; each may carry `imageId`), memberships[], publications[], links[] }`; `visibility{ directory, publicListing, showEmail, showPhone, showWorkContact, showRegistration, sections{ education, qualifications, experience, fellowships, achievements, memberships, publications, gallery, links } }`; `dismissProfilePrompt: true`; `wizardStep` (0–10, the profile wizard's resume position); `submit: true` (final submission of the wizard) | Updated own account. With `submit: true` the required fields (name, specialization, city) are checked against the resulting profile: if any is missing the answer is `400 VALIDATION_ERROR` with the fields in `details` and nothing is saved; otherwise the profile is saved and marked complete. Field limits are in [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md) |
 | PUT | `/doctors/me/photo` | Member | `mediaId` (an upload with purpose `profile`) | Updated own account; the previous photo is deleted from Cloudinary |
 | DELETE | `/doctors/me/photo` | Member | — | Updated own account |
 
@@ -151,7 +153,7 @@ createdAt`.
 
 | Method | Path | Access | Body | Result |
 | --- | --- | --- | --- | --- |
-| POST | `/media` | Member | `multipart/form-data`: `purpose` (`profile` \| `blog` \| `post` \| `event` \| `memory`), then `file` | `201` Media object. The upload is unattached until a content request refers to its `id` |
+| POST | `/media` | Member | `multipart/form-data`: `purpose` (`profile` \| `blog` \| `post` \| `event` \| `memory` \| `award`), then `file` | `201` Media object. The upload is unattached until a content request refers to its `id` |
 | DELETE | `/media/:id` | Owner | — | `{ deleted: true }`; only for uploads not yet attached (`409` otherwise) |
 
 Allowed content: JPG/PNG/WebP images for every purpose; MP4/MOV/WebM videos for `memory` only. See
@@ -161,26 +163,26 @@ Allowed content: JPG/PNG/WebP images for every purpose; MP4/MOV/WebM videos for 
 
 | Method | Path | Access | Parameters / body | Result |
 | --- | --- | --- | --- | --- |
-| GET | `/posts` | Member | `type`, `page`, `limit` (10, max 30) | Approved posts, newest first |
-| GET | `/posts/mine` | Member | `page`, `limit` | The caller's posts in every moderation state |
-| POST | `/posts` | Member | `type` (`GENERAL`, `ACHIEVEMENT`, `REUNION_UPDATE`, `ANNOUNCEMENT`, `EXPERIENCE`, `MEMORY`; default `GENERAL`), `body` (1–5000), `mediaIds[]` (≤ 4, purpose `post`) | `201` post; `PENDING` for doctors |
-| GET | `/posts/:id` | Member | — | Approved post, or the caller's own / any for admin |
-| PATCH | `/posts/:id` | Owner | Any of `type`, `body`, `mediaIds` | Post, back to `PENDING` for doctors |
+| GET | `/posts` | Member | `type`, `page`, `limit` (10, max 30) | Published posts, newest first |
+| GET | `/posts/mine` | Member | `page`, `limit` | Everything the caller has posted |
+| POST | `/posts` | Member | `type` (`GENERAL`, `ACHIEVEMENT`, `REUNION_UPDATE`, `ANNOUNCEMENT`, `EXPERIENCE`, `MEMORY`; default `GENERAL`), `body` (1–5000), `mediaIds[]` (≤ 4, purpose `post`) | `201` post, published immediately |
+| GET | `/posts/:id` | Member | — | The post |
+| PATCH | `/posts/:id` | Owner | Any of `type`, `body`, `mediaIds` | Post; it stays published |
 | DELETE | `/posts/:id` | Owner | — | `{ deleted: true }` |
 
-Post: `{ id, type, body, media[], author, likeCount, commentCount, likedByMe, createdAt, publishedAt, isMine, moderation? }`.
+Post: `{ id, type, body, media[], author, likeCount, commentCount, likedByMe, createdAt, publishedAt, isMine, moderation? }` (memories also carry `showInCommunity`).
 
 ## Blogs — `/blogs`
 
 | Method | Path | Access | Parameters / body | Result |
 | --- | --- | --- | --- | --- |
-| GET | `/blogs` | Public | `q` (title, ≤ 80), `category`, `tag`, `page`, `limit` (9, max 30) | Approved blog summaries, newest first |
-| GET | `/blogs/taxonomy` | Public | — | `{ categories[{ name, count }], tags[{ name, count }] }` (approved blogs, top 30 tags) |
-| GET | `/blogs/slug/:slug` | Public when approved | — | Blog detail with `bodyHtml`. An unpublished blog is returned only to its author or an admin; otherwise `404` |
+| GET | `/blogs` | Public | `q` (title, ≤ 80), `category`, `tag`, `author` (a doctor's id — their portfolio blogs), `page`, `limit` (9, max 30) | Published blog summaries, newest first. The same records whether listed for everyone or for one author |
+| GET | `/blogs/taxonomy` | Public | — | `{ categories[{ name, count }], tags[{ name, count }] }` (top 30 tags) |
+| GET | `/blogs/slug/:slug` | Public | — | Blog detail with `bodyHtml` |
 | GET | `/blogs/mine` | Member | `page`, `limit` (10, max 30) | The caller's blogs in every state |
 | POST | `/blogs` | Member | `title` (5–160), `excerpt` (20–320), `body` (Markdown, 200–50 000), `category`, `tags[]` (≤ 8, ≤ 30 chars each), `coverId` (purpose `blog`, optional) | `201` blog detail including `bodyMarkdown` |
 | GET | `/blogs/:id` | Owner / Admin | — | Blog detail including `bodyMarkdown` (for editing) |
-| PATCH | `/blogs/:id` | Owner | Any create field | Blog detail; back to `PENDING` for doctors. The slug never changes |
+| PATCH | `/blogs/:id` | Owner | Any create field | Blog detail; it stays published. The slug never changes |
 | DELETE | `/blogs/:id` | Owner | — | `{ deleted: true }` |
 
 Categories: `Clinical Practice`, `Career & Growth`, `Research`, `Medical Education`, `Wellbeing`, `Batch Stories`,
@@ -194,10 +196,10 @@ createdAt, updatedAt, publishedAt, isMine, moderation? }`; detail adds `bodyHtml
 
 | Method | Path | Access | Parameters / body | Result |
 | --- | --- | --- | --- | --- |
-| GET | `/comments` | Member | `targetType` (`post` \| `blog` \| `memory` \| `event`), `targetId`, `page`, `limit` (10, max 50) | Approved comments plus the caller's own pending/rejected ones, newest first |
+| GET | `/comments` | Member | `targetType` (`post` \| `blog` \| `memory` \| `event`), `targetId`, `page`, `limit` (10, max 50) | The thread, newest first |
 | GET | `/comments/mine` | Member | `page`, `limit` (10, max 30) | The caller's comments in every state |
-| POST | `/comments` | Member | `targetType`, `targetId`, `body` (1–2000) | `201` comment. The target must be approved. `PENDING` for doctors |
-| PATCH | `/comments/:id` | Owner | `body` | Comment, back to `PENDING` for doctors |
+| POST | `/comments` | Member | `targetType`, `targetId`, `body` (1–2000) | `201` comment, visible in the thread immediately |
+| PATCH | `/comments/:id` | Owner | `body` | Comment; it stays in the thread |
 | DELETE | `/comments/:id` | Owner | — | `{ deleted: true }` |
 
 Comment: `{ id, targetType, targetId, body, author, createdAt, isMine, moderation? }`.
@@ -206,7 +208,7 @@ Comment: `{ id, targetType, targetId, body, author, createdAt, isMine, moderatio
 
 | Method | Path | Access | Result |
 | --- | --- | --- | --- |
-| PUT | `/likes/:targetType/:targetId` | Member | `{ liked: true, likeCount }` — idempotent; `targetType` is `post`, `blog` or `memory`; the target must be approved |
+| PUT | `/likes/:targetType/:targetId` | Member | `{ liked: true, likeCount }` — idempotent; `targetType` is `post`, `blog` or `memory` |
 | DELETE | `/likes/:targetType/:targetId` | Member | `{ liked: false, likeCount }` — idempotent |
 
 ## Reports — `/reports`
@@ -219,17 +221,17 @@ Comment: `{ id, targetType, targetId, body, author, createdAt, isMine, moderatio
 
 | Method | Path | Access | Parameters / body | Result |
 | --- | --- | --- | --- | --- |
-| GET | `/memories` | Member | `eventId`, `page`, `limit` (12, max 36) | Approved memories, newest first |
-| GET | `/memories/events` | Member | — | `[{ id, title, startsAt }]` — approved events that have approved memories (gallery filter) |
+| GET | `/memories` | Member | `eventId`, `owner` (a doctor's id), `page`, `limit` (12, max 36) | Without `owner`: the community Memories section (items with `showInCommunity` on), newest first. With `owner`: that doctor's portfolio gallery — the same records; items kept for the portfolio only are included for the owner and admins, and for other members while the doctor is listed and has not hidden the gallery section |
+| GET | `/memories/events` | Member | — | `[{ id, title, startsAt }]` — events that have memories in the community section (gallery filter) |
 | GET | `/memories/mine` | Member | `page`, `limit` (12, max 36) | The caller's memories in every state |
-| POST | `/memories` | Member | `title` (3–140), `caption` (≤ 1500), `eventId` (optional, must be visible to the caller), `memoryDate` (optional, not in the future), `mediaIds[]` (1–12, purpose `memory`) | `201` memory |
-| GET | `/memories/:id` | Member | — | Approved memory, or own / admin |
-| PATCH | `/memories/:id` | Owner | Any create field | Memory, back to `PENDING` for doctors |
+| POST | `/memories` | Member | `title` (3–140), `caption` (≤ 1500), `eventId` (optional, must be visible to the caller), `memoryDate` (optional, not in the future), `mediaIds[]` (1–12, purpose `memory`) | `201` memory, published immediately. `showInCommunity` (boolean, default `true`) decides whether it is also listed in the community Memories section; it is always part of the owner's portfolio gallery |
+| GET | `/memories/:id` | Member | — | The memory (`404` for a portfolio-only item the caller may not see) |
+| PATCH | `/memories/:id` | Owner | Any create field | Memory; it stays published |
 | DELETE | `/memories/:id` | Owner | — | `{ deleted: true }` |
 | GET | `/memories/:id/media/:mediaId/download` | Member who can see the memory | — | `{ url, expiresInSeconds: 300 }` — a signed download link for the original file |
 
 Memory: `{ id, title, caption, memoryDate, event{ id, title } | null, media[], owner, likeCount, commentCount,
-likedByMe, createdAt, publishedAt, isMine, moderation? }`.
+likedByMe, createdAt, publishedAt, isMine, moderation? }` (memories also carry `showInCommunity`).
 
 ## Events and visit plans — `/events`
 
@@ -237,12 +239,12 @@ A visit plan is an event with `eventType: "VISIT_PLAN"`.
 
 | Method | Path | Access | Parameters / body | Result |
 | --- | --- | --- | --- | --- |
-| GET | `/events/public` | Public | — | Up to 6 upcoming approved events whose organiser enabled `showOnPublicSite`: `{ id, title, eventType, city, startsAt, endsAt }` only |
-| GET | `/events` | Member | `scope` (`upcoming` \| `past`, default `upcoming`), `type`, `page`, `limit` (9, max 30) | Approved events |
+| GET | `/events/public` | Public | — | Up to 6 upcoming events whose organiser enabled `showOnPublicSite`: `{ id, title, eventType, city, startsAt, endsAt }` only |
+| GET | `/events` | Member | `scope` (`upcoming` \| `past`, default `upcoming`), `type`, `page`, `limit` (9, max 30) | Published events |
 | GET | `/events/mine` | Member | `page`, `limit` (10, max 30) | The caller's events in every state |
 | POST | `/events` | Member | `title` (5–140), `description` (10–4000), `eventType` (`REUNION`, `GET_TOGETHER`, `DINNER`, `MEETUP`, `VISIT_PLAN`, `OTHER`), `city` (2–80), `startsAt` (future), optional `endsAt`, `venue` (≤ 200), `budgetNote` (≤ 140), `coverId` (purpose `event`), `rsvpEnabled` (default `true`), `rsvpDeadline` (≤ `startsAt`), `capacity`, `showOnPublicSite` (default `false`) | `201` event |
 | GET | `/events/:id` | Member | — | Event plus `memoryCount` |
-| PATCH | `/events/:id` | Owner | Any create field | Event, back to `PENDING` for doctors |
+| PATCH | `/events/:id` | Owner | Any create field | Event; it stays published |
 | DELETE | `/events/:id` | Owner | — | `{ deleted: true }` |
 | PUT | `/events/:id/rsvp` | Member | `status` (`GOING` \| `MAYBE` \| `NOT_GOING`), `guests` (0–5, counted only when going) | Updated event. One RSVP per member (upsert) |
 | DELETE | `/events/:id/rsvp` | Member | — | Updated event |
@@ -256,11 +258,11 @@ createdAt, publishedAt, isMine, moderation? }`.
 
 | Method | Path | Access | Parameters / body | Result |
 | --- | --- | --- | --- | --- |
-| GET | `/polls` | Member | `state` (`open` \| `closed` \| `all`, default `all`), `page`, `limit` (10, max 30) | Approved polls |
+| GET | `/polls` | Member | `state` (`open` \| `closed` \| `all`, default `all`), `page`, `limit` (10, max 30) | Published polls |
 | GET | `/polls/mine` | Member | `page`, `limit` | The caller's polls in every state |
 | POST | `/polls` | Member | `question` (8–240), `description` (≤ 1000), `options[]` (2–10 distinct strings, ≤ 140), `allowMultiple` (default `false`), `resultsVisibility` (`AFTER_VOTE` default, `ALWAYS`, `AFTER_CLOSE`), optional `startsAt` (default now), `endsAt` (future, after start, within one year) | `201` poll |
 | GET | `/polls/:id` | Member | — | Poll |
-| PATCH | `/polls/:id` | Owner | Any create field | Only while the poll is not approved and has no votes (`409 POLL_LOCKED` otherwise) |
+| PATCH | `/polls/:id` | Owner | Any create field | Only while the poll has no votes (`409 POLL_LOCKED` otherwise) |
 | DELETE | `/polls/:id` | Owner | — | `{ deleted: true }` |
 | POST | `/polls/:id/vote` | Member | `optionIds[]` (exactly one unless `allowMultiple`) | `201` updated poll. One ballot per member; votes are final |
 
@@ -277,7 +279,7 @@ createdAt, publishedAt, isMine, moderation? }`. `votes` / `percent` appear only 
 | PATCH | `/notifications/read-all` | Member | — | `{ updated }` |
 | PATCH | `/notifications/:id/read` | Member | — | The notification |
 
-Types: `WELCOME`, `CONTENT_APPROVED`, `CONTENT_REJECTED`, `CONTENT_REMOVED`, `EVENT_PUBLISHED`, `POLL_PUBLISHED`,
+Types: `WELCOME`, `CONTENT_REMOVED`, `EVENT_PUBLISHED`, `POLL_PUBLISHED`,
 `EVENT_REMINDER`, `NEW_COMMENT`, `ACCOUNT_STATUS`.
 
 ## Dashboard
@@ -290,20 +292,19 @@ Types: `WELCOME`, `CONTENT_APPROVED`, `CONTENT_REJECTED`, `CONTENT_REMOVED`, `EV
 
 | Method | Path | Parameters / body | Result |
 | --- | --- | --- | --- |
-| GET | `/admin/stats` | — | `{ doctors{ active, suspended }, pending{ posts, blogs, comments, memories, events, "visit-plans", polls }, openReports }` |
+| GET | `/admin/stats` | — | `{ doctors{ active, suspended }, content{ posts, blogs, comments, memories, events, "visit-plans", polls }, hiddenLegacyItems, openReports }` — `content` counts everything that exists of each type; `hiddenLegacyItems` counts records the former approval workflow left unpublished |
 | GET | `/admin/doctors` | `q` (name, email, phone, specialization, city; ≤ 80), `status` (`ACTIVE` \| `SUSPENDED` \| `ALL`), `page`, `limit` (12, max 50) | Doctor accounts incl. email, phone, status, visibility, `featured`, `profileCompletion`, `suspension`, `lastLoginAt` |
 | GET | `/admin/doctors/:id` | — | The same plus `contentCounts` per content type |
 | PATCH | `/admin/doctors/:id/status` | `status` (`ACTIVE` \| `SUSPENDED`), `reason` (≤ 500) | Updated doctor. Suspension ends all of the doctor's sessions; the doctor is notified |
 | PATCH | `/admin/doctors/:id/visibility` | `directory` and/or `featured` (booleans) | Updated doctor |
 | DELETE | `/admin/doctors/:id` | optional `reason` | `{ deleted: true }` — account and everything it owns (see [DATABASE.md](DATABASE.md#deleting-a-doctor)) |
-| GET | `/admin/moderation/:queue` | `queue`: `posts`, `blogs`, `comments`, `memories`, `events`, `visit-plans`, `polls`; `status` (`PENDING` default, `APPROVED`, `REJECTED`, `ALL`), `page`, `limit` (10, max 30) | Full items for review (comments include a `target` summary). Pending queues are oldest-first |
-| PATCH | `/admin/moderation/:queue/:id` | `action` (`approve` \| `reject`), `reason` (≤ 500) | The reviewed item |
-| DELETE | `/admin/moderation/:queue/:id` | optional `reason` | `{ deleted: true }` — works for any state, including approved content |
+| GET | `/admin/moderation/:queue` | `queue`: `posts`, `blogs`, `comments`, `memories`, `events`, `visit-plans`, `polls`; `status` (`ALL` default; `PENDING`, `REJECTED`, `APPROVED` to filter records from the former approval workflow), `page`, `limit` (10, max 30) | Full items, newest first (comments include a `target` summary) |
+| DELETE | `/admin/moderation/:queue/:id` | optional `reason` | `{ deleted: true }` — any item of that type. The author is notified and the deletion is audited |
 | GET | `/admin/reports` | `status` (`OPEN` default, `RESOLVED`, `DISMISSED`, `ALL`), `page`, `limit` (10, max 30) | Reports with reporter, reason, details and a `target` summary (`exists`, `title`, `link`, `moderationStatus`, `queue`) |
 | PATCH | `/admin/reports/:id` | `status` (`RESOLVED` \| `DISMISSED`) | `{ id, status }` |
 | GET | `/admin/audit-logs` | `page`, `limit` (20, max 50) | `[{ id, action, actorName, targetType, targetId, summary, createdAt }]` |
 
-Admins remove other members' content through `DELETE /admin/moderation/:queue/:id`; the member-facing
+There is no approve / reject endpoint: content needs no approval. Admins remove other members' content through `DELETE /admin/moderation/:queue/:id`; the member-facing
 `DELETE /posts/:id` (and equivalents) act on the caller's own content only.
 
 ## Permissions at a glance

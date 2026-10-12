@@ -13,7 +13,7 @@ import { safeNextPath } from './AuthShell';
 import AdminAuthShell, { SecretField } from './AdminAuthShell';
 
 const points = [
-  'Review and moderate posts, blogs, memories, events and polls.',
+  'See everything members publish and delete what should not be there.',
   'Manage doctor accounts and what appears on the public homepage.',
   'Every admin action is recorded in the audit log.',
 ];

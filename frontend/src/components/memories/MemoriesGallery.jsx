@@ -150,8 +150,8 @@ export default function MemoriesGallery() {
           title={eventId ? 'No memories from this event yet' : 'No memories have been shared yet'}
           description={
             eventId
-              ? 'Photos and videos linked to this event will appear here once an administrator approves them.'
-              : 'Be the first to share photos or videos from college days, reunions and celebrations. Memories appear here after an administrator approves them.'
+              ? 'Photos and videos linked to this event will appear here as soon as members share them.'
+              : 'Be the first to share photos or videos from college days, reunions and celebrations. Memories appear here as soon as they are shared.'
           }
           action={
             <>

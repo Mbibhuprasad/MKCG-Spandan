@@ -75,7 +75,7 @@ const aboutPoints = [
   {
     icon: ShieldCheck,
     title: 'Private and moderated',
-    text: 'Everything members share is reviewed by an administrator before it appears, and member content stays behind login.',
+    text: 'Member content stays behind login, anything inappropriate can be reported, and administrators can remove it.',
   },
   {
     icon: Newspaper,

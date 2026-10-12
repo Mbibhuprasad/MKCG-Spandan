@@ -52,7 +52,7 @@ export default function EventDetail() {
       <div className="container-page py-14">
         <ErrorState
           title="This event could not be found"
-          message="It may have been removed, or it has not been approved yet."
+          message="It may have been removed."
         />
         <div className="mt-6 text-center">
           <Button href="/events" variant="secondary" icon={ArrowLeft}>
@@ -198,7 +198,7 @@ export default function EventDetail() {
                 onCountChange={(delta) => setData((current) => ({ ...current, commentCount: Math.max(0, current.commentCount + delta) }))}
               />
             ) : (
-              <p className="text-sm text-muted">Comments open once this {noun} has been approved.</p>
+              <p className="text-sm text-muted">Comments are available once this {noun} is published.</p>
             )}
           </section>
         </div>

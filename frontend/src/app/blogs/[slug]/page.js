@@ -9,12 +9,12 @@ import BlogPreview from '@/components/blog/BlogPreview';
 
 const SLUG_RE = /^[a-z0-9-]{1,200}$/;
 
-// Public, credential-less read: the API only returns a blog here once an
-// administrator has approved it. Both generateMetadata and the page call this;
-// Next.js de-duplicates the identical request.
+// Public, credential-less read of a published blog. Not cached, so an edit or
+// a deletion (by the author or an administrator) takes effect at once. Both
+// generateMetadata and the page call this; React de-duplicates the request.
 function loadBlog(slug) {
   if (!SLUG_RE.test(slug)) return Promise.resolve({ ok: false, status: 404, data: null });
-  return publicFetch(`/blogs/slug/${slug}`, { revalidate: 60 });
+  return publicFetch(`/blogs/slug/${slug}`, { revalidate: 0 });
 }
 
 export async function generateMetadata({ params }) {

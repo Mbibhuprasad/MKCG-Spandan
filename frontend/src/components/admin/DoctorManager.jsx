@@ -333,7 +333,7 @@ export default function DoctorManager() {
         <div className="space-y-4">
           <p className="text-sm leading-relaxed text-fg-soft">
             The doctor is signed out immediately and cannot log in or use any protected feature until reactivated. Their
-            published content stays visible unless you reject or delete it separately.
+            published content stays visible unless you delete it separately.
           </p>
           <ReasonField
             value={reason}

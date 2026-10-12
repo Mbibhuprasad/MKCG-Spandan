@@ -24,17 +24,17 @@ AuditLog (stand-alone, append-only)
 Comments, likes and reports refer to their target with a pair `(targetType, target)` rather than one reference per
 content type.
 
-## Shared moderation fields
+## Shared publication fields
 
 Added by `plugins/moderation.js` to `Post`, `Blog`, `Comment`, `Memory`, `Event`, `Poll`:
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `moderationStatus` | `PENDING` \| `APPROVED` \| `REJECTED` | Default `PENDING`; indexed |
+| `moderationStatus` | `PENDING` \| `APPROVED` \| `REJECTED` | Default `APPROVED`: content is published on creation. `PENDING` / `REJECTED` only remain on records from the former approval workflow; indexed |
 | `submittedAt` | Date | Reset when a doctor edits |
-| `reviewedAt`, `reviewedBy` | Date, → User | Set by review |
+| `reviewedAt`, `reviewedBy` | Date, → User | Only set on records reviewed under the former workflow |
 | `rejectionReason` | String ≤ 500 | |
-| `publishedAt` | Date | Set at first approval; used for feed ordering |
+| `publishedAt` | Date | Set on creation; used for feed ordering |
 
 ## Models
 
@@ -50,11 +50,22 @@ Added by `plugins/moderation.js` to `Post`, `Blog`, `Comment`, `Memory`, `Event`
 | `passwordHash` | bcrypt hash, `select: false` |
 | `passwordChangedAt`, `lastLoginAt` | Dates |
 | `policyAcceptance` | `{ version, acceptedAt }` |
-| `profile` | See [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md): photo `{ media → Media, url, thumbUrl }`, title, specialization, subspecialty, designation, hospital, city, state, batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], experience[], achievements[], publications[], links[] |
+| `profile` | See [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md): photo `{ media → Media, url, thumbUrl }`, professionalTitle, headline, address, specialization, subspecialty, fieldOfWork, expertise[], procedures[], practiceArea, designation, hospital, city, state, country, workAddress, workEmail, workPhone, practiceLocations[], batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], credentials[], experience[], fellowships[], achievements[] (awards, each with an optional `image { media → Media, url, thumbUrl }`), memberships[], publications[], links[] |
 | `profilePromptDismissedAt` | Date |
-| `visibility` | `{ directory (default true), publicListing (false), showEmail (false), showPhone (false) }` |
+| `profileWizard` | `{ step (0–10, default 0), completedAt (Date, default null) }` — where the doctor left the profile wizard and when they submitted it. Written only by `PATCH /doctors/me`; `completedAt` is never taken from the request |
+| `visibility` | `{ directory (default true), publicListing (false), showEmail (false), showPhone (false), showWorkContact (true), showRegistration (false), sections{ education, qualifications, experience, fellowships, achievements, memberships, publications, gallery, links } (true each) }` |
 | `featured` | Boolean, set by admins only |
 | `suspension` | `{ reason, at, by → User }` |
+
+The profile wizard added fields to this model without renaming or removing any: `headline`, `country`, the
+`work*` fields, `credentials[]`, `fellowships[]`, extra keys inside `education[]` (`fieldOfStudy`, `startYear`,
+`details`), `experience[]` (`employmentType`, `state`) and `achievements[]` (`issuer`), `profileWizard`, and three
+`visibility` keys. A later change added `fieldOfWork`, `expertise[]`, `procedures[]`, `practiceArea`, `practiceLocations[]`,
+`memberships[]`, `level` and `certification` on education entries, `authors` and `description` on publications, the
+award `image`, two more `visibility.sections` keys, and `Memory.showInCommunity`. All have defaults, so documents
+written before the changes load unchanged and need no migration. The only data step is optional: publishing content
+that was still waiting for the approval that no longer exists (`npm run content:publish-pending`, see
+[CONTENT_MODERATION.md](CONTENT_MODERATION.md)).
 
 Indexes: unique `email`; unique `phone`; `{ role, status, visibility.directory, name }`;
 `{ role, status, profile.specialization }`; `{ role, status, profile.city }`; `{ featured, role, status }`.
@@ -71,7 +82,7 @@ One document per Cloudinary asset.
 | Field | Notes |
 | --- | --- |
 | `owner → User` | The uploader |
-| `purpose` | `profile`, `blog`, `post`, `event`, `memory` |
+| `purpose` | `profile`, `blog`, `post`, `event`, `memory`, `award` |
 | `publicId` | Cloudinary public id, **unique** |
 | `resourceType` | `image` \| `video` |
 | `deliveryType` | `upload` (public) \| `authenticated` (signed URLs only) |
@@ -107,9 +118,10 @@ Indexes: **unique** `{ user, targetType, target }` — one like per doctor per i
 ### Memory
 
 `owner → User`, `title` (≤ 140), `caption` (≤ 1500), `event → Event` (optional), `memoryDate`, `media[] → Media` (1–12),
-`likeCount`, `commentCount`, moderation fields.
+`showInCommunity` (Boolean, default `true` — whether the item is also listed in the community Memories section; it is
+always part of its owner's portfolio gallery), `likeCount`, `commentCount`, moderation fields.
 Indexes: `{ moderationStatus, publishedAt: -1 }`; `{ moderationStatus, event, publishedAt: -1 }`;
-`{ moderationStatus, submittedAt }`; `{ owner, createdAt: -1 }`.
+`{ moderationStatus, submittedAt }`; `{ owner, createdAt: -1 }`; `{ owner, moderationStatus, publishedAt: -1 }`.
 
 ### Event (events and visit plans)
 
@@ -170,7 +182,6 @@ Indexes: `{ createdAt: -1 }`; `{ action, createdAt: -1 }`. Append-only; no API m
 | One report per doctor per item | Unique index |
 | No duplicate notifications | Unique partial index on the dedupe key + upsert |
 | An upload is attached to one item only | Atomic `findOneAndUpdate` that matches only unattached uploads owned by the caller |
-| Moderation decisions | Compare-and-set on the previous status |
 
 **Transactions are not used.** Stand-alone MongoDB servers (and some hosted tiers) do not support multi-document
 transactions, so the application does not depend on them. Multi-step operations are ordered so that an interruption
@@ -188,7 +199,7 @@ with their `Media` documents.
 | Memory | Its comments (and reports on them), likes, reports, and all its photos/videos |
 | Event / visit plan | Its comments (and reports on them), RSVPs, reports, cover image; memories linked to it are kept and unlinked (`event: null`) |
 | Poll | Its votes and reports |
-| Comment | Reports on it; the target's `commentCount` is decremented if the comment was approved |
+| Comment | Reports on it; the target's `commentCount` is decremented if the comment was published |
 
 The same routine runs whether the owner or an admin deletes the item.
 

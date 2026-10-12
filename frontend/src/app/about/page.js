@@ -50,7 +50,7 @@ const features = [
   {
     icon: BookOpen,
     title: 'Blogs by members',
-    text: 'Write longer reflections on practice, research, careers and life in medicine. Approved blogs can be read by anyone.',
+    text: 'Write longer reflections on practice, research, careers and life in medicine. Blogs can be read by anyone.',
   },
   {
     icon: Images,
@@ -83,7 +83,7 @@ const steps = [
   {
     icon: Share2,
     title: 'Share and respond',
-    text: 'Submit posts, blogs, memories, events and polls. An administrator reviews each submission before the community sees it.',
+    text: 'Share posts, blogs, memories, events and polls. They are published to the community straight away.',
   },
   {
     icon: PartyPopper,
@@ -111,7 +111,7 @@ const commitments = [
   {
     icon: ShieldCheck,
     title: 'Moderation',
-    text: 'Everything members submit is reviewed before publication, members can report concerns, and administrators can remove content or suspend accounts.',
+    text: 'Members can report anything that concerns them, and administrators can remove content or suspend accounts.',
   },
 ];
 

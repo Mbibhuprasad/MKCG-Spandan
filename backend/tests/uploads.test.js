@@ -4,7 +4,7 @@ const Media = require('../src/models/Media');
 const Post = require('../src/models/Post');
 const { detectFileType } = require('../src/utils/fileSignature');
 const { cleanupOrphans } = require('../src/services/media.service');
-const { setupTestApp, registerDoctor, createAdmin, PNG, JPEG, MP4, EXE } = require('./helpers/harness');
+const { setupTestApp, registerDoctor, PNG, JPEG, MP4, EXE } = require('./helpers/harness');
 
 const ctx = setupTestApp();
 const cloud = cloudinaryMock.__state;
@@ -189,6 +189,56 @@ describe('attaching uploads to content', () => {
     expect((await bob.put('/api/v1/doctors/me/photo', { mediaId: theirs.body.data.id })).status).toBe(400);
   });
 
+  test('award images: claimed from the doctor’s own uploads, replaced and removed with their assets', async () => {
+    const award = (extra) => ({ title: 'Best Teacher Award', issuer: 'State Medical Association', year: 2019, ...extra });
+    const save = (client, achievements) => client.patch('/api/v1/doctors/me', { profile: { achievements } });
+
+    const first = await bob.upload('award', PNG);
+    expect(first.status).toBe(201);
+    const firstDoc = await Media.findById(first.body.data.id);
+    expect(firstDoc).toMatchObject({ purpose: 'award', resourceType: 'image' });
+    expect(cloud.uploads[0].options.folder).toBe(`mkcg-test/awards/${bob.user.id}`);
+
+    const set = await save(bob, [award({ imageId: first.body.data.id })]);
+    expect(set.status).toBe(200);
+    const saved = set.body.data.profile.achievements[0];
+    expect(saved).toMatchObject({ title: 'Best Teacher Award', imageId: first.body.data.id });
+    expect(saved.imageUrl).toContain('https://res.cloudinary.com/');
+    expect((await Media.findById(first.body.data.id)).attachedTo).toMatchObject({ kind: 'User' });
+
+    // Saving the awards again with the same image keeps it; nothing is destroyed.
+    await save(bob, [award({ imageId: first.body.data.id, description: 'For undergraduate teaching' })]);
+    expect(cloud.destroyed).toHaveLength(0);
+    expect(await Media.findById(first.body.data.id)).not.toBeNull();
+
+    // A URL can never be supplied, another doctor's upload is refused, and so is an upload made for something else.
+    const spoof = await save(bob, [award({ image: { url: 'https://evil.example/x.png' }, imageUrl: 'https://evil.example/x.png' })]);
+    expect(spoof.body.data.profile.achievements[0].imageUrl).toBe('');
+    expect(await Media.findById(first.body.data.id)).toBeNull(); // dropped from the list, so its asset went too
+    expect(cloud.destroyed.map((d) => d.publicId)).toContain(firstDoc.publicId);
+
+    const theirs = await alice.upload('award', PNG);
+    expect((await save(bob, [award({ imageId: theirs.body.data.id })])).status).toBe(400);
+    const wrongPurpose = await bob.upload('post', PNG);
+    expect((await save(bob, [award({ imageId: wrongPurpose.body.data.id })])).status).toBe(400);
+    expect((await Media.findById(theirs.body.data.id)).attachedTo.item).toBeNull();
+
+    // A refused submission claims nothing.
+    const second = await bob.upload('award', PNG);
+    const refused = await bob.patch('/api/v1/doctors/me', { profile: { achievements: [award({ imageId: second.body.data.id })], city: '' }, submit: true });
+    expect(refused.status).toBe(400);
+    expect((await Media.findById(second.body.data.id)).attachedTo.item).toBeNull();
+
+    // Members see the award image on the portfolio; hiding the section removes it for them.
+    await save(bob, [award({ imageId: second.body.data.id })]);
+    const seen = await alice.get(`/api/v1/doctors/${bob.user.id}`);
+    expect(seen.body.data.profile.achievements[0].imageUrl).toContain('https://res.cloudinary.com/');
+    await bob.patch('/api/v1/doctors/me', { visibility: { sections: { achievements: false } } });
+    expect((await alice.get(`/api/v1/doctors/${bob.user.id}`)).body.data.profile.achievements).toEqual([]);
+    await bob.patch('/api/v1/doctors/me', { visibility: { sections: { achievements: true } }, profile: { achievements: [] } });
+    expect(await Media.findById(second.body.data.id)).toBeNull();
+  });
+
   test('deleting content removes its Cloudinary assets', async () => {
     const upload = await alice.upload('post', PNG);
     const post = await alice.post('/api/v1/posts', { body: 'Soon to be deleted', mediaIds: [upload.body.data.id] });
@@ -253,16 +303,14 @@ describe('attaching uploads to content', () => {
 
 describe('private downloads', () => {
   test('only members who may see a memory can obtain its download link', async () => {
-    const admin = await createAdmin(ctx.app);
     const upload = await alice.upload('memory', PNG);
     const memory = await alice.post('/api/v1/memories', { title: 'Hostel days', mediaIds: [upload.body.data.id] });
     const path = `/api/v1/memories/${memory.body.data.id}/media/${upload.body.data.id}/download`;
 
     expect((await request(ctx.app).get(path)).status).toBe(401);
-    expect((await bob.get(path)).status).toBe(404); // still pending
     expect((await alice.get(path)).status).toBe(200); // the owner may
 
-    await admin.patch(`/api/v1/admin/moderation/memories/${memory.body.data.id}`, { action: 'approve' });
+    // Members may too, as soon as the memory exists: there is no approval step.
     const res = await bob.get(path);
     expect(res.status).toBe(200);
     const expires = Number(new URL(res.body.data.url).searchParams.get('expires_at'));

@@ -25,7 +25,7 @@ const sections = [
             'Be kind and assume good intentions.',
             'Celebrate one another’s achievements; disagree without making it personal.',
             'Share what you would be comfortable having every batchmate read.',
-            'Remember that approved blogs are public — write them accordingly.',
+            'Remember that blogs are public — write them accordingly.',
           ]}
         />
       </>
@@ -102,8 +102,9 @@ const sections = [
           ]}
         />
         <P>
-          Attempts to get around moderation or security — such as re-posting rejected content unchanged, or
-          interfering with other members&apos; accounts — are treated as breaches of these guidelines.
+          Attempts to get around these rules or the platform&apos;s security — such as re-posting content that an
+          administrator removed, or interfering with other members&apos; accounts — are treated as breaches of these
+          guidelines.
         </P>
       </>
     ),
@@ -138,38 +139,37 @@ const sections = [
   },
   {
     id: 'moderation',
-    title: 'How moderation works',
+    title: 'How publishing and moderation work',
     content: (
       <>
         <List
           ordered
           items={[
             <>
-              <Term>You submit.</Term> A post, blog, comment, memory, event, visit plan or poll is saved as
-              &ldquo;awaiting review&rdquo;. Only you and the administrators can see it.
+              <Term>You share, and it is published.</Term> A post, blog, comment, memory, event, visit plan or poll
+              is visible to the community as soon as you save it. Nothing waits for an administrator&apos;s approval,
+              so you are responsible for what you publish.
             </>,
             <>
-              <Term>An administrator reviews.</Term> The submission is approved or rejected. If it is rejected, a
-              reason may be given.
-            </>,
-            <>
-              <Term>You are notified.</Term> You receive an in-app notification either way, and can follow every
-              submission under{' '}
+              <Term>You stay in control.</Term> You can edit or delete what you shared at any time under{' '}
               <Link href="/dashboard/submissions" className={link}>
                 My submissions
               </Link>
-              .
+              . Edits are visible immediately.
             </>,
             <>
-              <Term>Approved content is published</Term> to the community. If you later edit it, it returns to
-              review before it is shown again.
+              <Term>Members can report.</Term> Anything that appears to break these guidelines can be reported; reports
+              are confidential and go to the administrators.
+            </>,
+            <>
+              <Term>Administrators can remove.</Term> An administrator can delete any content and, if needed, suspend
+              or delete an account. The author is notified when content is removed.
             </>,
           ]}
         />
         <P>
-          Review is carried out by people, so it can take time. Administrators can also remove content that was
-          previously approved, and their approvals, rejections, removals and account actions are recorded in an audit
-          log.
+          Administrators act after the fact, so something inappropriate may be visible for a while before it is
+          removed. Removals and account actions are recorded in an audit log.
         </P>
       </>
     ),
@@ -198,9 +198,6 @@ const sections = [
         <P>Depending on how serious the breach is, and whether it is repeated, administrators may:</P>
         <List
           items={[
-            <>
-              <Term>Reject a submission</Term> so that it is never published.
-            </>,
             <>
               <Term>Remove published content</Term>, together with its comments and likes. The author is notified.
             </>,

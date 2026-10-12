@@ -97,7 +97,7 @@ function ReportsPage({ status }) {
                     <>
                       <p className="mt-1 break-words text-sm font-semibold text-fg">{target.title || 'Untitled'}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <ModerationBadge status={target.moderationStatus} />
+                        {target.moderationStatus !== 'APPROVED' && <ModerationBadge status={target.moderationStatus} />}
                         {target.link && (
                           <Link href={target.link} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">
                             View item
@@ -106,11 +106,11 @@ function ReportsPage({ status }) {
                         )}
                         {target.queue && (
                           <Link
-                            href={`/admin/moderation?queue=${target.queue}&status=${target.moderationStatus}`}
+                            href={`/admin/moderation?queue=${target.queue}`}
                             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline"
                           >
                             <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-                            Open in moderation queue
+                            Find it under Content to delete it
                           </Link>
                         )}
                       </div>
@@ -169,7 +169,7 @@ function ReportsPage({ status }) {
 
 /**
  * Member reports. Resolving or dismissing a report only closes the report —
- * to act on the content itself, use the moderation queue link on each card.
+ * to delete the content itself, use the Content link on each card.
  */
 export default function ReportsList() {
   const [status, setStatus] = useState('OPEN');
@@ -177,7 +177,7 @@ export default function ReportsList() {
     <div>
       <AdminHeader
         title="Reports"
-        description="Content flagged by members. Review the item, take action in the moderation queue if needed, then close the report."
+        description="Content flagged by members. Look at the item, delete it under Content if it breaks the guidelines, then close the report."
       />
       <FilterPills className="mb-5" label="Status" options={STATUS_OPTIONS} value={status} onChange={setStatus} />
       <ReportsPage key={status} status={status} />

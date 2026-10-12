@@ -8,7 +8,6 @@ import { api, formErrors } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { EVENT_TYPES } from '@/lib/constants';
 import { fromLocalInputValue, toLocalInputValue } from '@/lib/format';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import Button from '@/components/ui/Button';
 import { Checkbox, Field, FormMessage, SelectField, TextAreaField, TextField } from '@/components/ui/Form';
@@ -81,7 +80,6 @@ function validate(values, { datesChanged }) {
 function EventFormInner({ initial, presetType }) {
   const router = useRouter();
   const toast = useToast();
-  const { isAdmin } = useAuth();
   const isEdit = Boolean(initial);
 
   const [startValues] = useState(() => initialValues(initial, presetType));
@@ -138,16 +136,9 @@ function EventFormInner({ initial, presetType }) {
     setBusy(true);
     try {
       const { data } = isEdit ? await api.patch(`/events/${initial.id}`, body) : await api.post('/events', body);
-      const published = data.moderation && data.moderation.status === 'APPROVED';
       const label = isVisit ? 'Visit plan' : 'Event';
-      toast.success(
-        published
-          ? `${label} published.`
-          : isEdit
-            ? `Changes saved. The ${noun} will be reviewed again before members see it.`
-            : `${label} submitted. Members will see it once an admin approves it.`
-      );
-      router.push('/dashboard/submissions');
+      toast.success(isEdit ? 'Changes saved.' : `${label} published. Members can see it now.`);
+      router.push(`/events/${data.id}`);
     } catch (error) {
       const parsed = formErrors(error);
       setErrors(parsed.fieldErrors);
@@ -342,23 +333,21 @@ function EventFormInner({ initial, presetType }) {
           onChange={set('showOnPublicSite')}
           error={errors.showOnPublicSite}
           label="Mention this on the public homepage"
-          description={`If ticked, visitors who are not signed in can see only the title, type, city and dates of this ${noun} once it is approved. The description, venue, budget, cover image and attendee list always stay members-only.`}
+          description={`If ticked, visitors who are not signed in can see only the title, type, city and dates of this ${noun}. The description, venue, budget, cover image and attendee list always stay members-only.`}
         />
 
         <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-relaxed text-muted">
-            {isAdmin
-              ? `As an administrator, your ${noun} is published immediately.`
-              : isEdit
-                ? `Saving sends the ${noun} back for admin review. Until it is approved again, only you can see it.`
-                : `An administrator reviews every ${noun}. Until it is approved, only you can see it.`}
+            {isEdit
+              ? 'Your changes are visible to members as soon as you save.'
+              : `Your ${noun} is published to members as soon as you save it, and they are notified.`}
           </p>
           <div className="flex shrink-0 gap-3">
             <Button href="/dashboard/submissions" variant="secondary">
               Cancel
             </Button>
             <Button type="submit" icon={Send} loading={busy} disabled={uploading}>
-              {uploading ? 'Uploading…' : isEdit ? 'Save changes' : isAdmin ? 'Publish' : 'Submit for review'}
+              {uploading ? 'Uploading…' : isEdit ? 'Save changes' : 'Publish'}
             </Button>
           </div>
         </div>

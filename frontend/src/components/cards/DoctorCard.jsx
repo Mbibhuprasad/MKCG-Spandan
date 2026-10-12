@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Building2, MapPin, Stethoscope } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
-import { yearsLabel } from '@/lib/format';
 
 /**
  * Doctor profile card.
@@ -41,12 +40,6 @@ export default function DoctorCard({ doctor, viewLabel = 'View Profile' }) {
             <dt className="sr-only">Location</dt>
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
             <dd className="line-clamp-1">{location}</dd>
-          </div>
-        )}
-        {doctor.yearsOfExperience !== null && doctor.yearsOfExperience !== undefined && (
-          <div className="pl-6 text-xs text-muted">
-            <dt className="sr-only">Experience</dt>
-            <dd>{yearsLabel(doctor.yearsOfExperience)}</dd>
           </div>
         )}
       </dl>

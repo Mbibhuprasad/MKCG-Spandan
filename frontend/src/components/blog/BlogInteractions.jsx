@@ -70,7 +70,7 @@ export default function BlogInteractions({ blogId, slug, initialLikeCount = 0, i
   if (!canInteract) {
     return (
       <section className="mt-12 border-t border-line pt-8" aria-label="Likes and comments">
-        <p className="text-sm text-muted">Likes and comments open once this blog has been approved.</p>
+        <p className="text-sm text-muted">Likes and comments are available once this blog is published.</p>
       </section>
     );
   }

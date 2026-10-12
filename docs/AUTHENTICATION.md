@@ -28,7 +28,7 @@ password change, suspension and deletion take effect immediately.
 7. The accepted policy version (`POLICY_VERSION`) and timestamp are stored in `policyAcceptance`.
 8. A session is created and the cookie is set — **the doctor is signed in automatically**.
 9. A one-time welcome notification is created.
-10. The web app redirects to `/dashboard`, where an incomplete profile shows a "Complete Your Doctor Profile" prompt
+10. The web app redirects to `/dashboard`, where an incomplete profile shows a "Complete Your Professional Profile" prompt
     that can be skipped.
 
 There is no `PENDING_APPROVAL` account state anywhere in the system. An administrator can later suspend or delete an

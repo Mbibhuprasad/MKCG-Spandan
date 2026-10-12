@@ -80,7 +80,8 @@ Defined in `MEDIA_PURPOSES` (`backend/src/config/constants.js`).
 | Purpose | Allowed | Max per item | Cloudinary type | Why |
 | --- | --- | --- | --- | --- |
 | `profile` | Image | 1 | `upload` (public) | Cards can appear on the public homepage with the doctor's consent |
-| `blog` | Image | 1 cover | `upload` (public) | Approved blogs are public |
+| `blog` | Image | 1 cover | `upload` (public) | Blogs are public |
+| `award` | Image | 1 per award | `upload` (public) | Award photos and certificates on the portfolio; attached by `PATCH /doctors/me` (`achievements[].imageId`) and destroyed when the award or its image is removed |
 | `post` | Image | 4 | `authenticated` | The feed is members-only |
 | `event` | Image | 1 cover | `authenticated` | Event details are members-only |
 | `memory` | Image, video | 12 | `authenticated` | Memories are members-only |
@@ -109,7 +110,7 @@ The API builds every URL; clients just use the `url` and `thumbUrl` fields of a 
 
 For `authenticated` assets, URLs are generated with `sign_url: true`: Cloudinary refuses to serve them without a
 signature derived from the API secret, so they cannot be guessed or constructed. The API returns these URLs only
-inside responses the caller is authorised to receive — for example, a pending memory's media appears only in
+inside responses the caller is authorised to receive — for example, a portfolio-only memory's media appears only in
 responses to its owner and to admins, and nothing is returned to signed-out visitors.
 
 ### Short-lived download URLs (original files)
@@ -177,6 +178,6 @@ The browser-side hints in `frontend/src/lib/constants.js` (`UPLOAD_LIMITS`) shou
   removed by Cloudinary.
 - **Uploads pass through the Next.js proxy by default**, so hosting limits on request size and duration apply (see
   [DEPLOYMENT.md](DEPLOYMENT.md)).
-- **No virus/malware scanning or automated image moderation.** Content is reviewed manually by administrators.
+- **No virus/malware scanning or automated image moderation.** Content is published without prior review; administrators act on reports.
 - **Posts accept images only**; videos are supported for memories only. GIF, HEIC and AVIF are not accepted.
 - **Cleanup is best-effort**: a failed Cloudinary delete is logged, not retried.

@@ -67,16 +67,16 @@ function TileSkeletons({ count }) {
 export default function AdminDashboard() {
   const { data, loading, error, reload } = useApi('/admin/stats');
 
-  const totalPending = data ? Object.values(data.pending).reduce((sum, n) => sum + n, 0) : 0;
+  const totalItems = data ? Object.values(data.content).reduce((sum, n) => sum + n, 0) : 0;
 
   return (
     <div>
       <AdminHeader
         title="Admin dashboard"
-        description="Community health at a glance: member accounts and everything waiting for your review."
+        description="Community health at a glance: member accounts, open reports and everything members have published."
         actions={
           <Button href="/admin/moderation" icon={MessageSquareText}>
-            Review submissions
+            Browse content
           </Button>
         }
       />
@@ -123,25 +123,26 @@ export default function AdminDashboard() {
           <section aria-labelledby="stats-pending">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="stats-pending" className="text-lg font-bold text-fg">
-                Awaiting review
+                Community content
               </h2>
               <p className="text-sm text-muted">
-                {totalPending === 0
-                  ? 'Nothing is waiting — the queues are clear.'
-                  : `${totalPending} ${totalPending === 1 ? 'submission is' : 'submissions are'} waiting in total.`}
+                {totalItems === 0
+                  ? 'Nothing has been shared yet.'
+                  : `${totalItems} ${totalItems === 1 ? 'item' : 'items'} in total — published as soon as members share them.`}
+                {data.hiddenLegacyItems > 0 ? ` ${data.hiddenLegacyItems} still hidden by the old approval system.` : ''}
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {MODERATION_QUEUES.map((queue) => {
-                const count = data.pending[queue.key] ?? 0;
+                const count = data.content[queue.key] ?? 0;
                 return (
                   <StatTile
                     key={queue.key}
                     href={`/admin/moderation?queue=${queue.key}`}
                     icon={QUEUE_ICONS[queue.key] || MessageSquareText}
-                    label={`Pending ${queue.label.toLowerCase()}`}
+                    label={queue.label}
                     value={count}
-                    tone={count > 0 ? 'warn' : 'neutral'}
+                    hint="View and delete"
                   />
                 );
               })}

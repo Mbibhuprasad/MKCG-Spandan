@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, ExternalLink, Trash2, X } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
 import { EVENT_TYPES, POLL_RESULTS_VISIBILITY, POST_TYPES, labelOf } from '@/lib/constants';
 import { formatDate, formatDateRange, formatDateTime } from '@/lib/format';
 import Button from '@/components/ui/Button';
 import { Badge, ModerationBadge } from '@/components/ui/Feedback';
 import AuthorLine from '@/components/content/AuthorLine';
 
-// Moderation queue (URL segment) → which field holds the author, and where the
+// Content list (URL segment) → which field holds the author, and where the
 // item lives for members.
 const AUTHOR_FIELD = {
   posts: 'author',
@@ -236,10 +236,10 @@ const CONTENT = {
 };
 
 /**
- * One submission in a moderation queue, shown in full so the admin can decide.
- * Approved content can still be rejected (unpublished) or deleted.
+ * One item in an admin content list, shown in full so the admin can judge it.
+ * The only action is deletion: content needs no approval.
  */
-export default function ModerationItem({ queue, item, busy, onApprove, onReject, onDelete }) {
+export default function ModerationItem({ queue, item, onDelete }) {
   const Content = CONTENT[queue];
   const moderation = item.moderation || {};
   const status = moderation.status;
@@ -250,40 +250,29 @@ export default function ModerationItem({ queue, item, busy, onApprove, onReject,
       <AuthorLine
         author={item[AUTHOR_FIELD[queue]]}
         date={item.createdAt}
-        trailing={<ModerationBadge status={status} className="shrink-0" />}
+        trailing={status && status !== 'APPROVED' ? <ModerationBadge status={status} className="shrink-0" /> : null}
       />
 
       <div className="mt-4">{Content ? <Content item={item} /> : null}</div>
 
       <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 border-t border-line pt-4 text-xs text-muted">
         <div className="flex gap-1.5">
-          <dt className="font-semibold">Submitted:</dt>
-          <dd>{moderation.submittedAt ? formatDateTime(moderation.submittedAt) : '—'}</dd>
+          <dt className="font-semibold">Shared:</dt>
+          <dd>{item.createdAt ? formatDateTime(item.createdAt) : '—'}</dd>
         </div>
-        <div className="flex gap-1.5">
-          <dt className="font-semibold">Reviewed:</dt>
-          <dd>{moderation.reviewedAt ? formatDateTime(moderation.reviewedAt) : 'Not yet'}</dd>
-        </div>
-        {status === 'REJECTED' && moderation.rejectionReason && (
-          <div className="flex gap-1.5 text-danger">
-            <dt className="font-semibold">Rejection reason:</dt>
-            <dd>{moderation.rejectionReason}</dd>
+        {status && status !== 'APPROVED' && (
+          <div className="flex gap-1.5 text-warn">
+            <dt className="font-semibold">Hidden from members:</dt>
+            <dd>
+              left unpublished by the old approval system
+              {moderation.rejectionReason ? ` (${moderation.rejectionReason})` : ''}
+            </dd>
           </div>
         )}
       </dl>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {status !== 'APPROVED' && (
-          <Button variant="leaf" size="sm" icon={Check} loading={busy} onClick={() => onApprove(item)}>
-            Approve
-          </Button>
-        )}
-        {status !== 'REJECTED' && (
-          <Button variant="secondary" size="sm" icon={X} disabled={busy} onClick={() => onReject(item)}>
-            {status === 'APPROVED' ? 'Reject and unpublish' : 'Reject'}
-          </Button>
-        )}
-        <Button variant="danger-ghost" size="sm" icon={Trash2} disabled={busy} onClick={() => onDelete(item)}>
+        <Button variant="danger-ghost" size="sm" icon={Trash2} onClick={() => onDelete(item)}>
           Delete
         </Button>
         {link && (
