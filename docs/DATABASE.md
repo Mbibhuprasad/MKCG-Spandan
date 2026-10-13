@@ -28,34 +28,34 @@ content type.
 
 Added by `plugins/moderation.js` to `Post`, `Blog`, `Comment`, `Memory`, `Event`, `Poll`:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `moderationStatus` | `PENDING` \| `APPROVED` \| `REJECTED` | Default `APPROVED`: content is published on creation. `PENDING` / `REJECTED` only remain on records from the former approval workflow; indexed |
-| `submittedAt` | Date | Reset when a doctor edits |
-| `reviewedAt`, `reviewedBy` | Date, → User | Only set on records reviewed under the former workflow |
-| `rejectionReason` | String ≤ 500 | |
-| `publishedAt` | Date | Set on creation; used for feed ordering |
+| Field                      | Type                                  | Notes                                                                                                                                          |
+| -------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `moderationStatus`         | `PENDING` \| `APPROVED` \| `REJECTED` | Default `APPROVED`: content is published on creation. `PENDING` / `REJECTED` only remain on records from the former approval workflow; indexed |
+| `submittedAt`              | Date                                  | Reset when a doctor edits                                                                                                                      |
+| `reviewedAt`, `reviewedBy` | Date, → User                          | Only set on records reviewed under the former workflow                                                                                         |
+| `rejectionReason`          | String ≤ 500                          |                                                                                                                                                |
+| `publishedAt`              | Date                                  | Set on creation; used for feed ordering                                                                                                        |
 
 ## Models
 
 ### User (doctors and the administrator)
 
-| Field | Type / rule |
-| --- | --- |
-| `role` | `ADMIN` \| `DOCTOR`, default `DOCTOR`, **immutable** |
-| `status` | `ACTIVE` \| `SUSPENDED`, default `ACTIVE` |
-| `name` | 2–80 chars |
-| `email` | Lower-cased, **unique** |
-| `phone` | Normalised `+<digits>`, **unique** |
-| `passwordHash` | bcrypt hash, `select: false` |
-| `passwordChangedAt`, `lastLoginAt` | Dates |
-| `policyAcceptance` | `{ version, acceptedAt }` |
-| `profile` | See [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md): photo `{ media → Media, url, thumbUrl }`, professionalTitle, headline, bloodGroup, address, specialization, subspecialty, fieldOfWork, expertise[], procedures[], practiceArea, designation, hospital, city, state, country, workAddress, workEmail, workPhone, practiceLocations[], batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], credentials[], experience[], fellowships[], achievements[] (awards, each with an optional `image { media → Media, url, thumbUrl }`), memberships[], publications[], links[] |
-| `profilePromptDismissedAt` | Date |
-| `profileWizard` | `{ step (default 0), layout (default 1), completedAt (Date, default null) }` — where the doctor left the profile wizard and when they submitted it. `layout` says which step order `step` refers to: `1` = the former eleven-step wizard (0–10), `2` = the current nine steps (0–8); the API writes `2` whenever it saves a position and translates a `1` position on read. Written only by `PATCH /doctors/me`; `completedAt` is never taken from the request |
-| `visibility` | `{ directory (default true), portfolio (true), publicListing (false), showEmail (false), showPhone (false), showWhatsapp (true), showWorkContact (true), showRegistration (false), showBloodGroup (false), sections{ education, qualifications, experience, fellowships, achievements, memberships, publications, gallery, links } (true each) }` |
-| `featured` | Boolean, set by admins only |
-| `suspension` | `{ reason, at, by → User }` |
+| Field                              | Type / rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `role`                             | `ADMIN` \| `DOCTOR`, default `DOCTOR`, **immutable**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `status`                           | `ACTIVE` \| `SUSPENDED`, default `ACTIVE`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `name`                             | 2–80 chars                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `email`                            | Lower-cased, **unique**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `phone`                            | Normalised `+<digits>`, **unique**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `passwordHash`                     | bcrypt hash, `select: false`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `passwordChangedAt`, `lastLoginAt` | Dates                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `policyAcceptance`                 | `{ version, acceptedAt }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `profile`                          | See [DOCTOR_PORTFOLIO.md](DOCTOR_PORTFOLIO.md): photo `{ media → Media, url, thumbUrl }`, professionalTitle, headline, bloodGroup, address, specialization, subspecialty, fieldOfWork, expertise[], procedures[], practiceArea, designation, hospital, city, state, country, workAddress, workEmail, workPhone, practiceLocations[], batchYear, yearsOfExperience, bio, qualifications[], interests[], languages[], education[], credentials[], experience[], fellowships[], achievements[] (awards, each with an optional `image { media → Media, url, thumbUrl }`), memberships[], publications[], links[] |
+| `profilePromptDismissedAt`         | Date                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `profileWizard`                    | `{ step (default 0), layout (default 1), completedAt (Date, default null) }` — where the doctor left the profile wizard and when they submitted it. `layout` says which step order `step` refers to: `1` = the former eleven-step wizard (0–10), `2` = the current nine steps (0–8); the API writes `2` whenever it saves a position and translates a `1` position on read. Written only by `PATCH /doctors/me`; `completedAt` is never taken from the request                                                                                                                                               |
+| `visibility`                       | `{ directory (default true), portfolio (true), publicListing (false), showEmail (false), showPhone (false), showWhatsapp (true), showWorkContact (true), showRegistration (false), showBloodGroup (false), sections{ education, qualifications, experience, fellowships, achievements, memberships, publications, gallery, links } (true each) }`                                                                                                                                                                                                                                                            |
+| `featured`                         | Boolean, set by admins only                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `suspension`                       | `{ reason, at, by → User }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 The profile wizard added fields to this model without renaming or removing any: `headline`, `country`, the
 `work*` fields, `credentials[]`, `fellowships[]`, extra keys inside `education[]` (`fieldOfStudy`, `startYear`,
@@ -82,16 +82,16 @@ Indexes: `user`; **TTL** on `expiresAt` (document removed when it expires).
 
 One document per Cloudinary asset.
 
-| Field | Notes |
-| --- | --- |
-| `owner → User` | The uploader |
-| `purpose` | `profile`, `blog`, `post`, `event`, `memory`, `award` |
-| `publicId` | Cloudinary public id, **unique** |
-| `resourceType` | `image` \| `video` |
-| `deliveryType` | `upload` (public) \| `authenticated` (signed URLs only) |
-| `format`, `bytes`, `width`, `height`, `duration` | From Cloudinary |
-| `attachedTo` | `{ kind: Post \| Blog \| Memory \| Event \| User, item: ObjectId }` — `null` until claimed |
-| `attachedAt` | Date |
+| Field                                            | Notes                                                                                      |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `owner → User`                                   | The uploader                                                                               |
+| `purpose`                                        | `profile`, `blog`, `post`, `event`, `memory`, `award`                                      |
+| `publicId`                                       | Cloudinary public id, **unique**                                                           |
+| `resourceType`                                   | `image` \| `video`                                                                         |
+| `deliveryType`                                   | `upload` (public) \| `authenticated` (signed URLs only)                                    |
+| `format`, `bytes`, `width`, `height`, `duration` | From Cloudinary                                                                            |
+| `attachedTo`                                     | `{ kind: Post \| Blog \| Memory \| Event \| User, item: ObjectId }` — `null` until claimed |
+| `attachedAt`                                     | Date                                                                                       |
 
 Indexes: `owner`; unique `publicId`; `attachedTo.item`; `{ attachedAt, createdAt }` (orphan cleanup).
 
@@ -121,8 +121,8 @@ Indexes: **unique** `{ user, targetType, target }` — one like per doctor per i
 ### Memory
 
 `owner → User`, `title` (≤ 140), `caption` (≤ 1500), `event → Event` (optional), `memoryDate`, `media[] → Media` (1–12),
-`showInCommunity` (Boolean, default `true` — whether the item is also listed in the community Memories section; it is
-always part of its owner's portfolio gallery), `likeCount`, `commentCount`, moderation fields.
+`showInCommunity` (Boolean, default `true` — `true`, or absent on older records: a community memory, listed in the
+Memories section; `false`: a photo in the Gallery on its owner's profile only — never both), `likeCount`, `commentCount`, moderation fields.
 Indexes: `{ moderationStatus, publishedAt: -1 }`; `{ moderationStatus, event, publishedAt: -1 }`;
 `{ moderationStatus, submittedAt }`; `{ owner, createdAt: -1 }`; `{ owner, moderationStatus, publishedAt: -1 }`.
 
@@ -176,14 +176,14 @@ Indexes: `{ createdAt: -1 }`; `{ action, createdAt: -1 }`. Append-only; no API m
 
 ## Uniqueness and atomicity
 
-| Rule | Mechanism |
-| --- | --- |
-| One account per email / phone | Unique indexes; a lost race returns `409 ACCOUNT_EXISTS` |
-| One like per doctor per item | Unique index; the counter is incremented only when the insert succeeds |
-| One vote per doctor per poll | Unique index; duplicate → `409 ALREADY_VOTED` |
-| One RSVP per doctor per event | Unique index + `findOneAndUpdate` upsert (retried once on a duplicate-key race) |
-| One report per doctor per item | Unique index |
-| No duplicate notifications | Unique partial index on the dedupe key + upsert |
+| Rule                                   | Mechanism                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| One account per email / phone          | Unique indexes; a lost race returns `409 ACCOUNT_EXISTS`                           |
+| One like per doctor per item           | Unique index; the counter is incremented only when the insert succeeds             |
+| One vote per doctor per poll           | Unique index; duplicate → `409 ALREADY_VOTED`                                      |
+| One RSVP per doctor per event          | Unique index + `findOneAndUpdate` upsert (retried once on a duplicate-key race)    |
+| One report per doctor per item         | Unique index                                                                       |
+| No duplicate notifications             | Unique partial index on the dedupe key + upsert                                    |
 | An upload is attached to one item only | Atomic `findOneAndUpdate` that matches only unattached uploads owned by the caller |
 
 **Transactions are not used.** Stand-alone MongoDB servers (and some hosted tiers) do not support multi-document
@@ -195,14 +195,14 @@ leaves the data safe, and can be repeated.
 Implemented in `deleteContent()` (`backend/src/services/content.service.js`). Cloudinary assets are destroyed together
 with their `Media` documents.
 
-| Deleting a… | Also removes |
-| --- | --- |
-| Post | Its comments (and reports on them), likes, reports, and its images |
-| Blog | Its comments (and reports on them), likes, reports, and its cover image |
-| Memory | Its comments (and reports on them), likes, reports, and all its photos/videos |
+| Deleting a…        | Also removes                                                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Post               | Its comments (and reports on them), likes, reports, and its images                                                           |
+| Blog               | Its comments (and reports on them), likes, reports, and its cover image                                                      |
+| Memory             | Its comments (and reports on them), likes, reports, and all its photos/videos                                                |
 | Event / visit plan | Its comments (and reports on them), RSVPs, reports, cover image; memories linked to it are kept and unlinked (`event: null`) |
-| Poll | Its votes and reports |
-| Comment | Reports on it; the target's `commentCount` is decremented if the comment was published |
+| Poll               | Its votes and reports                                                                                                        |
+| Comment            | Reports on it; the target's `commentCount` is decremented if the comment was published                                       |
 
 The same routine runs whether the owner or an admin deletes the item.
 
@@ -234,10 +234,10 @@ this routine before production use.
 
 ### Automatic expiry
 
-| Data | Removed |
-| --- | --- |
-| Sessions | When `expiresAt` passes (TTL index) |
-| Notifications | 180 days after creation (TTL index) |
+| Data               | Removed                                                          |
+| ------------------ | ---------------------------------------------------------------- |
+| Sessions           | When `expiresAt` passes (TTL index)                              |
+| Notifications      | 180 days after creation (TTL index)                              |
 | Unattached uploads | 24 hours after upload (background job / `npm run media:cleanup`) |
 
 MongoDB's TTL monitor runs about once a minute, so removal is not instantaneous; the API also checks `expiresAt` on

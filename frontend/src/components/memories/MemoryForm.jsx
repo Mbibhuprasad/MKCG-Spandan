@@ -35,13 +35,16 @@ function validate(values, media) {
 
 /**
  * The memory form itself. Used as a page (create / edit) and, with `embedded`,
- * inside a dialog — for example from the profile's gallery, where a memory is
- * the doctor's gallery item. Either way it saves through the same /memories API.
+ * inside a dialog. It saves through the /memories API in one of two places:
+ * a community memory (the Memories section) or, with `gallery`, a photo for the
+ * Gallery on the member's own profile. A new item goes where the form was
+ * opened from; the owner can move an existing one when editing it.
  *
  *   embedded  — no page heading or back link; `onSaved(memory)` and `onCancel()`
  *               replace the redirects
+ *   gallery   — a new item is a profile gallery photo, not a community memory
  */
-export function MemoryFormInner({ initial, presetEventId = '', embedded = false, onSaved, onCancel }) {
+export function MemoryFormInner({ initial, presetEventId = '', embedded = false, gallery = false, onSaved, onCancel }) {
   const router = useRouter();
   const toast = useToast();
   const isEdit = Boolean(initial);
@@ -52,7 +55,7 @@ export function MemoryFormInner({ initial, presetEventId = '', embedded = false,
     memoryDate: initial ? toDay(initial.memoryDate) : '',
     eventId: initial ? (initial.event ? initial.event.id : '') : presetEventId,
   });
-  const [showInCommunity, setShowInCommunity] = useState(initial ? initial.showInCommunity !== false : true);
+  const [showInCommunity, setShowInCommunity] = useState(initial ? initial.showInCommunity !== false : !gallery);
   const [media, setMedia] = useState(initial ? initial.media || [] : []);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -98,9 +101,9 @@ export function MemoryFormInner({ initial, presetEventId = '', embedded = false,
     setBusy(true);
     try {
       const { data } = isEdit ? await api.patch(`/memories/${initial.id}`, body) : await api.post('/memories', body);
-      toast.success(isEdit ? 'Changes saved.' : 'Published. It is in your gallery now.');
+      toast.success(isEdit ? 'Changes saved.' : data.showInCommunity === false ? 'Added to your gallery.' : 'Your memory is shared with the community.');
       if (onSaved) onSaved(data);
-      else router.push(data.showInCommunity === false ? '/dashboard/submissions?tab=memories' : `/memories?memory=${data.id}`);
+      else router.push(data.showInCommunity === false ? `/doctors/${data.owner.id}#gallery` : `/memories?memory=${data.id}`);
     } catch (error) {
       const parsed = formErrors(error);
       setErrors(parsed.fieldErrors);
@@ -117,10 +120,13 @@ export function MemoryFormInner({ initial, presetEventId = '', embedded = false,
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back
           </Link>
-          <h1 className="mt-3 font-display text-3xl font-semibold text-fg">{isEdit ? 'Edit memory' : 'Share a memory'}</h1>
+          <h1 className="mt-3 font-display text-3xl font-semibold text-fg">
+            {isEdit ? (showInCommunity ? 'Edit memory' : 'Edit gallery photo') : gallery ? 'Add to your gallery' : 'Share a memory'}
+          </h1>
           <p className="mt-2 text-fg-soft">
-            Upload photos or videos from college days, reunions and celebrations. Memories are visible to signed-in
-            members only, and each one is also part of the gallery on your portfolio.
+            {!isEdit && gallery
+              ? 'Photos for the Gallery on your own profile. Members see them when they open your profile — they are not added to the community Memories section.'
+              : 'Group photos and videos from college days, batch reunions, get-togethers and celebrations, shared with the whole community in Memories. Photos of your own belong in the Gallery on your profile.'}
           </p>
         </>
       )}
@@ -208,12 +214,15 @@ export function MemoryFormInner({ initial, presetEventId = '', embedded = false,
           )}
         </Field>
 
-        <Checkbox
-          label="Also show this in the community Memories section"
-          description="It always appears in the gallery on your portfolio. Untick this to keep it there only."
-          checked={showInCommunity}
-          onChange={(event) => setShowInCommunity(event.target.checked)}
-        />
+        {/* Where a new item goes is decided by where the form was opened; only an existing one can be moved. */}
+        {isEdit && (
+          <Checkbox
+            label="Show in the community Memories section"
+            description="Ticked: shared with every member in Memories. Unticked: kept in the Gallery on your profile only. It is never in both."
+            checked={showInCommunity}
+            onChange={(event) => setShowInCommunity(event.target.checked)}
+          />
+        )}
 
         <div className="rounded-xl border border-warn/25 bg-warn-soft px-4 py-3 text-sm text-warn">
           <p className="flex items-center gap-2 font-semibold">
@@ -250,7 +259,7 @@ export function MemoryFormInner({ initial, presetEventId = '', embedded = false,
   );
 }
 
-/** Create a memory, or edit one of your own with ?edit=ID. */
+/** Create a memory (or, with ?gallery=1, a profile gallery photo), or edit one of your own with ?edit=ID. */
 export default function MemoryForm() {
   const params = useSearchParams();
   const editParam = params.get('edit') || '';
@@ -263,7 +272,7 @@ export default function MemoryForm() {
   if (editParam && !editId) {
     return <ErrorState title="This memory could not be found" message="The link you followed is not valid." />;
   }
-  if (!editId) return <MemoryFormInner initial={null} presetEventId={presetEventId} />;
+  if (!editId) return <MemoryFormInner initial={null} presetEventId={presetEventId} gallery={params.get('gallery') === '1'} />;
 
   if (existing.error) {
     return (

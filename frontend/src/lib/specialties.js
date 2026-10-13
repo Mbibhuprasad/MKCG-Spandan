@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import { useApi } from '@/lib/hooks';
+import { useMemo } from "react";
+import { useApi } from "@/lib/hooks";
 
 const keyOf = (value) =>
-  String(value || '')
-    .replace(/\s+/g, ' ')
+  String(value || "")
+    .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
 
@@ -26,12 +26,13 @@ export const sameText = (a, b) => keyOf(a) === keyOf(b);
  *   isListed(spec, sub)         whether `sub` is an option of `spec`
  */
 export function useSpecialties() {
-  const { data, loading, error } = useApi('/doctors/specialties');
+  const { data, loading, error } = useApi("/doctors/specialties");
   return useMemo(() => {
     const entries = (data && data.specializations) || [];
     const byKey = new Map();
     for (const entry of entries) {
-      for (const label of [entry.name, ...entry.aliases]) byKey.set(keyOf(label), entry);
+      for (const label of [entry.name, ...entry.aliases])
+        byKey.set(keyOf(label), entry);
     }
     const find = (value) => byKey.get(keyOf(value)) || null;
     return {
@@ -40,7 +41,7 @@ export function useSpecialties() {
       names: entries.map((entry) => entry.name),
       keywordsOf: (name) => {
         const entry = find(name);
-        return entry ? entry.aliases.join(' ') : '';
+        return entry ? entry.aliases.join(" ") : "";
       },
       find,
       subspecializationsOf: (value) => {
@@ -50,7 +51,11 @@ export function useSpecialties() {
       isListed: (specialization, subspecialty) => {
         const entry = find(specialization);
         const key = keyOf(subspecialty);
-        return Boolean(entry && key && entry.subspecializations.some((sub) => keyOf(sub) === key));
+        return Boolean(
+          entry &&
+          key &&
+          entry.subspecializations.some((sub) => keyOf(sub) === key),
+        );
       },
     };
   }, [data, loading, error]);

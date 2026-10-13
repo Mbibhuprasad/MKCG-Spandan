@@ -213,7 +213,7 @@ function summaries(form, user, counts) {
 export default function ReviewStep({ form, problems, onEdit }) {
   const { user } = useAuth();
   // Gallery items and blogs are saved by their own modules; only the totals are needed here.
-  const memories = useApi('/memories/mine', { limit: 1 });
+  const memories = useApi('/memories', { owner: user.id, limit: 1 });
   const blogs = useApi('/blogs/mine', { limit: 1 });
   const counts = { gallery: memories.meta ? memories.meta.total : 0, blogs: blogs.meta ? blogs.meta.total : 0 };
   const content = summaries(form, user, counts);

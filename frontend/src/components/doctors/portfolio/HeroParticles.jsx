@@ -5,36 +5,37 @@ import gsap from 'gsap';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/format';
 
-const BLUE = '#60a5fa';
-const TEAL = '#2dd4bf';
-const GREEN = '#4ade80';
-const GRAY = '#cbd5e1';
+// Blues that read on the light ground and on the dark theme alike.
+const BLUE = '#2563eb';
+const AZURE = '#3b82f6';
+const SKY = '#38bdf8';
+const PALE = '#93c5fd';
 
 // Where each particle sits, in percent of the hero. Fixed values, so rendering
 // never depends on a random number. `depth` 1 is the nearer layer (it moves
 // further with the pointer); `wide` particles are left out on small screens.
 const PARTICLES = [
-  { x: 5, y: 22, size: 4, color: BLUE, alpha: 0.7, depth: 0 },
-  { x: 14, y: 70, size: 6, color: TEAL, alpha: 0.55, depth: 1 },
-  { x: 22, y: 12, size: 3, color: GRAY, alpha: 0.5, depth: 0, wide: true },
-  { x: 31, y: 86, size: 4, color: GREEN, alpha: 0.5, depth: 0 },
-  { x: 38, y: 30, size: 5, color: BLUE, alpha: 0.45, depth: 1, wide: true },
-  { x: 46, y: 62, size: 3, color: GRAY, alpha: 0.55, depth: 0 },
-  { x: 52, y: 14, size: 5, color: TEAL, alpha: 0.6, depth: 1 },
-  { x: 58, y: 80, size: 4, color: BLUE, alpha: 0.5, depth: 0, wide: true },
-  { x: 64, y: 40, size: 3, color: GREEN, alpha: 0.55, depth: 1, wide: true },
-  { x: 70, y: 9, size: 4, color: GRAY, alpha: 0.45, depth: 0 },
-  { x: 76, y: 68, size: 6, color: TEAL, alpha: 0.5, depth: 1 },
-  { x: 82, y: 24, size: 3, color: BLUE, alpha: 0.65, depth: 0, wide: true },
-  { x: 88, y: 84, size: 5, color: GREEN, alpha: 0.45, depth: 1 },
-  { x: 93, y: 46, size: 4, color: GRAY, alpha: 0.5, depth: 0 },
-  { x: 97, y: 14, size: 3, color: TEAL, alpha: 0.6, depth: 1, wide: true },
-  { x: 9, y: 48, size: 3, color: GREEN, alpha: 0.45, depth: 1, wide: true },
+  { x: 5, y: 22, size: 6, color: BLUE, alpha: 0.9, depth: 0 },
+  { x: 14, y: 70, size: 8, color: AZURE, alpha: 0.75, depth: 1 },
+  { x: 22, y: 12, size: 5, color: PALE, alpha: 0.7, depth: 0, wide: true },
+  { x: 31, y: 86, size: 6, color: SKY, alpha: 0.7, depth: 0 },
+  { x: 38, y: 30, size: 7, color: BLUE, alpha: 0.65, depth: 1, wide: true },
+  { x: 46, y: 62, size: 5, color: PALE, alpha: 0.75, depth: 0 },
+  { x: 52, y: 14, size: 7, color: AZURE, alpha: 0.8, depth: 1 },
+  { x: 58, y: 80, size: 6, color: BLUE, alpha: 0.7, depth: 0, wide: true },
+  { x: 64, y: 40, size: 5, color: SKY, alpha: 0.75, depth: 1, wide: true },
+  { x: 70, y: 9, size: 6, color: PALE, alpha: 0.65, depth: 0 },
+  { x: 76, y: 68, size: 8, color: AZURE, alpha: 0.7, depth: 1 },
+  { x: 82, y: 24, size: 5, color: BLUE, alpha: 0.85, depth: 0, wide: true },
+  { x: 88, y: 84, size: 7, color: SKY, alpha: 0.65, depth: 1 },
+  { x: 93, y: 46, size: 6, color: PALE, alpha: 0.7, depth: 0 },
+  { x: 97, y: 14, size: 5, color: AZURE, alpha: 0.8, depth: 1, wide: true },
+  { x: 9, y: 48, size: 5, color: SKY, alpha: 0.65, depth: 1, wide: true },
 ];
 const LAYERS = [0, 1];
 
 /**
- * A few softly glowing particles behind the hero's content. Framer Motion fades
+ * A few softly glowing blue particles behind the hero's content. Framer Motion fades
  * each one in; GSAP then lets it drift and dim slowly, and on a desktop pointer
  * shifts the two layers slightly for depth. The layer ignores the pointer, is
  * hidden from assistive technology, pauses while the hero is off screen and
@@ -58,10 +59,10 @@ export default function HeroParticles() {
           drift.to(
             dot,
             {
-              x: gsap.utils.random(-28, 28),
-              y: gsap.utils.random(-36, 36),
-              opacity: Number(dot.dataset.alpha) * 0.3,
-              duration: gsap.utils.random(7, 13),
+              x: gsap.utils.random(-44, 44),
+              y: gsap.utils.random(-52, 52),
+              opacity: Number(dot.dataset.alpha) * 0.45,
+              duration: gsap.utils.random(6, 11),
               ease: 'sine.inOut',
               repeat: -1,
               yoyo: true,

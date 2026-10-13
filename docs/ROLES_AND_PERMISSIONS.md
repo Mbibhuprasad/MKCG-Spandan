@@ -67,14 +67,15 @@ the request body.
 | Post | Members | Member — published at once | Owner (stays published) | Owner; admin (any) |
 | Blog | **Everyone** | Member — published at once, from the Blogs page, the dashboard or the profile (one collection) | Owner (stays published) | Owner; admin (any) |
 | Comment | Members | Member — appears at once | Owner | Owner; admin (any) |
-| Memory / gallery item | Members (portfolio-only items: see below) | Member — published at once | Owner | Owner; admin (any) |
+| Memory / gallery item | Members (gallery items: see below) | Member — published at once | Owner | Owner; admin (any) |
 | Event / visit plan | Members (public summary only if opted in) | Member — published at once | Owner | Owner; admin (any) |
 | Poll | Members | Member — open at once | Owner, only before any vote | Owner; admin (any) |
 
 Notes:
 
-- A memory with `showInCommunity` off is a portfolio-only gallery item: members see it in its owner's gallery, unless
-  the owner hides the gallery section or is not listed in the directory. The owner and admins always see it.
+- A memory with `showInCommunity` off is a gallery item: members see it in the Gallery on its owner's profile and
+  nowhere else, unless the owner hides the gallery section or is not listed in the directory. The owner and admins
+  always see it. Only the owner can add to, change or remove from their gallery (admins can delete).
 - Admins do **not** edit, approve or reject other members' content; they can delete it. Admin deletion goes through
   `DELETE /admin/moderation/:queue/:id`.
 - A doctor requesting someone else's unpublished item receives `404`; trying to edit or delete someone else's

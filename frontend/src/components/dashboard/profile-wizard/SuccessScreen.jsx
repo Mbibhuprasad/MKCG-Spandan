@@ -74,7 +74,7 @@ export default function SuccessScreen({ portfolioHref, listed, updated }) {
       </h1>
       <p className="relative mx-auto mt-3 max-w-md text-fg-soft" role="status">
         {listed
-          ? 'Everything is saved. Your portfolio is live and you appear in the doctor directory for fellow members.'
+          ? 'Everything is saved. Your portfolio is live and you appear in the Friends section for fellow members.'
           : 'Everything is saved. Your portfolio is ready — it follows the visibility choices you made.'}
       </p>
       <p className="relative mt-2 text-sm text-muted">Taking you to your portfolio…</p>

@@ -11,8 +11,9 @@ const memorySchema = new Schema(
     caption: { type: String, default: '', maxlength: 1500 },
     event: { type: Schema.Types.ObjectId, ref: 'Event', default: null },
     memoryDate: { type: Date, default: null },
-    // Every memory belongs to its owner's portfolio gallery. This decides whether
-    // it is also listed in the community Memories section.
+    // true (and every record saved before this field existed): a community memory,
+    // listed in the Memories section. false: a photo in the Gallery on its owner's
+    // profile only. A record is never in both lists.
     showInCommunity: { type: Boolean, default: true },
     media: {
       type: [{ type: Schema.Types.ObjectId, ref: 'Media' }],

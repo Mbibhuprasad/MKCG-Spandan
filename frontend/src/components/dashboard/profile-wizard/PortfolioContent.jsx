@@ -5,9 +5,10 @@ import { BookOpen, ExternalLink, Images, Pencil, Plus, Trash2 } from 'lucide-rea
 import { api } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { formatDate, plural } from '@/lib/format';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import Button from '@/components/ui/Button';
-import { Badge, Skeleton, Spinner } from '@/components/ui/Feedback';
+import { Skeleton, Spinner } from '@/components/ui/Feedback';
 import { ConfirmDialog, Modal } from '@/components/ui/Modal';
 import { MemoryFormInner } from '@/components/memories/MemoryForm';
 import { BlogFormFields } from '@/components/community/BlogForm';
@@ -46,15 +47,16 @@ function LoadError({ onRetry }) {
 /**
  * The doctor's personal gallery and personal blogs.
  *
- * Nothing here is a separate copy of anything: a gallery item IS a memory
- * (the /memories API and collection) and a blog IS a community blog (the
- * /blogs API and collection). They are created, edited and deleted through
- * those same endpoints, are published the moment they are saved, and appear
- * on the portfolio because of who owns them.
+ * The gallery is the member's own: its photos are stored through the /memories
+ * API as gallery items and shown in the Gallery on their profile only, never
+ * in the community Memories section. A blog IS a community blog (the /blogs
+ * API and collection). Both are published the moment they are saved.
  */
 export default function PortfolioContent() {
   const toast = useToast();
-  const memories = useApi('/memories/mine', { limit: 36 });
+  const { user } = useAuth();
+  // `owner` selects the profile gallery — community memories are not part of it.
+  const memories = useApi('/memories', { owner: user.id, limit: 36 });
   const blogs = useApi('/blogs/mine', { limit: 30 });
 
   // { kind: 'memory' | 'blog', item: record or null (new), loading?: true }
@@ -99,7 +101,7 @@ export default function PortfolioContent() {
       <Subsection
         icon={Images}
         title="Personal gallery"
-        description="Photos for your portfolio. Each item is also a memory: you choose whether it appears in the community Memories section too."
+        description="Photos for the Gallery on your profile. Members see them when they open your profile — they are not added to the community Memories section."
         action={
           <Button variant="outline" size="sm" icon={Plus} onClick={() => setEditor({ kind: 'memory', item: null })}>
             Add photos
@@ -137,9 +139,6 @@ export default function PortfolioContent() {
                       <p className="mt-0.5 truncate text-xs text-muted">
                         {memory.memoryDate ? formatDate(memory.memoryDate) : formatDate(memory.createdAt)}
                       </p>
-                      <Badge tone={memory.showInCommunity ? 'leaf' : 'neutral'} className="mt-1.5">
-                        {memory.showInCommunity ? 'Gallery + Memories' : 'Gallery only'}
-                      </Badge>
                       <div className="mt-2 flex gap-1">
                         <Button
                           variant="ghost"
@@ -242,10 +241,10 @@ export default function PortfolioContent() {
         onClose={close}
         size="lg"
         title={editor && editor.item ? 'Edit gallery item' : 'Add to your gallery'}
-        description="Saved through the Memories module and published straight away."
+        description="Shown in the Gallery on your profile as soon as you save."
       >
         {editor && editor.kind === 'memory' && (
-          <MemoryFormInner key={editor.item ? editor.item.id : 'new'} initial={editor.item} embedded onSaved={saved(memories)} onCancel={close} />
+          <MemoryFormInner key={editor.item ? editor.item.id : 'new'} initial={editor.item} embedded gallery onSaved={saved(memories)} onCancel={close} />
         )}
       </Modal>
 
@@ -274,7 +273,7 @@ export default function PortfolioContent() {
         message={
           removing && removing.kind === 'blog'
             ? 'The blog is deleted everywhere — from the Blogs page and from your portfolio — together with its comments and likes. This cannot be undone.'
-            : 'The item is deleted everywhere — from your gallery and from the Memories section — together with its photos, comments and likes. This cannot be undone.'
+            : 'The item is deleted from your gallery together with its photos, comments and likes. This cannot be undone.'
         }
         confirmLabel="Delete"
       />

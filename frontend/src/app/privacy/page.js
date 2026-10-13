@@ -94,7 +94,7 @@ const sections = [
           settings.
         </P>
         <P>
-          <Term>Directory listing.</Term> You can remove yourself from the doctor directory. Other members then see
+          <Term>Friends listing.</Term> You can remove yourself from the Friends section. Other members then see
           only a small name card (name, photo, title and specialization) where your name appears next to content you
           have shared.
         </P>
@@ -113,9 +113,9 @@ const sections = [
           content.
         </P>
         <P>
-          <Term>Portfolio-only gallery items</Term> — memories you chose not to show in the community Memories
-          section — appear only in the gallery on your portfolio, and not at all to other members if you hide that
-          gallery or your directory listing.
+          <Term>Gallery photos</Term> — the photos you add to the Gallery on your own profile — appear only there,
+          never in the community Memories section, and not at all to other members if you hide that gallery or your
+          Friends listing.
           Poll ballots are not shown to other members; only totals are displayed, according to each poll&apos;s
           result settings.
         </P>
@@ -254,7 +254,7 @@ const sections = [
             </Link>
             .
           </>,
-          'Decide whether you appear in the member directory, whether your profile may be featured publicly, and whether members can see your email address or phone number.',
+          'Decide whether you appear in the Friends section, whether your profile may be featured publicly, and whether members can see your email address or phone number.',
           'Delete anything you have submitted.',
           <>
             Ask for a copy of your information, or for your account to be deleted, by contacting <ContactLine />.

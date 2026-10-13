@@ -317,7 +317,7 @@ function ExpertiseStep({ w }) {
           )}
         </EntryList>
       </Group>
-      <Note>Your specialization and city are what batchmates use to find you in the doctor directory.</Note>
+      <Note>Your specialization and city are what batchmates use to find you in the Friends section.</Note>
     </>
   );
 }
@@ -893,7 +893,7 @@ function VisibilityStep({ w }) {
   if (w.isAdmin) {
     return (
       <FormMessage tone="info">
-        Administrator accounts are not listed in the doctor directory, so the visibility settings do not apply. Check the summary
+        Administrator accounts are not listed in the Friends section, so the visibility settings do not apply. Check the summary
         below and save.
       </FormMessage>
     );
@@ -901,9 +901,9 @@ function VisibilityStep({ w }) {
   const v = w.form.visibility;
   return (
     <>
-      <Group title="Directory and portfolio">
+      <Group title="Friends listing and portfolio">
         <Switch
-          label="List me in the doctor directory"
+          label="List me in Friends"
           description="Signed-in members can find you by name, specialization and city. If you turn this off, other members only see a brief name card."
           checked={v.directory}
           onChange={(value) => w.setVisibility('directory', value)}
@@ -949,7 +949,7 @@ function VisibilityStep({ w }) {
         />
       </Group>
 
-      <Group title="Private details" description="Off by default. Nothing here is ever shown in the directory or on the public site.">
+      <Group title="Private details" description="Off by default. Nothing here is ever shown in the Friends section or on the public site.">
         <Switch
           label="Show my blood group on my portfolio"
           description={

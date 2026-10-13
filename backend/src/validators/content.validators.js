@@ -138,7 +138,7 @@ const updateMemory = z
   })
   .partial();
 
-// `owner` asks for one doctor's portfolio gallery instead of the community list.
+// `owner` asks for the Gallery on one doctor's profile instead of the community list.
 const memoryListQuery = z.object({ eventId: objectId.optional(), owner: objectId.optional(), page, limit: limit(12, 36) });
 
 const memoryDownloadParams = z.object({ id: objectId, mediaId: objectId });

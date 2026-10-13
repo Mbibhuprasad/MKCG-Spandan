@@ -136,7 +136,7 @@ export const PROFILE_SECTIONS = [
   { key: 'achievements', label: 'Awards' },
   { key: 'memberships', label: 'Memberships' },
   { key: 'publications', label: 'Publications' },
-  { key: 'gallery', label: 'Gallery (items kept for the portfolio only)' },
+  { key: 'gallery', label: 'Gallery' },
   { key: 'links', label: 'Professional links' },
 ];
 

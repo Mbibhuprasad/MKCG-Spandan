@@ -49,13 +49,14 @@ Browser / app                API                                   Cloudinary   
 3. **Real content check** — `detectFileType()` reads the leading bytes. The filename, extension and client-declared
    MIME type are ignored.
 
-   | Kind | Accepted formats | Signature checked |
-   | --- | --- | --- |
-   | Image | JPG, PNG, WebP | `FF D8 FF`; PNG 8-byte header; `RIFF….WEBP` |
-   | Video | MP4, MOV, WebM | ISO `ftyp` box with a known MP4 brand or `qt  `; EBML header containing `webm` |
+   | Kind  | Accepted formats | Signature checked                                                              |
+   | ----- | ---------------- | ------------------------------------------------------------------------------ |
+   | Image | JPG, PNG, WebP   | `FF D8 FF`; PNG 8-byte header; `RIFF….WEBP`                                    |
+   | Video | MP4, MOV, WebM   | ISO `ftyp` box with a known MP4 brand or `qt  `; EBML header containing `webm` |
 
    Anything else — including GIF, HEIC/AVIF, SVG, PDF and executables renamed to `.png` — is rejected with
    `400 UNSUPPORTED_MEDIA_TYPE`.
+
 4. **Purpose rules and size** — the `purpose` field decides which kinds are allowed and how the asset is delivered
    (table below). Files over the limit for their kind return `413 FILE_TOO_LARGE`.
 5. **Upload** — the buffer is streamed to Cloudinary with `upload_stream`, using a server-chosen folder, a random
@@ -77,14 +78,14 @@ keeps the returned media objects until the form is submitted.
 
 Defined in `MEDIA_PURPOSES` (`backend/src/config/constants.js`).
 
-| Purpose | Allowed | Max per item | Cloudinary type | Why |
-| --- | --- | --- | --- | --- |
-| `profile` | Image | 1 | `upload` (public) | Cards can appear on the public homepage with the doctor's consent |
-| `blog` | Image | 1 cover | `upload` (public) | Blogs are public |
-| `award` | Image | 1 per award | `upload` (public) | Award photos and certificates on the portfolio; attached by `PATCH /doctors/me` (`achievements[].imageId`) and destroyed when the award or its image is removed |
-| `post` | Image | 4 | `authenticated` | The feed is members-only |
-| `event` | Image | 1 cover | `authenticated` | Event details are members-only |
-| `memory` | Image, video | 12 | `authenticated` | Memories are members-only |
+| Purpose   | Allowed      | Max per item | Cloudinary type   | Why                                                                                                                                                             |
+| --------- | ------------ | ------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profile` | Image        | 1            | `upload` (public) | Cards can appear on the public homepage with the doctor's consent                                                                                               |
+| `blog`    | Image        | 1 cover      | `upload` (public) | Blogs are public                                                                                                                                                |
+| `award`   | Image        | 1 per award  | `upload` (public) | Award photos and certificates on the portfolio; attached by `PATCH /doctors/me` (`achievements[].imageId`) and destroyed when the award or its image is removed |
+| `post`    | Image        | 4            | `authenticated`   | The feed is members-only                                                                                                                                        |
+| `event`   | Image        | 1 cover      | `authenticated`   | Event details are members-only                                                                                                                                  |
+| `memory`  | Image, video | 12           | `authenticated`   | Memories are members-only                                                                                                                                       |
 
 ## Folder convention
 
@@ -98,13 +99,13 @@ Use a different `CLOUDINARY_FOLDER` per environment so development, staging and 
 
 The API builds every URL; clients just use the `url` and `thumbUrl` fields of a media object.
 
-| Use | Transformation | Notes |
-| --- | --- | --- |
-| Image display (`url`) | `c_limit,w_1600,h_1600,q_auto,f_auto` | Never upscaled; modern formats chosen automatically |
-| Image thumbnail (`thumbUrl`) | `c_fill,g_auto,w_600,h_600,q_auto,f_auto` | Gallery tiles and previews |
-| Avatar (profile `thumbUrl`) | `c_fill,g_face,w_320,h_320,q_auto,f_auto` | |
-| Video playback (`url`) | `q_auto`, delivered as `.mp4` | |
-| Video poster (`thumbUrl`) | `c_fill,w_600,h_600,so_0`, delivered as `.jpg` | First frame |
+| Use                          | Transformation                                 | Notes                                               |
+| ---------------------------- | ---------------------------------------------- | --------------------------------------------------- |
+| Image display (`url`)        | `c_limit,w_1600,h_1600,q_auto,f_auto`          | Never upscaled; modern formats chosen automatically |
+| Image thumbnail (`thumbUrl`) | `c_fill,g_auto,w_600,h_600,q_auto,f_auto`      | Gallery tiles and previews                          |
+| Avatar (profile `thumbUrl`)  | `c_fill,g_face,w_320,h_320,q_auto,f_auto`      |                                                     |
+| Video playback (`url`)       | `q_auto`, delivered as `.mp4`                  |                                                     |
+| Video poster (`thumbUrl`)    | `c_fill,w_600,h_600,so_0`, delivered as `.jpg` | First frame                                         |
 
 ### Signed delivery URLs (private assets)
 
@@ -127,13 +128,13 @@ short period right after upload the derived video may not be ready yet.
 
 ## Deleting assets
 
-| Situation | Behaviour |
-| --- | --- |
-| Content is deleted (by owner or admin) | Its assets are destroyed in Cloudinary (`invalidate: true`) and their `Media` documents removed |
-| Media removed while editing a post or memory, or a cover/photo replaced | The dropped assets are destroyed after the item is saved |
-| A doctor is deleted | Every asset they own is destroyed |
-| The uploader discards an unused upload | `DELETE /api/v1/media/:id` (refused with `409` once the file is attached) |
-| A form is abandoned after uploading | **Orphan cleanup**: uploads still unattached after 24 hours are destroyed by the background job (every 6 hours) or by `npm run media:cleanup` |
+| Situation                                                               | Behaviour                                                                                                                                     |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Content is deleted (by owner or admin)                                  | Its assets are destroyed in Cloudinary (`invalidate: true`) and their `Media` documents removed                                               |
+| Media removed while editing a post or memory, or a cover/photo replaced | The dropped assets are destroyed after the item is saved                                                                                      |
+| A doctor is deleted                                                     | Every asset they own is destroyed                                                                                                             |
+| The uploader discards an unused upload                                  | `DELETE /api/v1/media/:id` (refused with `409` once the file is attached)                                                                     |
+| A form is abandoned after uploading                                     | **Orphan cleanup**: uploads still unattached after 24 hours are destroyed by the background job (every 6 hours) or by `npm run media:cleanup` |
 
 If Cloudinary is unreachable during a delete, the failure is logged and the `Media` document is still removed; the
 asset may then remain in Cloudinary until removed manually.
@@ -148,15 +149,15 @@ asset may then remain in Cloudinary until removed manually.
 
 ## Limits at a glance
 
-| Limit | Default | Where |
-| --- | --- | --- |
-| Image size | 8 MB | `MAX_IMAGE_MB` |
-| Video size | 60 MB | `MAX_VIDEO_MB` |
-| Images per post | 4 | `LIMITS.postMedia` |
-| Files per memory | 12 | `LIMITS.memoryMedia` |
-| Uploads per user | 40 / 10 min | `RATE_LIMIT_UPLOAD_MAX` |
-| Download link lifetime | 5 minutes | `memory.controller.js` |
-| Orphan grace period | 24 hours | `media.service.js` |
+| Limit                  | Default     | Where                   |
+| ---------------------- | ----------- | ----------------------- |
+| Image size             | 8 MB        | `MAX_IMAGE_MB`          |
+| Video size             | 60 MB       | `MAX_VIDEO_MB`          |
+| Images per post        | 4           | `LIMITS.postMedia`      |
+| Files per memory       | 12          | `LIMITS.memoryMedia`    |
+| Uploads per user       | 40 / 10 min | `RATE_LIMIT_UPLOAD_MAX` |
+| Download link lifetime | 5 minutes   | `memory.controller.js`  |
+| Orphan grace period    | 24 hours    | `media.service.js`      |
 
 The browser-side hints in `frontend/src/lib/constants.js` (`UPLOAD_LIMITS`) should be kept equal to the server values.
 

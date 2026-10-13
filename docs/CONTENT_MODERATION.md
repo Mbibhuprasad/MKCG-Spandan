@@ -50,17 +50,18 @@ Nothing is copied to make it appear in more than one place.
 - **Blogs.** There is one `Blog` collection. A blog written from the profile wizard, from the dashboard or from the
   Blogs page is created by the same `POST /blogs`. It is listed on the Blogs page (`GET /blogs`), on its author's
   portfolio (`GET /blogs?author=<id>`) and in the author's own list (`GET /blogs/mine`) — the same document each time.
-- **Gallery and memories.** There is one `Memory` collection. A doctor's personal gallery is simply their memories
-  (`GET /memories?owner=<id>`). `showInCommunity` (default `true`) decides whether an item is also listed in the
-  community Memories section (`GET /memories`). Media files live in Cloudinary; MongoDB stores their metadata.
+- **Gallery and memories.** There is one `Memory` collection holding two separate lists, told apart by
+  `showInCommunity`: community memories (`true`, the default — `GET /memories`) and the photos a doctor keeps in the
+  Gallery on their own profile (`false` — `GET /memories?owner=<id>`). An item is never in both; its owner can move it
+  by editing it. Media files live in Cloudinary; MongoDB stores their metadata.
 
 ## Visibility rules (enforced by the API)
 
 | Request | Result |
 | --- | --- |
 | Feed / list endpoints (`GET /posts`, `/blogs`, `/memories`, `/events`, `/polls`) | Published items. `/memories` lists only items with `showInCommunity` on |
-| `GET /memories?owner=<id>` | That doctor's gallery. Items kept for the portfolio only are included for the owner and admins, and for other members only while the doctor is listed in the directory and has not hidden the gallery section; otherwise only the items that are in the community section anyway |
-| `GET /memories/:id` and its download link | Refused with `404` for a portfolio-only item the caller may not see in the gallery |
+| `GET /memories?owner=<id>` | The Gallery on that doctor's profile (items with `showInCommunity` off) for the owner and admins, and for other members only while the doctor is listed in the directory and has not hidden the gallery section; otherwise an empty list. Community memories are never part of it |
+| `GET /memories/:id` and its download link | Refused with `404` for a gallery item the caller may not see in the gallery |
 | `GET /<type>/mine` | Everything the caller owns |
 | Like, comment, report, RSVP, vote | On published items |
 | Edit / delete of someone else's item | `403` (`404` for an item the caller cannot see at all) |

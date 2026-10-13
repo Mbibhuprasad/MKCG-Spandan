@@ -86,7 +86,7 @@ export const SUBMISSION_TYPES = [
     title: (item) => item.title,
     meta: (item) => {
       const count = (item.media || []).length;
-      return `${count} ${count === 1 ? 'file' : 'files'}${item.event ? ` · ${item.event.title}` : ''}`;
+      return `${item.showInCommunity === false ? 'Profile gallery · ' : ''}${count} ${count === 1 ? 'file' : 'files'}${item.event ? ` · ${item.event.title}` : ''}`;
     },
     viewHref: (item) => `/memories?memory=${item.id}`,
     editHref: (item) => `/dashboard/create/memory?edit=${item.id}`,

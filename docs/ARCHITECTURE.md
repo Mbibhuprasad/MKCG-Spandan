@@ -17,37 +17,37 @@ Browser ──HTTPS──▶ Next.js (frontend/)  ──/api/v1/* rewrite──�
 
 ## Backend (`backend/src`)
 
-| Folder | Responsibility |
-| --- | --- |
-| `config/` | `env.js` validates environment variables with Zod and exposes a frozen config; `db.js` connects Mongoose; `cloudinary.js` lazily configures the SDK; `constants.js` holds roles, statuses, enums, upload purposes, limits and the policy version |
-| `models/` | Mongoose schemas and indexes. `plugins/moderation.js` adds the shared publication fields |
-| `middleware/` | `auth.js` (session resolution, CSRF, role guard), `security.js` (origin guard, operator-key rejection), `rateLimiters.js`, `validate.js` (Zod → `req.valid`), `upload.js` (Multer memory storage), `errorHandler.js` |
-| `validators/` | Zod schemas for every body, query string and route parameter |
-| `controllers/` | HTTP handlers. They read only `req.valid` and `req.user`, call services, and return serialised data |
-| `services/` | Business logic shared between controllers (see below) |
-| `routes/` | One router file per feature; `routes/index.js` mounts them under `/api/v1` |
-| `utils/` | `ApiError`, response envelope helpers, text/phone/email normalisation, file-signature detection, logger |
-| `scripts/` | `createAdmin.js`, `setAdminPassword.js`, `cleanupMedia.js`, `devMemory.js` |
-| `../tests/` | Jest + Supertest suites and helpers; `../__mocks__/cloudinary.js` is the Cloudinary test double |
+| Folder         | Responsibility                                                                                                                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `config/`      | `env.js` validates environment variables with Zod and exposes a frozen config; `db.js` connects Mongoose; `cloudinary.js` lazily configures the SDK; `constants.js` holds roles, statuses, enums, upload purposes, limits and the policy version |
+| `models/`      | Mongoose schemas and indexes. `plugins/moderation.js` adds the shared publication fields                                                                                                                                                         |
+| `middleware/`  | `auth.js` (session resolution, CSRF, role guard), `security.js` (origin guard, operator-key rejection), `rateLimiters.js`, `validate.js` (Zod → `req.valid`), `upload.js` (Multer memory storage), `errorHandler.js`                             |
+| `validators/`  | Zod schemas for every body, query string and route parameter                                                                                                                                                                                     |
+| `controllers/` | HTTP handlers. They read only `req.valid` and `req.user`, call services, and return serialised data                                                                                                                                              |
+| `services/`    | Business logic shared between controllers (see below)                                                                                                                                                                                            |
+| `routes/`      | One router file per feature; `routes/index.js` mounts them under `/api/v1`                                                                                                                                                                       |
+| `utils/`       | `ApiError`, response envelope helpers, text/phone/email normalisation, file-signature detection, logger                                                                                                                                          |
+| `scripts/`     | `createAdmin.js`, `setAdminPassword.js`, `cleanupMedia.js`, `devMemory.js`                                                                                                                                                                       |
+| `../tests/`    | Jest + Supertest suites and helpers; `../__mocks__/cloudinary.js` is the Cloudinary test double                                                                                                                                                  |
 
 ### Services
 
-| Service | Purpose |
-| --- | --- |
-| `session.service.js` | Creates/ends sessions, signs and verifies the JWT, derives and checks the CSRF token, cookie options |
-| `adminBootstrap.service.js` | Idempotent creation of the first admin; explicit password rotation |
-| `content.service.js` | **Content registry**: one table mapping `post`, `blog`, `memory`, `event`, `poll`, `comment` to model, owner field and capabilities; visibility (`canView`, `loadVisible`), ownership (`loadManageable`), publishing on create (`publishedState`) and on edit (`publishAfterEdit`), links, cascade deletion |
-| `moderation.service.js` | Announcements when something is published (event, poll, comment) and admin removal with notification and audit entry. There is no approve / reject |
-| `legacyContent.service.js` | One-off, idempotent publication of content left `PENDING` by the former approval workflow (`npm run content:publish-pending`) |
-| `media.service.js` | Upload validation and Cloudinary upload, claiming uploads for content, syncing on edit, destruction, orphan cleanup, media serialisation |
-| `cloudinary.service.js` | The only module that calls the Cloudinary SDK: upload stream, destroy, signed delivery URLs, short-lived download URLs |
-| `markdown.service.js` | Markdown → sanitised HTML, reading time, slugs |
-| `interaction.service.js` | "Which of these has the viewer liked?" lookups |
-| `notification.service.js` | Best-effort, de-duplicated in-app notifications and fan-out |
-| `audit.service.js` | Append-only audit log entries |
-| `doctor.service.js` | Cascade deletion of a doctor |
-| `jobs.service.js` | In-process timers: event reminders and orphan-media cleanup |
-| `serializers.js` | Explicit output shapes — controllers never send Mongoose documents |
+| Service                     | Purpose                                                                                                                                                                                                                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session.service.js`        | Creates/ends sessions, signs and verifies the JWT, derives and checks the CSRF token, cookie options                                                                                                                                                                                                        |
+| `adminBootstrap.service.js` | Idempotent creation of the first admin; explicit password rotation                                                                                                                                                                                                                                          |
+| `content.service.js`        | **Content registry**: one table mapping `post`, `blog`, `memory`, `event`, `poll`, `comment` to model, owner field and capabilities; visibility (`canView`, `loadVisible`), ownership (`loadManageable`), publishing on create (`publishedState`) and on edit (`publishAfterEdit`), links, cascade deletion |
+| `moderation.service.js`     | Announcements when something is published (event, poll, comment) and admin removal with notification and audit entry. There is no approve / reject                                                                                                                                                          |
+| `legacyContent.service.js`  | One-off, idempotent publication of content left `PENDING` by the former approval workflow (`npm run content:publish-pending`)                                                                                                                                                                               |
+| `media.service.js`          | Upload validation and Cloudinary upload, claiming uploads for content, syncing on edit, destruction, orphan cleanup, media serialisation                                                                                                                                                                    |
+| `cloudinary.service.js`     | The only module that calls the Cloudinary SDK: upload stream, destroy, signed delivery URLs, short-lived download URLs                                                                                                                                                                                      |
+| `markdown.service.js`       | Markdown → sanitised HTML, reading time, slugs                                                                                                                                                                                                                                                              |
+| `interaction.service.js`    | "Which of these has the viewer liked?" lookups                                                                                                                                                                                                                                                              |
+| `notification.service.js`   | Best-effort, de-duplicated in-app notifications and fan-out                                                                                                                                                                                                                                                 |
+| `audit.service.js`          | Append-only audit log entries                                                                                                                                                                                                                                                                               |
+| `doctor.service.js`         | Cascade deletion of a doctor                                                                                                                                                                                                                                                                                |
+| `jobs.service.js`           | In-process timers: event reminders and orphan-media cleanup                                                                                                                                                                                                                                                 |
+| `serializers.js`            | Explicit output shapes — controllers never send Mongoose documents                                                                                                                                                                                                                                          |
 
 ### Request lifecycle
 
@@ -61,7 +61,7 @@ Order is defined in `backend/src/app.js`:
 6. `express.json({ limit: '200kb' })` and `cookie-parser`.
 7. `rejectOperatorKeys` — any key starting with `$` or containing `.` (or prototype keys) in body/query → `400 INVALID_INPUT`.
 8. `Cache-Control: no-store` on everything under `/api`.
-9. The feature router. A typical route reads: *limiter → `requireAuth` → role guard → `validate(...)` → handler*.
+9. The feature router. A typical route reads: _limiter → `requireAuth` → role guard → `validate(...)` → handler_.
 10. `notFoundHandler` and `errorHandler` — every error becomes `{ success:false, error:{ code, message, details? } }`; unexpected errors are logged server-side and returned as a generic `500 INTERNAL_ERROR`.
 
 `requireAuth` (`middleware/auth.js`) reads the bearer token or the session cookie, verifies the JWT (HS256 only), loads
@@ -91,37 +91,37 @@ per-page variant of the logic. See [CONTENT_MODERATION.md](CONTENT_MODERATION.md
 
 `jobs.service.js` starts two `setInterval` timers when the server boots (unless `JOBS_ENABLED=false`):
 
-| Job | Interval | Effect |
-| --- | --- | --- |
-| Event reminders | every 30 min (first run 15 s after boot) | Notifies the organiser and members who RSVP'd Going/Maybe about events starting within 48 hours. A dedupe key makes each reminder at-most-once |
-| Orphan media cleanup | every 6 h | Deletes uploads never attached to content and older than 24 h, from Cloudinary and MongoDB |
+| Job                  | Interval                                 | Effect                                                                                                                                         |
+| -------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Event reminders      | every 30 min (first run 15 s after boot) | Notifies the organiser and members who RSVP'd Going/Maybe about events starting within 48 hours. A dedupe key makes each reminder at-most-once |
+| Orphan media cleanup | every 6 h                                | Deletes uploads never attached to content and older than 24 h, from Cloudinary and MongoDB                                                     |
 
 Both are idempotent, so running several API instances is safe, but they are not distributed-locked.
 
 ## Frontend (`frontend/src`)
 
-| Folder | Responsibility |
-| --- | --- |
-| `app/` | App Router routes. `layout.js` sets fonts, metadata, the theme init script, `Providers`, `Navbar`, `Footer`. `error.js`, `not-found.js`, `loading.js` are the fallbacks |
-| `components/providers/` | `ThemeProvider` (light default, `localStorage` key `mkcg-theme`), `AuthProvider` (session state), `ToastProvider`, and `Providers` which also sets Framer Motion's `reducedMotion="user"` |
-| `components/ui/` | The UI kit: `Button`, `Form` (Field, Input, Textarea, Select, Checkbox, FormMessage), `Feedback` (Spinner, Skeleton, EmptyState, ErrorState, Badge, ModerationBadge, ModerationNotice), `Modal`/`ConfirmDialog` (native `<dialog>`), `Pagination`, `Avatar`, `Layout` (PageHeader, SectionHeading, Tabs), `Reveal` |
-| `components/layout/` | `Navbar`, `Footer`, `Logo`, `ThemeToggle`, `NotificationBell` |
-| `components/auth/` | `LoginForm`, `RegisterForm`, `AuthShell`, and the guards `RequireAuth`, `RequireAdmin`, `MemberGate` |
-| `components/content/` | Shared interaction components: `AuthorLine`, `LikeButton`, `CommentSection`, `ReportButton`, `MediaUploader` |
-| `components/cards/` | `DoctorCard`, `BlogCard`, `EventCard` |
-| `components/<feature>/` | Feature components (dashboard, doctors, community, memories, events, blog, admin, home) |
-| `lib/` | `api.js` (browser client), `server-api.js` (server-side reads of public endpoints), `hooks.js` (`useApi`, `useAction`, `useDebounced`), `format.js`, `constants.js`, `site.js` (branding) |
+| Folder                  | Responsibility                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app/`                  | App Router routes. `layout.js` sets fonts, metadata, the theme init script, `Providers`, `Navbar`, `Footer`. `error.js`, `not-found.js`, `loading.js` are the fallbacks                                                                                                                                            |
+| `components/providers/` | `ThemeProvider` (light default, `localStorage` key `mkcg-theme`), `AuthProvider` (session state), `ToastProvider`, and `Providers` which also sets Framer Motion's `reducedMotion="user"`                                                                                                                          |
+| `components/ui/`        | The UI kit: `Button`, `Form` (Field, Input, Textarea, Select, Checkbox, FormMessage), `Feedback` (Spinner, Skeleton, EmptyState, ErrorState, Badge, ModerationBadge, ModerationNotice), `Modal`/`ConfirmDialog` (native `<dialog>`), `Pagination`, `Avatar`, `Layout` (PageHeader, SectionHeading, Tabs), `Reveal` |
+| `components/layout/`    | `Navbar`, `Footer`, `Logo`, `ThemeToggle`, `NotificationBell`                                                                                                                                                                                                                                                      |
+| `components/auth/`      | `LoginForm`, `RegisterForm`, `AuthShell`, and the guards `RequireAuth`, `RequireAdmin`, `MemberGate`                                                                                                                                                                                                               |
+| `components/content/`   | Shared interaction components: `AuthorLine`, `LikeButton`, `CommentSection`, `ReportButton`, `MediaUploader`                                                                                                                                                                                                       |
+| `components/cards/`     | `DoctorCard`, `BlogCard`, `EventCard`                                                                                                                                                                                                                                                                              |
+| `components/<feature>/` | Feature components (dashboard, doctors, community, memories, events, blog, admin, home)                                                                                                                                                                                                                            |
+| `lib/`                  | `api.js` (browser client), `server-api.js` (server-side reads of public endpoints), `hooks.js` (`useApi`, `useAction`, `useDebounced`), `format.js`, `constants.js`, `site.js` (branding)                                                                                                                          |
 
 ### Route map
 
-| Route | Audience | Rendering |
-| --- | --- | --- |
-| `/`, `/about`, `/terms`, `/privacy`, `/community-guidelines` | Public, indexable | Server components; the homepage reads public endpoints only |
-| `/blogs`, `/blogs/[slug]` | Public | Server-rendered for SEO and not cached, so a new, edited or deleted blog shows at once; likes and comments are client-side and member-only |
-| `/login`, `/register` | Public | Client forms |
-| `/doctors`, `/doctors/[id]`, `/memories`, `/community`, `/community/posts/[id]`, `/events`, `/events/[id]` | Members | Page shell + `MemberGate`; data is fetched in the browser with the session cookie |
-| `/dashboard`, `/dashboard/profile`, `/dashboard/submissions`, `/dashboard/notifications`, `/dashboard/create/{post,blog,memory,event,poll}` | Signed-in users | `dashboard/layout.js` wraps everything in `RequireAuth`; `noindex` |
-| `/admin`, `/admin/doctors`, `/admin/moderation`, `/admin/reports`, `/admin/audit-log` | `ADMIN` only | `RequireAdmin`; `noindex` |
+| Route                                                                                                                                       | Audience          | Rendering                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/`, `/about`, `/terms`, `/privacy`, `/community-guidelines`                                                                                | Public, indexable | Server components; the homepage reads public endpoints only                                                                                |
+| `/blogs`, `/blogs/[slug]`                                                                                                                   | Public            | Server-rendered for SEO and not cached, so a new, edited or deleted blog shows at once; likes and comments are client-side and member-only |
+| `/login`, `/register`                                                                                                                       | Public            | Client forms                                                                                                                               |
+| `/doctors`, `/doctors/[id]`, `/memories`, `/community`, `/community/posts/[id]`, `/events`, `/events/[id]`                                  | Members           | Page shell + `MemberGate`; data is fetched in the browser with the session cookie                                                          |
+| `/dashboard`, `/dashboard/profile`, `/dashboard/submissions`, `/dashboard/notifications`, `/dashboard/create/{post,blog,memory,event,poll}` | Signed-in users   | `dashboard/layout.js` wraps everything in `RequireAuth`; `noindex`                                                                         |
+| `/admin`, `/admin/doctors`, `/admin/moderation`, `/admin/reports`, `/admin/audit-log`                                                       | `ADMIN` only      | `RequireAdmin`; `noindex`                                                                                                                  |
 
 Create pages double as edit pages with `?edit=<id>`; `/dashboard/create/event?type=VISIT_PLAN` preselects a visit plan.
 
@@ -133,7 +133,7 @@ Create pages double as edit pages with `?edit=<id>`; `/dashboard/create/event?ty
   sitemap, or any cached page.
 - Member data is requested in the browser by client components through `lib/api.js`, after `AuthProvider` has
   restored the session.
-- The guards decide what to *show*; they are not security. The API refuses every request independently.
+- The guards decide what to _show_; they are not security. The API refuses every request independently.
 
 ### Why the browser calls the API through a rewrite
 
@@ -171,17 +171,17 @@ suspension. `uploadMedia()` uses `XMLHttpRequest` to report upload progress.
 
 Nothing essential depends on Next.js server actions or browser-only behaviour:
 
-| Concern | How a mobile app uses the same API |
-| --- | --- |
-| Authentication | Send `X-Client-Type: mobile` on `POST /auth/register` or `/auth/login`. The response body then contains `token`; no cookie is set. Send `Authorization: Bearer <token>` on every request |
-| CSRF | Not required for bearer requests (the token is not an ambient credential). Native apps send no `Origin` header, so the origin guard does not apply |
-| Logout | `POST /auth/logout` with the bearer token deletes the server-side session |
-| Uploads | `multipart/form-data` to `POST /api/v1/media` with fields `purpose` then `file`; use the returned `id` in `mediaIds` / `coverId` / `PUT /doctors/me/photo` |
-| Media display | Use the `url` / `thumbUrl` values returned by the API; request a download link from `GET /memories/:id/media/:mediaId/download` when needed |
-| Permissions and publishing rules | Identical — all enforced in the API |
+| Concern                          | How a mobile app uses the same API                                                                                                                                                       |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication                   | Send `X-Client-Type: mobile` on `POST /auth/register` or `/auth/login`. The response body then contains `token`; no cookie is set. Send `Authorization: Bearer <token>` on every request |
+| CSRF                             | Not required for bearer requests (the token is not an ambient credential). Native apps send no `Origin` header, so the origin guard does not apply                                       |
+| Logout                           | `POST /auth/logout` with the bearer token deletes the server-side session                                                                                                                |
+| Uploads                          | `multipart/form-data` to `POST /api/v1/media` with fields `purpose` then `file`; use the returned `id` in `mediaIds` / `coverId` / `PUT /doctors/me/photo`                               |
+| Media display                    | Use the `url` / `thumbUrl` values returned by the API; request a download link from `GET /memories/:id/media/:mediaId/download` when needed                                              |
+| Permissions and publishing rules | Identical — all enforced in the API                                                                                                                                                      |
 
-Store the token in the platform's secure storage (Keychain / Keystore). Building the mobile app is out of scope for
-this project.
+Store the token in the platform's secure storage (Keychain / Keystore). The Android app in `mobile/` is such a client;
+see [MOBILE.md](MOBILE.md).
 
 ## Remaining limitations
 

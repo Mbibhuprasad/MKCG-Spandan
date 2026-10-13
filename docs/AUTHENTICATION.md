@@ -36,9 +36,9 @@ account.
 
 ### Normalisation
 
-| Value | Rule (`backend/src/utils/text.js`) |
-| --- | --- |
-| Email | Trimmed and lower-cased |
+| Value | Rule (`backend/src/utils/text.js`)                                                                                                                                                                                                                          |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email | Trimmed and lower-cased                                                                                                                                                                                                                                     |
 | Phone | Spaces, dashes, dots and brackets removed. A leading `+` or `00` means an international number. Otherwise leading zeros are dropped and a 10-digit number gets `DEFAULT_COUNTRY_CODE` (default `91`). Result is `+<8–15 digits>`; anything else is rejected |
 
 Example: `098765 43210`, `+91 98765-43210` and `9876543210` all become `+919876543210`.
@@ -59,12 +59,12 @@ The login form disables the submit button while a request is in flight and shows
 
 ## Sessions and tokens
 
-| Item | Detail |
-| --- | --- |
-| Session document | `Session { user, client: web \| mobile, userAgent (≤ 200 chars), expiresAt }`; a TTL index removes expired sessions |
-| Token | JWT, HS256, payload `{ sub: userId, sid: sessionId }`, lifetime `JWT_EXPIRES_IN_DAYS` (default 7). Only HS256 is accepted on verification |
-| Cookie | Name `COOKIE_NAME` (default `mkcg_session`); `HttpOnly`; `Secure` in production (or `COOKIE_SECURE`); `SameSite` from `COOKIE_SAMESITE` (default `Lax`); optional `Domain`; `Path=/`; `Max-Age` equal to the session lifetime |
-| Per request | Verify JWT → load session (`_id`, `user`, not expired) → load user → require `ACTIVE` |
+| Item             | Detail                                                                                                                                                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session document | `Session { user, client: web \| mobile, userAgent (≤ 200 chars), expiresAt }`; a TTL index removes expired sessions                                                                                                           |
+| Token            | JWT, HS256, payload `{ sub: userId, sid: sessionId }`, lifetime `JWT_EXPIRES_IN_DAYS` (default 7). Only HS256 is accepted on verification                                                                                     |
+| Cookie           | Name `COOKIE_NAME` (default `mkcg_session`); `HttpOnly`; `Secure` in production (or `COOKIE_SECURE`); `SameSite` from `COOKIE_SAMESITE` (default `Lax`); optional `Domain`; `Path=/`; `Max-Age` equal to the session lifetime |
+| Per request      | Verify JWT → load session (`_id`, `user`, not expired) → load user → require `ACTIVE`                                                                                                                                         |
 
 Nothing about the role or status is trusted from the token: both are read from the user document on every request.
 
@@ -113,11 +113,11 @@ Bearer-token requests skip the CSRF token check because a bearer token is not an
 
 ## Rate limiting
 
-| Endpoint | Limit (default) |
-| --- | --- |
-| `POST /auth/login` | 10 attempts / 15 min per IP + identifier, and 50 / 15 min per IP |
-| `POST /auth/register` | 10 / hour per IP |
-| Everything | 1500 / 15 min per IP |
+| Endpoint              | Limit (default)                                                  |
+| --------------------- | ---------------------------------------------------------------- |
+| `POST /auth/login`    | 10 attempts / 15 min per IP + identifier, and 50 / 15 min per IP |
+| `POST /auth/register` | 10 / hour per IP                                                 |
+| Everything            | 1500 / 15 min per IP                                             |
 
 Client IPs come from `X-Forwarded-For` only when `TRUST_PROXY` says the proxy is trusted — configure it correctly in
 production (see [DEPLOYMENT.md](DEPLOYMENT.md)).

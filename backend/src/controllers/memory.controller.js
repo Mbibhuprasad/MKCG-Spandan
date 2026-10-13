@@ -33,12 +33,17 @@ async function assertLinkableEvent(eventId, viewer) {
   }
 }
 
-// Memories listed in the community section (the default for every memory).
+// A memory is one of two things, told apart by `showInCommunity`:
+//   community memory — shared with every member in the Memories section
+//                      (the default, and every record saved before the flag existed)
+//   gallery item     — a photo a doctor keeps in the Gallery on their own profile
+// The two lists never overlap, and nothing is copied between them.
 const COMMUNITY = { showInCommunity: { $ne: false } };
+const GALLERY = { showInCommunity: false };
 
-// May the viewer see the items a doctor keeps for their portfolio only? Yes for
-// the doctor and for admins; for other members only while the doctor is listed
-// in the directory and has not hidden the gallery section of the portfolio.
+// May the viewer see a doctor's profile gallery? Yes for the doctor and for
+// admins; for other members only while the doctor is listed in the directory
+// and has not hidden the gallery section of the portfolio.
 async function canSeePortfolioGallery(ownerId, viewer) {
   if (String(viewer._id) === String(ownerId) || viewer.role === ROLES.ADMIN) return true;
   const owner = await User.findById(ownerId).select('visibility status');
@@ -48,13 +53,13 @@ async function canSeePortfolioGallery(ownerId, viewer) {
 }
 
 // Members-only. Without `owner`: the community Memories section. With `owner`:
-// that doctor's portfolio gallery — the same records, never copies.
+// the Gallery on that doctor's profile, which is empty for a viewer who may not open it.
 async function list(req, res) {
   const { eventId, owner, page, limit } = req.valid.query;
   const filter = { moderationStatus: MODERATION.APPROVED };
   if (owner) {
-    filter.owner = owner;
-    if (!(await canSeePortfolioGallery(owner, req.user))) Object.assign(filter, COMMUNITY);
+    if (!(await canSeePortfolioGallery(owner, req.user))) return ok(res, [], pageMeta({ page, limit, total: 0 }));
+    Object.assign(filter, GALLERY, { owner });
   } else {
     Object.assign(filter, COMMUNITY);
   }
@@ -88,7 +93,7 @@ async function mine(req, res) {
   return ok(res, await present(memories, req.user), pageMeta({ page, limit, total }));
 }
 
-// A portfolio-only memory is not served to members who may not see that gallery.
+// A gallery item is not served to members who may not see that gallery.
 async function loadViewable(id, viewer) {
   const memory = await content.loadVisible('memory', id, viewer);
   if (memory.showInCommunity === false && !(await canSeePortfolioGallery(memory.owner, viewer))) {

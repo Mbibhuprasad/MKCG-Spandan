@@ -39,7 +39,7 @@ export const metadata = {
 const features = [
   {
     icon: Stethoscope,
-    title: 'A directory of doctors',
+    title: 'Find your friends',
     text: 'Find batchmates by name, specialization or city, and see where their careers have taken them through professional profile pages.',
   },
   {
@@ -96,7 +96,7 @@ const commitments = [
   {
     icon: Lock,
     title: 'Privacy',
-    text: 'Member posts, memories, events and the doctor directory are visible only to signed-in members. Your email address and phone number stay hidden from other members unless you choose to show them.',
+    text: 'Member posts, memories, events and the Friends section are visible only to signed-in members. Your email address and phone number stay hidden from other members unless you choose to show them.',
   },
   {
     icon: Handshake,
@@ -155,7 +155,7 @@ export default function AboutPage() {
           </h2>
           <div className="mt-5 space-y-4 text-base leading-relaxed text-fg-soft">
             <p>
-              MKCGSPANDAN is an online community for doctors and medical batchmates. It combines a doctor directory,
+              MKCGSPANDAN is an online community for doctors and medical batchmates. It combines a Friends section,
               a community feed, member blogs, a memories gallery, events and polls — everything a batch needs to stay
               in touch — inside a space that is private to its members.
             </p>

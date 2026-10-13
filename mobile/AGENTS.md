@@ -21,12 +21,13 @@ npx expo-doctor             # diagnose dependency and config issues
 npx expo install --fix      # fix incompatible package versions
 ```
 
-Run lint and typecheck before declaring any task done.
+This project is JavaScript/JSX only (no TypeScript sources), so there is no typecheck step. Before declaring a task
+done run `npm run lint`, `npm run doctor` and `npm run export` (bundles every route). See `docs/MOBILE.md`.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
+- Use **Expo Router** for all navigation. Routes live in `app/` — every file there is a screen, `_layout.js` files define navigators. Keep non-route code (`components/`, `features/`, `hooks/`, `services/`, `utils/`) outside `app/`. `@/…` is the project root (`jsconfig.json`).
+- In this SDK import `Link`, `Redirect`, `router`, `useRouter` and `useLocalSearchParams` from `expo-router`; `Stack` from `expo-router/stack`; `Tabs` from `expo-router/js-tabs`. (`expo-router/link` exports only a default `Link` — a named `Redirect` import from it is `undefined` at run time.)
 - Docs: https://docs.expo.dev/router/introduction.md
 
 ## Building with EAS

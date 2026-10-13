@@ -99,8 +99,8 @@ const sections = [
         <List
           items={[
             <>
-              <Term>Members only:</Term> posts, comments, memories, events, visit plans, polls and the doctor
-              directory are shown to signed-in members.
+              <Term>Members only:</Term> posts, comments, memories, events, visit plans, polls and the Friends
+              section are shown to signed-in members.
             </>,
             <>
               <Term>Public:</Term> blogs can be read by anyone and may appear in search engines, together

@@ -26,7 +26,7 @@ export const HiddenBadge = () => (
 export function Section({ id, overline, title, icon: Icon, align = 'left', hidden = false, action, className, children }) {
   const centered = align === 'center';
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className={cn('scroll-mt-40 py-9 sm:py-12 xl:scroll-mt-24', className)}>
+    <section id={id} aria-labelledby={`${id}-title`} className={cn('scroll-mt-40 py-9 sm:py-12', className)}>
       <Reveal>
         <div className={cn('flex flex-wrap gap-x-6 gap-y-3', centered ? 'flex-col items-center text-center' : 'items-end justify-between')}>
           <div className="min-w-0">

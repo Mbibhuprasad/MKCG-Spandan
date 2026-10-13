@@ -8,7 +8,7 @@ const columns = [
     title: 'Community',
     links: [
       { href: '/about', label: 'About' },
-      { href: '/doctors', label: 'Doctors' },
+      { href: '/doctors', label: 'Friends' },
       { href: '/community', label: 'Community feed' },
       { href: '/events', label: 'Events & reunions' },
     ],
@@ -31,6 +31,9 @@ const columns = [
     ],
   },
 ];
+
+// Only a full web address becomes a link; anything else is shown as plain text.
+const developerUrl = /^https?:\/\//i.test(site.developer.url) ? site.developer.url : '';
 
 export default function Footer() {
   return (
@@ -71,6 +74,18 @@ export default function Footer() {
           </p>
           <p>Please never share patient-identifiable information here.</p>
         </div>
+        {site.developer.name && (
+          <p className="container-page -mt-2 pb-5 text-xs text-muted">
+            Developed by{' '}
+            {developerUrl ? (
+              <a href={developerUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-fg-soft hover:text-brand-ink hover:underline">
+                {site.developer.name}
+              </a>
+            ) : (
+              <span className="font-semibold text-fg-soft">{site.developer.name}</span>
+            )}
+          </p>
+        )}
       </div>
     </footer>
   );

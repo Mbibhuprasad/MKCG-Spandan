@@ -1,10 +1,10 @@
-import { MemberGate } from '@/components/auth/Guards';
-import DoctorPortfolio from '@/components/doctors/DoctorPortfolio';
+import { MemberGate } from "@/components/auth/Guards";
+import DoctorPortfolio from "@/components/doctors/DoctorPortfolio";
 
 // Portfolios are member-only. The profile is loaded in the browser with the
 // member's session, so no profile data is ever part of the public HTML.
 export const metadata = {
-  title: 'Doctor profile',
+  title: "Doctor profile",
   robots: { index: false, follow: false },
 };
 

@@ -30,6 +30,7 @@ It is a members' community — not a hospital, patient-management or medical-adv
 MKCGSpandan/
 ├── backend/     Express REST API, Mongoose models, scripts and tests
 ├── frontend/    Next.js web application
+├── mobile/      Android app (Expo, React Native) — a second client of the same API
 ├── docs/        Project documentation (see the index below)
 ├── package.json Root convenience scripts
 └── README.md
@@ -153,6 +154,7 @@ binary on first use and replace the Cloudinary SDK with a test double. See [docs
 | [docs/DATABASE.md](docs/DATABASE.md) | Models, relationships, indexes, deletion behaviour, backups |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Every environment variable |
 | [docs/TESTING.md](docs/TESTING.md) | Automated tests and the manual acceptance checklist |
+| [docs/MOBILE.md](docs/MOBILE.md) | The Android app: running it, API address, structure, chat, tests and limits |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment and pre-launch checklist |
 | [docs/DOCTOR_PORTFOLIO.md](docs/DOCTOR_PORTFOLIO.md) | Profile fields, completion, visibility preferences |
 | [docs/CLOUDINARY.md](docs/CLOUDINARY.md) | Upload architecture, delivery types, signed URLs, limitations |
