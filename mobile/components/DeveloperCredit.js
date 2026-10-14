@@ -12,7 +12,7 @@ export function DeveloperCredit({ style }) {
   if (!site.developer.name) return null;
   return (
     <Text variant="caption" tone="muted" center style={[styles.credit, style]}>
-      Developed by{' '}
+      Design & Devloped by{' '}
       <Text
         variant="caption"
         tone={url ? 'brand' : 'soft'}

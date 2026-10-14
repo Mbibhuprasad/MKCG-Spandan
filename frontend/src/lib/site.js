@@ -31,12 +31,12 @@ export const site = {
   // environment) to the full https:// address of the APK file or its download
   // page, then rebuild. Until it is set, the button shows "coming soon" and is
   // not a link.
-  androidApkUrl: httpsUrl(process.env.NEXT_PUBLIC_ANDROID_APK_URL),
+  androidApkUrl: httpsUrl(""),
   // Credit shown at the bottom of the footer. Replace the placeholder with the
   // developer's name; add a full https:// address to `url` to make it a link.
   developer: {
-    name: "[DEVELOPER_NAME]",
-    url: "",
+    name: ": Bibhu Prsad Mahapatra",
+    url: "https://www.linkedin.com/in/bibhuprasad-mahapatra-a9a896282/?isSelfProfile=true",
   },
   // Optional real photograph for the homepage hero (e.g. '/brand/hero.jpg').
   // When empty, the built-in illustration is shown instead.

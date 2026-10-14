@@ -75,8 +75,8 @@ export default function Footer() {
           <p>Please never share patient-identifiable information here.</p>
         </div>
         {site.developer.name && (
-          <p className="container-page -mt-2 pb-5 text-xs text-muted">
-            Developed by{' '}
+          <p className="container-page -mt-2 pb-5 text-md text-muted">
+            Design & Developed by{' '}
             {developerUrl ? (
               <a href={developerUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-fg-soft hover:text-brand-ink hover:underline">
                 {site.developer.name}

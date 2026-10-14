@@ -145,7 +145,7 @@ export default function Hero() {
               </a>
             ) : (
               <Button variant="secondary" size="sm" icon={Download} disabled className="h-10">
-                Download App — coming soon
+                Download App 
               </Button>
             )}
           </div>
