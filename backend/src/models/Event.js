@@ -12,7 +12,8 @@ const eventSchema = new Schema(
     title: { type: String, required: true, trim: true, maxlength: 140 },
     description: { type: String, required: true, maxlength: 4000 },
     eventType: { type: String, enum: EVENT_TYPES, required: true },
-    venue: { type: String, trim: true, maxlength: 200, default: '' },
+    venue: { type: String, trim: true, maxlength: 200, default: '' }, // venue name
+    address: { type: String, trim: true, maxlength: 300, default: '' }, // full street address of the venue (optional)
     city: { type: String, required: true, trim: true, maxlength: 80 },
     startsAt: { type: Date, required: true },
     endsAt: { type: Date, required: true },

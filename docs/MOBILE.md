@@ -129,8 +129,13 @@ Profile and the profile menu. Whether onboarding is still pending is remembered 
   checked (`GET /auth/me`), and fades out when that check ends — into the app, the sign-in screens, or the
   "cannot reach the server" screen. The three dots only mean "working"; no progress is simulated. It is shown at
   launch and when the session is re-checked, never when moving between tabs.
-- **In-app logo** — `assets/logo-mark.png`, loaded in one place (`components/Logo.js`). Replace the file (square PNG,
-  512 px or larger) to change the logo everywhere, including the launch screen. The file must exist at build time.
+- **Logo** — the official `assets/MKCGSPANDAN LOGO.png` (the same artwork as the website), loaded in one place
+  (`components/Logo.js`, `LOGO`) and shown on a white rounded tile so it is legible in both themes: header, Home,
+  About, sign-in, onboarding and the launch screen. The native splash (`app.config.js`, expo-splash-screen) uses the
+  same file; changing it there needs a new native build. The file must exist at build time.
+- **Website link** — `EXPO_PUBLIC_WEB_URL` (see `.env.example`, read in `services/config.js` as `WEB_URL`): the
+  "Explore MKCGSPANDAN on the Web" card in the Home "More to Explore" section opens it. While it is empty the card
+  shows "Coming soon" and opens nothing.
 - **Developer credit** — `site.developer` in `utils/constants.js` (`name`, optional `url`), rendered by
   `components/DeveloperCredit.js` at the end of Home and About.
 

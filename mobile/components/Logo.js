@@ -5,16 +5,21 @@ import { Image } from 'expo-image';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/theme/ThemeProvider';
 
-// The in-app logo: the header, the launch screen, Home and About all draw this
-// one file. To use the final logo, replace mobile/assets/logo-mark.png (a square
-// PNG, 512px or larger, transparent background) or point this line at another
-// file in assets/. The file is bundled at build time, so it must exist.
-const MARK = require('../assets/logo-mark.png');
+// The official MKCGSPANDAN logo (the same artwork as the website's), drawn by
+// the header, Home, About, sign-in and onboarding; the launch screen and the
+// native splash use the same file (components/BootScreens.js, app.config.js).
+// The file is bundled at build time, so it must exist.
+export const LOGO = require('../assets/MKCGSPANDAN LOGO.png');
 
-// The only place the logo artwork is rendered. It is fitted inside a square
-// with softly rounded corners and is never stretched.
+// The only place the in-app logo is rendered. The artwork sits on white, so it
+// is shown on a white tile with softly rounded corners — legible in both
+// themes — and fitted inside it, never stretched or cropped.
 export function LogoMark({ size = 36 }) {
-  return <Image source={MARK} style={{ width: size, height: size, borderRadius: size * 0.25 }} contentFit="contain" accessibilityLabel="MKCGSPANDAN logo" />;
+  return (
+    <View style={[styles.tile, { width: size, height: size, borderRadius: size * 0.25, padding: Math.max(1, size * 0.04) }]}>
+      <Image source={LOGO} style={styles.fill} contentFit="contain" accessibilityLabel="MKCGSPANDAN logo" />
+    </View>
+  );
 }
 
 export function Logo({ size = 34, showName = true, color }) {
@@ -58,6 +63,8 @@ export function PulsingLogo({ size = 96 }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  tile: { backgroundColor: '#ffffff', overflow: 'hidden' },
+  fill: { width: '100%', height: '100%' },
   name: { fontWeight: '800', letterSpacing: 0.6 },
   pulseWrap: { alignItems: 'center', justifyContent: 'center' },
   halo: { position: 'absolute' },

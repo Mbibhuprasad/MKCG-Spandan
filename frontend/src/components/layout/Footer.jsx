@@ -40,7 +40,7 @@ export default function Footer() {
     <footer className="mt-auto border-t border-line bg-bg-soft">
       <div className="container-page grid gap-10 py-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="max-w-sm">
-          <Logo />
+          <Logo logoSize={48} />
           <p className="mt-4 text-sm leading-relaxed text-fg-soft">
             A private community where doctors and medical batchmates reconnect, celebrate one another&apos;s journeys and
             keep shared memories alive.

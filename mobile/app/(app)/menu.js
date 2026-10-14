@@ -101,6 +101,7 @@ export default function ProfileMenu() {
           <Divider style={styles.gap} />
           <Row icon="book-outline" label="Create Blog" onPress={() => go('/create/blog')} />
           <Row icon="calendar-outline" label="Create Event" onPress={() => go('/create/event')} />
+          <Row icon="time-outline" label="Event Schedule" onPress={() => go('/events/schedule')} />
           <Row icon="images-outline" label="Create Memory" onPress={() => go('/create/memory')} />
           <Divider style={styles.gap} />
           <Row icon="notifications-outline" label="Notifications" badge={unreadCount} onPress={() => go('/notifications')} />

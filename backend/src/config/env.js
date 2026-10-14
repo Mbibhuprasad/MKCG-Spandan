@@ -41,6 +41,19 @@ const schema = z.object({
   MAX_IMAGE_MB: int(8, 1, 50),
   MAX_VIDEO_MB: int(60, 1, 500),
   DEFAULT_COUNTRY_CODE: z.string().regex(/^\d{1,3}$/).default('91'),
+  // The community's calendar: decides which day "today" is (birthdays). Same default as the website.
+  TIME_ZONE: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() ? v.trim() : 'Asia/Kolkata'))
+    .refine((tz) => {
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: tz });
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'must be an IANA time zone such as Asia/Kolkata'),
   BCRYPT_ROUNDS: int(12, 4, 15),
   RATE_LIMIT_GLOBAL_MAX: int(1500, 1, 1000000),
   RATE_LIMIT_LOGIN_MAX: int(10, 1, 1000000),
@@ -120,6 +133,7 @@ function loadEnv(source = process.env) {
     maxImageBytes: e.MAX_IMAGE_MB * 1024 * 1024,
     maxVideoBytes: e.MAX_VIDEO_MB * 1024 * 1024,
     defaultCountryCode: e.DEFAULT_COUNTRY_CODE,
+    timeZone: e.TIME_ZONE,
     bcryptRounds: e.BCRYPT_ROUNDS,
     rateLimit: Object.freeze({
       globalMax: e.RATE_LIMIT_GLOBAL_MAX,

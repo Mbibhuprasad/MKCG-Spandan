@@ -3,12 +3,14 @@ import { cn } from '@/lib/format';
 /** Title block at the top of an inner page. */
 export function PageHeader({ eyebrow, title, description, actions, className }) {
   return (
-    <header className={cn('border-b border-line bg-bg-soft', className)}>
-      <div className="container-page flex flex-col gap-5 py-10 sm:py-12 md:flex-row md:items-end md:justify-between">
+    <header className={cn("border-b border-line bg-bg-soft", className)}>
+      <div className="container-page flex flex-col gap-5 py-2 sm:py-4 md:flex-row md:items-end md:justify-between">
         <div className="max-w-2xl">
           {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-fg sm:text-4xl">{title}</h1>
-          {description && <p className="mt-3 text-base leading-relaxed text-fg-soft">{description}</p>}
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
+            {title}{" "}
+           
+          </h1>
         </div>
         {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
       </div>

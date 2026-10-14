@@ -11,6 +11,7 @@ const {
 } = require('../config/constants');
 const { serializeMedia } = require('./media.service');
 const { orderProfile, experienceSummary } = require('./profileOrder');
+const { formatIsoDay } = require('../utils/calendar');
 
 const AUTHOR_FIELDS = 'name role status profile.professionalTitle profile.specialization profile.photo';
 
@@ -125,6 +126,7 @@ function profileBody(user) {
     professionalTitle: p.professionalTitle || '',
     headline: p.headline || '',
     bloodGroup: p.bloodGroup || '',
+    dateOfBirth: formatIsoDay(p.dateOfBirth), // "YYYY-MM-DD" or null
     address: p.address || '',
     specialization: p.specialization || '',
     subspecialty: p.subspecialty || '',
@@ -197,6 +199,7 @@ function visibilityOf(user) {
     showWorkContact: v.showWorkContact !== false,
     showRegistration: Boolean(v.showRegistration),
     showBloodGroup: Boolean(v.showBloodGroup),
+    showBirthday: v.showBirthday !== false,
     sections: Object.fromEntries(PROFILE_SECTIONS.map((key) => [key, sections[key] !== false])),
   };
 }
@@ -213,6 +216,8 @@ function memberProfileBody(user, visibility) {
   body.workPhone = '';
   // Private unless the doctor opted in. No section switch can reveal it.
   if (!visibility.showBloodGroup) body.bloodGroup = '';
+  // Never shared: members only see the doctor in "Today's Birthdays" on the day.
+  body.dateOfBirth = null;
 
   if (!visibility.showWorkContact) body.practiceLocations = body.practiceLocations.map((l) => ({ ...l, phone: '' }));
   if (!visibility.showRegistration) {
@@ -256,9 +261,17 @@ function serializeSelf(user) {
   };
 }
 
-// Directory card shown to signed-in members.
-function serializeDoctorCard(user) {
+// Directory card shown to signed-in members. `contact` carries a phone number
+// only under the same rules as the portfolio: the account phone with
+// visibility.showPhone, the workplace phone with visibility.showWorkContact
+// (the doctor themselves and admins always see theirs).
+function serializeDoctorCard(user, viewer) {
   const p = user.profile || {};
+  const visibility = visibilityOf(user);
+  const always = owns(viewer, user) || isAdmin(viewer);
+  const contact = {};
+  if (visibility.showPhone || always) contact.phone = user.phone;
+  if (p.workPhone && (visibility.showWorkContact || always)) contact.workPhone = p.workPhone;
   return {
     id: String(user._id),
     name: user.name,
@@ -271,6 +284,7 @@ function serializeDoctorCard(user) {
     state: p.state || '',
     yearsOfExperience: p.yearsOfExperience ?? null,
     batchYear: p.batchYear ?? null,
+    contact,
   };
 }
 
@@ -445,6 +459,30 @@ function serializeMemory(memory, { viewer, likedIds } = {}) {
   return withModeration(out, memory, viewer, memory.owner);
 }
 
+// A travel plan stored on an RSVP, or null when the member has not shared one.
+function serializeTravel(travel) {
+  if (!travel || !travel.arrivalAt) return null;
+  return {
+    from: travel.from,
+    arrivalAt: travel.arrivalAt,
+    departureAt: travel.departureAt,
+    note: travel.note || '',
+    updatedAt: travel.updatedAt,
+  };
+}
+
+// One row of an event's schedule: who is coming, from where, and when. Only the
+// member summary that appears on every post is included — no contact details.
+function serializeScheduleEntry(rsvp, { viewer } = {}) {
+  return {
+    id: String(rsvp._id),
+    doctor: authorSummary(rsvp.user),
+    status: rsvp.status,
+    travel: serializeTravel(rsvp.travel),
+    isMine: owns(viewer, rsvp.user),
+  };
+}
+
 function serializeEvent(event, { viewer, counts, myRsvp } = {}) {
   const now = Date.now();
   const c = counts || { going: 0, maybe: 0, notGoing: 0, guests: 0 };
@@ -454,6 +492,7 @@ function serializeEvent(event, { viewer, counts, myRsvp } = {}) {
     description: event.description,
     eventType: event.eventType,
     venue: event.venue,
+    address: event.address || '',
     city: event.city,
     startsAt: event.startsAt,
     endsAt: event.endsAt,
@@ -471,7 +510,7 @@ function serializeEvent(event, { viewer, counts, myRsvp } = {}) {
       notGoing: c.notGoing,
       guests: c.guests,
       attending: c.going + c.guests,
-      mine: myRsvp ? { status: myRsvp.status, guests: myRsvp.guests } : null,
+      mine: myRsvp ? { status: myRsvp.status, guests: myRsvp.guests, travel: serializeTravel(myRsvp.travel) } : null,
     },
     commentCount: event.commentCount,
     createdAt: event.createdAt,
@@ -573,6 +612,8 @@ module.exports = {
   serializeMemory,
   serializeEvent,
   serializeEventPublic,
+  serializeTravel,
+  serializeScheduleEntry,
   serializePoll,
   serializeNotification,
 };

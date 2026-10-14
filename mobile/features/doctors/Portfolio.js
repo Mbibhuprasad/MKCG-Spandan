@@ -434,6 +434,35 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
           </Section>
         ) : null}
 
+        {/* 4 — Professional experience (the API lists current roles first) */}
+        {p.experience && p.experience.length ? (
+          <Section
+            icon="briefcase-outline"
+            title="Professional experience"
+            delay={next()}
+          >
+            {p.experience.map((e, i) => (
+              <Entry
+                key={e.id}
+                title={e.role}
+                subtitle={joinParts([
+                  e.organization,
+                  joinParts([e.city, e.state], ", "),
+                ])}
+                period={joinParts([
+                  yearRange(e.startYear, e.endYear, e.current),
+                  e.employmentType
+                    ? labelOf(EMPLOYMENT_TYPES, e.employmentType)
+                    : "",
+                ])}
+                note={e.description}
+                badge={e.current ? "Current" : null}
+                last={i === p.experience.length - 1}
+              />
+            ))}
+          </Section>
+        ) : null}
+
         {/* 3 — Education and qualifications */}
         {hasEducation ? (
           <Section
@@ -470,35 +499,6 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
               />
             ))}
             <Tags label="Qualifications" items={p.qualifications} tone="leaf" />
-          </Section>
-        ) : null}
-
-        {/* 4 — Professional experience (the API lists current roles first) */}
-        {p.experience && p.experience.length ? (
-          <Section
-            icon="briefcase-outline"
-            title="Professional experience"
-            delay={next()}
-          >
-            {p.experience.map((e, i) => (
-              <Entry
-                key={e.id}
-                title={e.role}
-                subtitle={joinParts([
-                  e.organization,
-                  joinParts([e.city, e.state], ", "),
-                ])}
-                period={joinParts([
-                  yearRange(e.startYear, e.endYear, e.current),
-                  e.employmentType
-                    ? labelOf(EMPLOYMENT_TYPES, e.employmentType)
-                    : "",
-                ])}
-                note={e.description}
-                badge={e.current ? "Current" : null}
-                last={i === p.experience.length - 1}
-              />
-            ))}
           </Section>
         ) : null}
 
@@ -680,11 +680,7 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
           </Section>
         ) : null}
         {galleryItems.length || (mine && gallery.status === "ready") ? (
-          <Section
-            icon="images-outline"
-            title="Gallery"
-            delay={next()}
-          >
+          <Section icon="images-outline" title="Gallery" delay={next()}>
             {galleryItems.length ? (
               <View style={styles.gallery}>
                 {galleryItems.map((memory) => (

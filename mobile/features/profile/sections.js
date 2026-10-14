@@ -309,6 +309,12 @@ export const SECTIONS = [
         options: BLOOD_GROUPS,
         help: "Private unless you choose to show it to members.",
       },
+      {
+        key: "dateOfBirth",
+        label: "Date of birth",
+        type: "date",
+        help: "Private — never shown on your profile. On your birthday members see you in Today's Birthdays on the website (you can turn this off in Settings).",
+      },
       { key: "address", label: "Area or locality", max: 240 },
     ],
     lists: [],

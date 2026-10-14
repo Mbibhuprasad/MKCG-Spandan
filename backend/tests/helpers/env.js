@@ -35,4 +35,5 @@ Object.assign(process.env, {
   COOKIE_DOMAIN: '',
   COOKIE_SECURE: 'false',
   DEFAULT_COUNTRY_CODE: '91',
+  TIME_ZONE: 'Asia/Kolkata',
 });

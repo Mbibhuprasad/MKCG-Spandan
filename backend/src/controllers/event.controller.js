@@ -8,8 +8,16 @@ const { paging } = require('../utils/pagination');
 const { MODERATION } = require('../config/constants');
 const content = require('../services/content.service');
 const { announce } = require('../services/moderation.service');
+const { audit } = require('../services/audit.service');
 const { claimMedia, unclaim, destroyMedia } = require('../services/media.service');
-const { serializeEvent, serializeEventPublic, authorSummary, AUTHOR_FIELDS } = require('../services/serializers');
+const {
+  serializeEvent,
+  serializeEventPublic,
+  serializeScheduleEntry,
+  authorSummary,
+  idOf,
+  AUTHOR_FIELDS,
+} = require('../services/serializers');
 
 const POPULATE = [{ path: 'organizer', select: AUTHOR_FIELDS }, { path: 'cover' }];
 
@@ -133,6 +141,7 @@ async function create(req, res) {
       description: data.description,
       eventType: data.eventType,
       venue: data.venue,
+      address: data.address,
       city: data.city,
       startsAt: data.startsAt,
       endsAt,
@@ -159,7 +168,7 @@ async function update(req, res) {
   const event = await content.loadManageable('event', req.valid.params.id, req.user);
   const data = req.valid.body;
 
-  const simple = ['title', 'description', 'eventType', 'venue', 'city', 'budgetNote', 'rsvpEnabled', 'rsvpDeadline', 'capacity', 'showOnPublicSite'];
+  const simple = ['title', 'description', 'eventType', 'venue', 'address', 'city', 'budgetNote', 'rsvpEnabled', 'rsvpDeadline', 'capacity', 'showOnPublicSite'];
   for (const key of simple) if (data[key] !== undefined) event[key] = data[key];
   const datesChanged = data.startsAt !== undefined || data.endsAt !== undefined;
   if (data.startsAt !== undefined) event.startsAt = data.startsAt;
@@ -208,43 +217,60 @@ async function loadOpenEvent(id, viewer) {
   return event;
 }
 
-async function setRsvp(req, res) {
-  const { status, guests } = req.valid.body;
-  const event = await loadOpenEvent(req.valid.params.id, req.user);
+function assertRsvpOpen(event) {
   const now = Date.now();
-
   if (!event.rsvpEnabled) throw ApiError.conflict('RSVPs are not enabled for this event.', undefined, 'RSVP_CLOSED');
   if (event.endsAt.getTime() < now) throw ApiError.conflict('This event has already taken place.', undefined, 'RSVP_CLOSED');
   if (event.rsvpDeadline && event.rsvpDeadline.getTime() < now) {
     throw ApiError.conflict('The RSVP deadline for this event has passed.', undefined, 'RSVP_CLOSED');
   }
+}
 
-  const effectiveGuests = status === 'GOING' ? guests : 0;
-  if (status === 'GOING' && event.capacity) {
-    const others = await Rsvp.aggregate([
-      { $match: { event: event._id, status: 'GOING', user: { $ne: req.user._id } } },
-      { $group: { _id: null, people: { $sum: { $add: [1, '$guests'] } } } },
-    ]);
-    const taken = others.length ? others[0].people : 0;
-    if (taken + 1 + effectiveGuests > event.capacity) {
-      throw ApiError.conflict('This event does not have enough places left.', undefined, 'EVENT_FULL');
-    }
+// Whether `userId` (plus guests) still fits, counting everyone else who is going.
+async function assertPlaceLeft(event, userId, guests) {
+  if (!event.capacity) return;
+  const others = await Rsvp.aggregate([
+    { $match: { event: event._id, status: 'GOING', user: { $ne: userId } } },
+    { $group: { _id: null, people: { $sum: { $add: [1, '$guests'] } } } },
+  ]);
+  const taken = others.length ? others[0].people : 0;
+  if (taken + 1 + guests > event.capacity) {
+    throw ApiError.conflict('This event does not have enough places left.', undefined, 'EVENT_FULL');
   }
+}
 
-  // Upsert against the unique (event, user) index: a doctor always has at most
-  // one RSVP, even if the same request is sent twice at once.
+// Upsert against the unique (event, user) index: a doctor always has at most
+// one RSVP (and so one travel plan) per event, even if the same request is
+// sent twice at once.
+async function writeRsvp(eventId, userId, update) {
   const write = () =>
-    Rsvp.findOneAndUpdate(
-      { event: event._id, user: req.user._id },
-      { $set: { status, guests: effectiveGuests } },
-      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-    );
+    Rsvp.findOneAndUpdate({ event: eventId, user: userId }, update, {
+      upsert: true,
+      returnDocument: 'after',
+      setDefaultsOnInsert: true,
+    });
   try {
-    await write();
+    return await write();
   } catch (err) {
     if (!err || err.code !== 11000) throw err;
-    await write();
+    return write();
   }
+}
+
+const NO_TRAVEL = { from: '', arrivalAt: null, departureAt: null, note: '', updatedAt: null };
+
+async function setRsvp(req, res) {
+  const { status, guests } = req.valid.body;
+  const event = await loadOpenEvent(req.valid.params.id, req.user);
+  assertRsvpOpen(event);
+
+  const effectiveGuests = status === 'GOING' ? guests : 0;
+  if (status === 'GOING') await assertPlaceLeft(event, req.user._id, effectiveGuests);
+
+  // Someone who can no longer come drops off the event's schedule too.
+  const set = { status, guests: effectiveGuests };
+  if (status === 'NOT_GOING') set.travel = NO_TRAVEL;
+  await writeRsvp(event._id, req.user._id, { $set: set });
 
   await event.populate(POPULATE);
   const [item] = await present([event], req.user);
@@ -276,4 +302,113 @@ async function attendees(req, res) {
   );
 }
 
-module.exports = { publicUpcoming, list, mine, getOne, create, update, remove, setRsvp, clearRsvp, attendees };
+/* ── Travel schedules ── */
+
+// Travel plans are about getting to this event, so the dates must be close to it.
+const SCHEDULE_WINDOW_MS = 60 * 24 * 60 * 60 * 1000; // 60 days either side
+
+function assertTravelDates(event, { arrivalAt, departureAt }) {
+  const details = {};
+  const start = event.startsAt.getTime();
+  const end = event.endsAt.getTime();
+  if (arrivalAt.getTime() > end) details.arrivalAt = 'Your arrival must be before the event ends.';
+  else if (arrivalAt.getTime() < start - SCHEDULE_WINDOW_MS) details.arrivalAt = 'Your arrival must be within 60 days of the event.';
+  if (departureAt.getTime() <= arrivalAt.getTime()) details.departureAt = 'Departure must be after your arrival.';
+  else if (departureAt.getTime() < start) details.departureAt = 'Your departure cannot be before the event starts.';
+  else if (departureAt.getTime() > end + SCHEDULE_WINDOW_MS) details.departureAt = 'Your departure must be within 60 days of the event.';
+  if (Object.keys(details).length) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Please check the highlighted fields.', details);
+  }
+}
+
+// Adds or updates the signed-in member's own travel plan. The plan is stored on
+// their RSVP, so it always belongs to exactly one doctor and one event and
+// nobody can write another member's plan. Sharing a plan means attending: a
+// member without a Going/Maybe answer is marked as going under the usual RSVP
+// rules — except the organiser, who may always add their own plan.
+async function setSchedule(req, res) {
+  const event = await loadOpenEvent(req.valid.params.id, req.user);
+  if (event.endsAt.getTime() < Date.now()) {
+    throw ApiError.conflict('This event has already taken place.', undefined, 'SCHEDULE_CLOSED');
+  }
+  const { travelFrom, arrivalAt, departureAt, note } = req.valid.body;
+  assertTravelDates(event, { arrivalAt, departureAt });
+
+  const current = await Rsvp.findOne({ event: event._id, user: req.user._id }).lean();
+  const attending = Boolean(current && current.status !== 'NOT_GOING');
+  const set = { travel: { from: travelFrom, arrivalAt, departureAt, note, updatedAt: new Date() } };
+  if (!attending) {
+    if (idOf(event.organizer) !== String(req.user._id)) assertRsvpOpen(event);
+    await assertPlaceLeft(event, req.user._id, 0);
+    Object.assign(set, { status: 'GOING', guests: 0 });
+  }
+  await writeRsvp(event._id, req.user._id, { $set: set });
+
+  await event.populate(POPULATE);
+  const [item] = await present([event], req.user);
+  return ok(res, item);
+}
+
+// Removes the member's own travel plan; their RSVP answer stays as it is.
+async function clearSchedule(req, res) {
+  const event = await loadOpenEvent(req.valid.params.id, req.user);
+  await Rsvp.updateOne({ event: event._id, user: req.user._id }, { $set: { travel: NO_TRAVEL } });
+  await event.populate(POPULATE);
+  const [item] = await present([event], req.user);
+  return ok(res, item);
+}
+
+// Administrators can take down a member's travel plan (for example a note that
+// breaks the community guidelines), as they can any member content.
+async function removeScheduleOf(req, res) {
+  const { id, userId } = req.valid.params;
+  const event = await loadOpenEvent(id, req.user);
+  const result = await Rsvp.updateOne(
+    { event: event._id, user: userId, 'travel.arrivalAt': { $ne: null } },
+    { $set: { travel: NO_TRAVEL } }
+  );
+  if (!result.matchedCount) throw ApiError.notFound('That travel plan could not be found.');
+  await audit(req.user, {
+    action: 'TRAVEL_PLAN_DELETED',
+    targetType: 'event',
+    targetId: event._id,
+    summary: `Removed a member travel plan from the event schedule of "${event.title}"`,
+    metadata: { userId: String(userId) },
+  });
+  return ok(res, { removed: true });
+}
+
+// The Event Schedule: members attending (Going or Maybe) who shared a travel
+// plan, earliest arrival first.
+async function schedule(req, res) {
+  const event = await loadOpenEvent(req.valid.params.id, req.user);
+  const { page, limit } = req.valid.query;
+  const filter = { event: event._id, status: { $in: ['GOING', 'MAYBE'] }, 'travel.arrivalAt': { $ne: null } };
+  const { skip } = paging({ page, limit });
+  const [rows, total] = await Promise.all([
+    Rsvp.find(filter).sort({ 'travel.arrivalAt': 1, _id: 1 }).skip(skip).limit(limit).populate('user', AUTHOR_FIELDS),
+    Rsvp.countDocuments(filter),
+  ]);
+  return ok(
+    res,
+    rows.map((row) => serializeScheduleEntry(row, { viewer: req.user })),
+    pageMeta({ page, limit, total })
+  );
+}
+
+module.exports = {
+  publicUpcoming,
+  list,
+  mine,
+  getOne,
+  create,
+  update,
+  remove,
+  setRsvp,
+  clearRsvp,
+  attendees,
+  schedule,
+  setSchedule,
+  clearSchedule,
+  removeScheduleOf,
+};

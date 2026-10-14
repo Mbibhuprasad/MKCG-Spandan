@@ -2,9 +2,9 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Search, Users, X } from "lucide-react";
+import { LayoutGrid, List, Search, Users, X } from "lucide-react";
 import { useApi, useDebounced } from "@/lib/hooks";
-import { plural } from "@/lib/format";
+import { cn, plural } from "@/lib/format";
 import Button from "@/components/ui/Button";
 import Pagination from "@/components/ui/Pagination";
 import { Field, Input, SelectField } from "@/components/ui/Form";
@@ -13,9 +13,47 @@ import {
   EmptyState,
   ErrorState,
 } from "@/components/ui/Feedback";
-import DoctorCard from "@/components/cards/DoctorCard";
+import DoctorGridCard from "@/components/cards/DoctorGridCard";
+import DoctorListItem from "@/components/cards/DoctorListItem";
 
 const PAGE_SIZE = 12;
+
+// Grid (the cards) is the default on the website; List shows one row per friend.
+const VIEWS = [
+  { value: "grid", label: "Grid", icon: LayoutGrid },
+  { value: "list", label: "List", icon: List },
+];
+
+function ViewSwitch({ value, onChange }) {
+  return (
+    <div
+      role="group"
+      aria-label="Show friends as"
+      className="inline-flex shrink-0 rounded-xl border border-line bg-surface-2 p-1"
+    >
+      {VIEWS.map((view) => {
+        const active = view.value === value;
+        return (
+          <button
+            key={view.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(view.value)}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors",
+              active
+                ? "bg-surface text-brand-ink shadow-soft"
+                : "text-muted hover:text-fg",
+            )}
+          >
+            <view.icon className="h-4 w-4" aria-hidden="true" />
+            {view.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * The Friends list (member discovery). Rendered inside <MemberGate>, so it only mounts — and only
@@ -29,6 +67,9 @@ export default function DoctorsDirectory() {
     () => params.get("specialization") || "",
   );
   const [city, setCity] = useState(() => params.get("city") || "");
+  const [view, setView] = useState(() =>
+    params.get("view") === "list" ? "list" : "grid",
+  );
   const [page, setPage] = useState(() => {
     const n = Number(params.get("page"));
     return Number.isInteger(n) && n > 0 ? n : 1;
@@ -53,9 +94,10 @@ export default function DoctorsDirectory() {
     if (specialization) next.set("specialization", specialization);
     if (city) next.set("city", city);
     if (page > 1) next.set("page", String(page));
+    if (view === "list") next.set("view", "list");
     const qs = next.toString();
     window.history.replaceState(null, "", qs ? `/doctors?${qs}` : "/doctors");
-  }, [debouncedQ, specialization, city, page]);
+  }, [debouncedQ, specialization, city, page, view]);
 
   const change = (setter) => (event) => {
     setter(event.target.value);
@@ -78,7 +120,11 @@ export default function DoctorsDirectory() {
   const cities = filters.data ? filters.data.cities : [];
 
   return (
-    <div className="container-page py-8 sm:py-10">
+    <div className="container-page py-6 sm:py-6">
+      <p className="mb-5 max-w-2xl text-base leading-relaxed text-fg-soft">
+        Find batchmates by name, specialization or city, and see where their
+        journeys in medicine have taken them.
+      </p>
       <form
         role="search"
         aria-label="Find friends"
@@ -148,17 +194,24 @@ export default function DoctorsDirectory() {
         </Button>
       </form>
 
-      <p className="mt-5 text-sm text-muted" aria-live="polite">
-        {loading && !data
-          ? "Loading friends…"
-          : meta && !error
-            ? `${plural(meta.total, "friend")}${hasFilters ? " found" : " in the community"}`
-            : ""}
-      </p>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted" aria-live="polite">
+          {loading && !data
+            ? "Loading friends…"
+            : meta && !error
+              ? `${plural(meta.total, "friend")}${hasFilters ? " found" : " in the community"}`
+              : ""}
+        </p>
+        <ViewSwitch value={view} onChange={setView} />
+      </div>
 
       <div className="mt-4">
         {loading && !data ? (
-          <CardSkeletons count={6} height="h-60" />
+          view === "list" ? (
+            <CardSkeletons count={4} className="space-y-4" height="h-24" />
+          ) : (
+            <CardSkeletons count={6} height="h-60" />
+          )
         ) : error ? (
           <ErrorState message={error.message} onRetry={reload} />
         ) : doctors.length === 0 ? (
@@ -194,6 +247,17 @@ export default function DoctorsDirectory() {
               }
             />
           )
+        ) : view === "list" ? (
+          <ul
+            className={`space-y-4 ${loading ? "opacity-60" : ""}`}
+            aria-busy={loading}
+          >
+            {doctors.map((doctor) => (
+              <li key={doctor.id}>
+                <DoctorListItem doctor={doctor} />
+              </li>
+            ))}
+          </ul>
         ) : (
           <ul
             className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${loading ? "opacity-60" : ""}`}
@@ -201,7 +265,7 @@ export default function DoctorsDirectory() {
           >
             {doctors.map((doctor) => (
               <li key={doctor.id}>
-                <DoctorCard doctor={doctor} />
+                <DoctorGridCard doctor={doctor} />
               </li>
             ))}
           </ul>

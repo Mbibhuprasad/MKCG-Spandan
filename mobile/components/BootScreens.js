@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { Image } from 'expo-image';
+import { LOGO } from '@/components/Logo';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LogoMark } from '@/components/Logo';
 import { Button, Text } from '@/components/ui';
 import { API_ORIGIN } from '@/services/config';
 import { useTheme } from '@/theme/ThemeProvider';
 import { site } from '@/utils/constants';
 
-const LOGO_SIZE = 104;
-const INTRO_MS = 700; // the logo arriving
+// The official logo (components/Logo.js). Its artwork sits on white, so it is
+// shown on a white tile in both themes.
+const LOGO_SIZE = 184; // the white tile
+const INTRO_MS = 650; // the logo arriving
+const PULSE_MS = 1400; // one soft breath while the session is checked
 const OUTRO_MS = 320; // the screen leaving
 
 // One of the three dots under the logo. They only say "working" — nothing here
@@ -37,22 +41,27 @@ function Dot({ index }) {
 }
 
 // The animated launch screen. It takes over from the native splash and covers
-// the app while the stored session is checked: the logo zooms in to its size in
-// the centre of the screen, a quiet loading indicator sits below it, and the
-// whole screen fades away to reveal the app.
+// the app while the stored session is checked: the logo fades in and grows to
+// its size in the centre of the screen, then breathes softly while a quiet
+// loading indicator sits below it, and the whole screen fades away to reveal
+// the app as soon as the check is over (it never waits on the animation for
+// more than the short entrance).
 //   done      the session check has finished (whatever its outcome)
 //   onHidden  called after the fade-out so the parent can unmount the screen
 export function LaunchScreen({ done = false, onHidden }) {
   const { colors } = useTheme();
   const intro = useSharedValue(0);
+  const pulse = useSharedValue(0);
   const exit = useSharedValue(0);
   const [arrived, setArrived] = useState(false);
 
   useEffect(() => {
     intro.value = withTiming(1, { duration: INTRO_MS, easing: Easing.out(Easing.cubic) });
+    const half = { duration: PULSE_MS / 2, easing: Easing.inOut(Easing.sin) };
+    pulse.value = withDelay(INTRO_MS, withRepeat(withSequence(withTiming(1, half), withTiming(0, half)), -1, false));
     const timer = setTimeout(() => setArrived(true), INTRO_MS);
     return () => clearTimeout(timer);
-  }, [intro]);
+  }, [intro, pulse]);
 
   // Leave once the app is ready and the logo has arrived: the zoom is never cut
   // short, and the screen is never held for longer than the check really takes.
@@ -71,7 +80,10 @@ export function LaunchScreen({ done = false, onHidden }) {
   const screen = useAnimatedStyle(() => ({ opacity: 1 - exit.value }));
   // The gradient fades in over the background colour the native splash used.
   const backdrop = useAnimatedStyle(() => ({ opacity: interpolate(intro.value, [0, 0.4], [0, 1], 'clamp') }));
-  const logo = useAnimatedStyle(() => ({ opacity: interpolate(intro.value, [0, 0.5], [0, 1], 'clamp'), transform: [{ scale: 0.6 + 0.4 * intro.value }] }));
+  const logo = useAnimatedStyle(() => ({
+    opacity: interpolate(intro.value, [0, 0.6], [0, 1], 'clamp'),
+    transform: [{ scale: (0.86 + 0.14 * intro.value) * (1 + 0.025 * pulse.value) }],
+  }));
   const caption = useAnimatedStyle(() => ({ opacity: interpolate(intro.value, [0.5, 1], [0, 1], 'clamp') }));
 
   return (
@@ -81,15 +93,12 @@ export function LaunchScreen({ done = false, onHidden }) {
         <LinearGradient colors={colors.gradientHero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <View style={styles.fill}>
-        <Animated.View style={logo}>
-          <LogoMark size={LOGO_SIZE} />
+        <Animated.View style={[styles.tile, logo]}>
+          <Image source={LOGO} style={styles.logo} contentFit="contain" accessibilityLabel="MKCGSPANDAN logo" />
         </Animated.View>
         {/* Hung below the centred logo, so the logo itself stays in the middle of the screen. */}
         <Animated.View style={[styles.below, caption]}>
-          <Text style={styles.wordmark} color="#ffffff">
-            MKCG<Text style={styles.wordmark} color="#6fe3ad">SPANDAN</Text>
-          </Text>
-          <Text variant="small" color="rgba(255,255,255,0.82)" center style={styles.tagline}>
+          <Text variant="small" color="rgba(255,255,255,0.86)" center style={styles.tagline}>
             {site.tagline}
           </Text>
           <View style={styles.dots} accessibilityRole="progressbar" accessibilityLabel="Loading">
@@ -151,9 +160,21 @@ export function NotConfigured() {
 const styles = StyleSheet.create({
   fill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   pad: { paddingHorizontal: 28, gap: 10 },
-  below: { position: 'absolute', top: '50%', left: 0, right: 0, marginTop: LOGO_SIZE / 2 + 18, alignItems: 'center', paddingHorizontal: 28 },
-  wordmark: { fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: 1.2 },
-  tagline: { marginTop: 8, maxWidth: 260 },
+  below: { position: 'absolute', top: '50%', left: 0, right: 0, marginTop: LOGO_SIZE / 2 + 22, alignItems: 'center', paddingHorizontal: 28 },
+  tile: {
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
+    borderRadius: 36,
+    padding: 10,
+    backgroundColor: '#ffffff',
+    elevation: 10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  logo: { width: '100%', height: '100%' },
+  tagline: { maxWidth: 260 },
   dots: { flexDirection: 'row', gap: 8, marginTop: 26 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#ffffff' },
   iconTile: { width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },

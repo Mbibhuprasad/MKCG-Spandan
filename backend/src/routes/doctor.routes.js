@@ -10,6 +10,7 @@ module.exports = function doctorRoutes(limiters) {
   const write = limiters.write;
   router.get('/featured', doctors.featured); // public, minimal fields
   router.get('/filters', requireAuth, doctors.filters);
+  router.get('/birthdays', requireAuth, doctors.birthdays);
   router.get('/specialties', requireAuth, validate({ query: v.specialtyQuery }), doctors.specialties);
   router.get('/me', requireAuth, doctors.getMe);
   router.patch('/me', requireAuth, write, validate({ body: v.updateProfile }), doctors.updateMe);

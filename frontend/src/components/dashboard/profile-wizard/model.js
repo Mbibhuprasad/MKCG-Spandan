@@ -51,6 +51,7 @@ export const STEPS = [
       "designation",
       "headline",
       "bloodGroup",
+      "dateOfBirth",
       "address",
       "bio",
       "languages",
@@ -270,6 +271,7 @@ export function toForm(account) {
     designation: p.designation || "",
     headline: p.headline || "",
     bloodGroup: p.bloodGroup || "",
+    dateOfBirth: p.dateOfBirth || "", // "YYYY-MM-DD"
     address: p.address || "",
     bio: p.bio || "",
     languages: [...(p.languages || [])],
@@ -396,6 +398,7 @@ export function toForm(account) {
       showWorkContact: v.showWorkContact !== false,
       showRegistration: Boolean(v.showRegistration),
       showBloodGroup: Boolean(v.showBloodGroup),
+      showBirthday: v.showBirthday !== false,
       sections: Object.fromEntries(
         PROFILE_SECTIONS.map(({ key }) => [key, sections[key] !== false]),
       ),
@@ -416,6 +419,7 @@ export function toPayload(form) {
       designation: form.designation,
       headline: form.headline,
       bloodGroup: form.bloodGroup,
+      dateOfBirth: form.dateOfBirth || null,
       address: form.address,
       bio: form.bio,
       languages: form.languages,
@@ -595,6 +599,24 @@ function isPhone(value) {
   return digits >= 8 && digits <= 15;
 }
 
+// Today's date as "YYYY-MM-DD" on the visitor's own calendar.
+export function todayInputValue() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// "" (not stated) or a real calendar date from 1900 up to today.
+function dateOfBirthError(value) {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = match ? new Date(Date.UTC(+match[1], +match[2] - 1, +match[3])) : null;
+  if (!date || date.getUTCDate() !== +match[3] || date.getUTCMonth() !== +match[2] - 1 || +match[1] < 1900) {
+    return "Enter a valid date of birth.";
+  }
+  return value > todayInputValue() ? "The date of birth cannot be in the future." : null;
+}
+
 function yearError(value) {
   if (value === "") return null;
   const n = Number(value);
@@ -630,6 +652,7 @@ export function validateStep(
   switch (stepId) {
     case "basic":
       if (form.name.trim().length < 2) put("name", "Enter your full name.");
+      put("profile.dateOfBirth", dateOfBirthError(form.dateOfBirth));
       break;
 
     case "expertise":

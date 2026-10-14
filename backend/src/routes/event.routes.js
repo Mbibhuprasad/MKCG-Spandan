@@ -1,7 +1,7 @@
 const express = require('express');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { idParams, pageQuery } = require('../validators/common');
+const { z, idParams, objectId, pageQuery } = require('../validators/common');
 const v = require('../validators/content.validators');
 const events = require('../controllers/event.controller');
 
@@ -20,5 +20,16 @@ module.exports = function eventRoutes(limiters) {
   router.put('/:id/rsvp', write, byId, validate({ body: v.rsvpBody }), events.setRsvp);
   router.delete('/:id/rsvp', write, byId, events.clearRsvp);
   router.get('/:id/attendees', byId, validate({ query: pageQuery(30, 50) }), events.attendees);
+  // Travel schedules: everyone attending can read; each member writes only their own.
+  router.get('/:id/schedule', byId, validate({ query: pageQuery(50, 100) }), events.schedule);
+  router.put('/:id/schedule', write, byId, validate({ body: v.scheduleBody }), events.setSchedule);
+  router.delete('/:id/schedule', write, byId, events.clearSchedule);
+  router.delete(
+    '/:id/schedule/:userId',
+    requireAdmin,
+    write,
+    validate({ params: z.object({ id: objectId, userId: objectId }) }),
+    events.removeScheduleOf
+  );
   return router;
 };

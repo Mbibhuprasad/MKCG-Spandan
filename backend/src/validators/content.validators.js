@@ -149,6 +149,7 @@ const eventFields = {
   description: text(10, 4000, 'Description'),
   eventType: z.enum(EVENT_TYPES),
   venue: line(0, 200, 'Venue'),
+  address: line(0, 300, 'Venue address'),
   city: line(2, 80, 'City'),
   startsAt: date,
   endsAt: nullableDate,
@@ -163,6 +164,7 @@ const eventFields = {
 const createEvent = z.object({
   ...eventFields,
   venue: eventFields.venue.default(''),
+  address: eventFields.address.default(''),
   endsAt: eventFields.endsAt.default(null),
   budgetNote: eventFields.budgetNote.default(''),
   coverId: eventFields.coverId.default(null),
@@ -185,6 +187,20 @@ const rsvpBody = z.object({
   status: z.enum(RSVP_STATUS),
   guests: z.number().int().min(0).max(5, 'You can bring at most 5 guests.').default(0),
 });
+
+// A member's own travel plan for an event. How the dates relate to the event
+// is checked by the controller, which has the event.
+const scheduleBody = z
+  .object({
+    travelFrom: line(2, 120, 'Travelling from'),
+    arrivalAt: date,
+    departureAt: date,
+    note: text(0, 300, 'Travel notes').default(''),
+  })
+  .refine((s) => s.departureAt.getTime() > s.arrivalAt.getTime(), {
+    path: ['departureAt'],
+    message: 'Departure must be after your arrival.',
+  });
 
 /* ── Polls ── */
 const pollOptions = z
@@ -261,6 +277,7 @@ module.exports = {
   updateEvent,
   eventListQuery,
   rsvpBody,
+  scheduleBody,
   createPoll,
   updatePoll,
   pollListQuery,

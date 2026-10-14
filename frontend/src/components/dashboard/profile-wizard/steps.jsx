@@ -19,7 +19,7 @@ import TagInput from '@/components/dashboard/TagInput';
 import { ComboField, EntryList, ImageAttachment, YearField } from './controls';
 import PhotoPicker from './PhotoPicker';
 import PortfolioContent from './PortfolioContent';
-import { BIO_MAX, subspecialtyNeedsReview } from './model';
+import { BIO_MAX, subspecialtyNeedsReview, todayInputValue } from './model';
 
 /*
  * One component per wizard step. Each receives `w`, the wizard's form helpers:
@@ -112,6 +112,17 @@ function BasicStep({ w }) {
             </option>
           ))}
         </SelectField>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <TextField
+          label="Date of birth"
+          type="date"
+          min="1900-01-01"
+          max={todayInputValue()}
+          hint="Private — never shown on your profile. Batchmates only see you in Today's Birthdays on the day, unless you turn that off in the last step."
+          optional
+          {...w.text('dateOfBirth')}
+        />
       </div>
       {/* <TextField
         label="Professional headline"
@@ -919,6 +930,16 @@ function VisibilityStep({ w }) {
           description="If an administrator features you, visitors who are not signed in can see only your name, photo, title, specialization and city — never your contact details."
           checked={v.publicListing}
           onChange={(value) => w.setVisibility('publicListing', value)}
+        />
+        <Switch
+          label="Show me in Today's Birthdays"
+          description={
+            w.form.dateOfBirth
+              ? 'On your birthday, signed-in members see your name in the Today\u2019s Birthdays strip. Your date of birth and age are never shown.'
+              : 'You have not entered a date of birth, so you will not appear there.'
+          }
+          checked={v.showBirthday}
+          onChange={(value) => w.setVisibility('showBirthday', value)}
         />
       </Group>
 

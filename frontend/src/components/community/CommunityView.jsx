@@ -15,6 +15,7 @@ import { Tabs } from '@/components/ui/Layout';
 import { CardSkeletons, EmptyState, ErrorState } from '@/components/ui/Feedback';
 import PostCard from './PostCard';
 import PollCard from './PollCard';
+import TodaysBirthdays from './TodaysBirthdays';
 
 const TABS = [
   { value: 'feed', label: 'Feed' },
@@ -215,6 +216,7 @@ export default function CommunityView() {
   return (
     <div className="container-page py-8 sm:py-10">
       <div className="mx-auto max-w-3xl">
+        <TodaysBirthdays />
         <Tabs tabs={TABS} value={tab} onChange={changeTab} label="Community sections" className="mb-6 w-fit" />
         <div role="tabpanel" aria-label={tab === 'polls' ? 'Polls' : 'Feed'}>
           {tab === 'polls' ? <PollsTab /> : <FeedTab />}

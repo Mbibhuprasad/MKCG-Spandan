@@ -18,7 +18,7 @@ module.exports = {
     orientation: "portrait",
     extra: {
       eas: {
-        projectId: "69ea46db-58a4-45ab-a878-fb0cdd35a9b0",
+        projectId: "bcd131ba-391b-43fe-b763-cdc1dd8a6284",
       },
     },
     icon: "./assets/icon.png",
@@ -49,12 +49,14 @@ module.exports = {
       [
         "expo-splash-screen",
         {
-          image: "./assets/splash-icon.png",
-          imageWidth: 144,
+          // The MKCGSPANDAN logo (artwork on white), centred; the animated
+          // launch screen in components/BootScreens.js takes over from it.
+          image: "./assets/MKCGSPANDAN LOGO.png",
+          imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff",
           dark: {
-            image: "./assets/splash-icon.png",
+            image: "./assets/MKCGSPANDAN LOGO.png",
             backgroundColor: "#090c11",
           },
         },

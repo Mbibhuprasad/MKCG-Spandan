@@ -5,6 +5,8 @@ const { ok, pageMeta } = require('../utils/respond');
 const { paging } = require('../utils/pagination');
 const { escapeRegex } = require('../utils/text');
 const { ROLES, ACCOUNT_STATUS, PROFILE_WIZARD_LAYOUT } = require('../config/constants');
+const { getEnv } = require('../config/env');
+const { calendarDay, isoDay, birthdayMatches } = require('../utils/calendar');
 const { buildCatalogue, isListedSubspecialty } = require('../services/specialty.service');
 const { claimMedia, destroyMedia, unclaim, syncMedia } = require('../services/media.service');
 const cloud = require('../services/cloudinary.service');
@@ -36,7 +38,7 @@ async function list(req, res) {
     User.find(filter).collation(COLLATION).sort({ name: 1, _id: 1 }).skip(skip).limit(limit),
     User.countDocuments(filter).collation(COLLATION),
   ]);
-  return ok(res, doctors.map(serializeDoctorCard), pageMeta({ page, limit, total }));
+  return ok(res, doctors.map((doctor) => serializeDoctorCard(doctor, req.user)), pageMeta({ page, limit, total }));
 }
 
 async function filters(_req, res) {
@@ -60,6 +62,28 @@ async function specialties(req, res) {
     { $limit: 2000 },
   ]);
   return ok(res, { specializations: buildCatalogue(pairs.map((pair) => pair._id), req.valid.query.q) });
+}
+
+// "Today's Birthdays": listed doctors whose saved date of birth falls on today
+// in the community's time zone (day and month only; 29 February birthdays are
+// celebrated on 28 February in other years). Doctors can opt out with
+// visibility.showBirthday. Only the name card goes out — never the date itself.
+async function birthdays(_req, res) {
+  const { timeZone } = getEnv();
+  const today = calendarDay(new Date(), timeZone);
+  const sameDay = birthdayMatches(today).map(({ month, day }) => ({
+    $and: [{ $eq: [{ $month: '$profile.dateOfBirth' }, month] }, { $eq: [{ $dayOfMonth: '$profile.dateOfBirth' }, day] }],
+  }));
+  const doctors = await User.find({
+    ...directoryFilter(),
+    'visibility.showBirthday': { $ne: false },
+    'profile.dateOfBirth': { $type: 'date' },
+    $expr: { $or: sameDay },
+  })
+    .collation(COLLATION)
+    .sort({ name: 1, _id: 1 })
+    .limit(100);
+  return ok(res, { date: isoDay(today), timeZone, doctors: doctors.map(serializeDoctorPublicCard) });
 }
 
 // Public homepage: only doctors who consented to a public listing AND were
@@ -216,4 +240,4 @@ async function removePhoto(req, res) {
   return ok(res, serializeSelf(user));
 }
 
-module.exports = { list, filters, specialties, featured, getOne, getMe, updateMe, setPhoto, removePhoto };
+module.exports = { list, filters, specialties, featured, birthdays, getOne, getMe, updateMe, setPhoto, removePhoto };

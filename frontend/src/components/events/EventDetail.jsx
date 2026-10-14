@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowLeft, CalendarDays, Clock, Images, MapPin, Pencil, Plane, Plus, Trash2, Users, Wallet } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CalendarDays, Clock, Images, MapPin, Pencil, Plane, Plus, Trash2, Users, Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { EVENT_TYPES, labelOf } from '@/lib/constants';
@@ -17,6 +17,7 @@ import CommentSection from '@/components/content/CommentSection';
 import ReportButton from '@/components/content/ReportButton';
 import RsvpPanel from './RsvpPanel';
 import EventAttendees from './EventAttendees';
+import TravelPlanPanel from './TravelPlan';
 
 const ID_RE = /^[a-f\d]{24}$/i;
 
@@ -75,6 +76,7 @@ export default function EventDetail() {
   const approved = !event.moderation || event.moderation.status === 'APPROVED';
   const noun = isVisit ? 'visit plan' : 'event';
   const place = [event.venue, event.city].filter(Boolean).join(', ');
+  const fullAddress = [event.address, event.city].filter(Boolean).join(', ');
   const startTime = formatTime(event.startsAt);
   const endTime = formatTime(event.endsAt);
   const sameMoment = new Date(event.startsAt).getTime() === new Date(event.endsAt).getTime();
@@ -152,7 +154,14 @@ export default function EventDetail() {
                 {sameMoment ? startTime : `${startTime} – ${endTime}`}
               </Fact>
               <Fact icon={MapPin} label={isVisit ? 'Visiting' : 'Where'}>
-                {place}
+                {event.address ? (
+                  <>
+                    {event.venue && <span className="block">{event.venue}</span>}
+                    <span className="block text-fg-soft">{fullAddress}</span>
+                  </>
+                ) : (
+                  place
+                )}
               </Fact>
               {event.budgetNote && (
                 <Fact icon={Wallet} label="Proposed budget">
@@ -205,6 +214,14 @@ export default function EventDetail() {
 
         <aside className="space-y-5">
           <RsvpPanel event={event} onUpdated={handleRsvpUpdated} />
+          {approved && (
+            <TravelPlanPanel key={`travel-${event.id}`} event={event} onUpdated={handleRsvpUpdated} />
+          )}
+          {approved && (
+            <Button href={`/events/schedule?event=${event.id}`} variant="secondary" icon={CalendarClock} className="w-full">
+              View the event schedule
+            </Button>
+          )}
           {approved && event.rsvpEnabled && <EventAttendees key={attendeeVersion} eventId={event.id} />}
 
           {approved && (

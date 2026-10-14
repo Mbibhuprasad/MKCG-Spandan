@@ -5,6 +5,18 @@ import { normalizePhone } from "@/utils/phone";
 import { LISTS } from "./sections";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const pad = (n) => String(n).padStart(2, "0");
+
+// Calendar dates (date of birth) travel as "YYYY-MM-DD"; the picker works with
+// a Date on the phone's own calendar.
+export const isoDayOf = (date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+export function dateOfIsoDay(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return date.getDate() === Number(match[3]) ? date : null;
+}
 const isHttpUrl = (value) => /^https?:\/\/[^\s]+$/i.test(value);
 let itemKey = 0;
 const newKey = () => `k${(itemKey += 1)}`;
@@ -76,6 +88,11 @@ function fieldIssue(field, value) {
     return "Enter a valid phone number, including the country code if outside India.";
   if (field.type === "email" && !EMAIL_RE.test(text))
     return "Enter a valid email address.";
+  if (field.type === "date") {
+    const date = dateOfIsoDay(text);
+    if (!date || date.getFullYear() < 1900) return `Enter a valid ${label.toLowerCase()}.`;
+    if (text > isoDayOf(new Date())) return `The ${label.toLowerCase()} cannot be in the future.`;
+  }
   if (field.type === "url" && !isHttpUrl(text))
     return "Enter a full link starting with http:// or https://";
   return "";
@@ -131,6 +148,7 @@ const toValue = (field, raw) => {
   if (field.type === "tags") return raw;
   const text = String(raw || "").trim();
   if (field.type === "year") return text ? Number(text) : null;
+  if (field.type === "date") return text || null;
   if (field.type === "phone") return text ? normalizePhone(text) || text : "";
   if (field.type === "email") return text.toLowerCase();
   return text;

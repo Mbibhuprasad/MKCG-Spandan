@@ -1,3 +1,9 @@
+// Only a full https:// address is used; anything else counts as "not set".
+function httpsUrl(value) {
+  const url = String(value || "").trim();
+  return /^https:\/\/[^\s]+$/i.test(url) ? url : "";
+}
+
 // Single source of truth for branding. To rebrand, change this file and
 // replace the logo files in /public — no component embeds the logo itself.
 export const site = {
@@ -11,16 +17,21 @@ export const site = {
     "",
   ),
   logo: {
-    // The final logo. Save the artwork as frontend/public/mkcgspandan-logo.png
-    // (any proportions — it is shown 36px tall, never stretched or cropped).
-    // Until that file exists the built-in mark below is shown instead.
-    image: "/mkcgspandan-logo.png",
-    // Pixel size of the logo file, used to reserve its space while it loads.
-    width: 512,
-    height: 512,
-    mark: "/brand/logo-mark.svg", // built-in fallback symbol
+    // The official MKCGSPANDAN logo (square artwork on white), in public/brand.
+    // It is shown on a white tile so it stays legible in the dark theme, and is
+    // never stretched or cropped. Next.js serves a resized copy of this file.
+    image: "/brand/MKCGSPANDAN LOGO.png",
+    // Pixel size of the logo file, used to keep its proportions.
+    width: 1254,
+    height: 1254,
     alt: "MKCGSPANDAN logo",
   },
+  // Android app download — the "Download App" button on the homepage hero.
+  // Set NEXT_PUBLIC_ANDROID_APK_URL in frontend/.env.local (or your host's
+  // environment) to the full https:// address of the APK file or its download
+  // page, then rebuild. Until it is set, the button shows "coming soon" and is
+  // not a link.
+  androidApkUrl: httpsUrl(process.env.NEXT_PUBLIC_ANDROID_APK_URL),
   // Credit shown at the bottom of the footer. Replace the placeholder with the
   // developer's name; add a full https:// address to `url` to make it a link.
   developer: {

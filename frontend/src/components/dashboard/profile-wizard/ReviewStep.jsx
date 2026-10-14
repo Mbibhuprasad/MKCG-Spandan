@@ -2,7 +2,7 @@
 
 import { CircleAlert, Pencil } from 'lucide-react';
 import { CREDENTIAL_TYPES, DEGREE_LEVELS, EMPLOYMENT_TYPES, labelOf } from '@/lib/constants';
-import { plural, yearRange } from '@/lib/format';
+import { formatDate, plural, yearRange } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
 import { useAuth } from '@/components/providers/AuthProvider';
 import Avatar from '@/components/ui/Avatar';
@@ -81,6 +81,10 @@ function summaries(form, user, counts) {
           <Row label="Current designation">{form.designation}</Row>
           <Row label="Professional headline">{form.headline}</Row>
           <Row label="Blood group">{form.bloodGroup && `${form.bloodGroup} (${shown(v.showBloodGroup)})`}</Row>
+          <Row label="Date of birth">
+            {form.dateOfBirth &&
+              `${formatDate(`${form.dateOfBirth}T12:00:00Z`)} (private${v.showBirthday ? '; listed in Today\u2019s Birthdays' : ''})`}
+          </Row>
           <Row label="Address">{form.address}</Row>
           <Row label="Biography">{form.bio}</Row>
           <Row label="Languages">{tagRow(form.languages)}</Row>

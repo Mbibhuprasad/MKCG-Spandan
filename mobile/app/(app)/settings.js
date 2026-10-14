@@ -96,6 +96,12 @@ const LISTING = [
     "Only if an administrator also features your profile.",
     "globe-outline",
   ],
+  [
+    "showBirthday",
+    "Show me in Today's Birthdays",
+    "On your birthday only. Your date of birth is never shown.",
+    "gift-outline",
+  ],
 ];
 
 function Group({ title, children }) {

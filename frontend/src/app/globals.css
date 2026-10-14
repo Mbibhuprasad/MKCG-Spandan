@@ -391,3 +391,34 @@ dialog::backdrop {
   animation: float-slow 7s ease-in-out infinite;
   animation-delay: var(--delay, 0ms);
 }
+
+/* Today's Birthday Celebrations banner (BirthdayBanner.jsx): the track holds two
+   identical halves, so moving it by half its width loops without a jump. It
+   pauses under the pointer or keyboard focus. With reduced motion it stands
+   still and can be scrolled sideways instead. */
+@keyframes birthday-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.birthday-marquee {
+  animation: birthday-marquee var(--marquee-duration, 40s) linear infinite;
+}
+
+.birthday-marquee-viewport:hover .birthday-marquee,
+.birthday-marquee-viewport:focus-within .birthday-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birthday-marquee {
+    animation: none !important;
+  }
+  .birthday-marquee-viewport {
+    overflow-x: auto;
+  }
+  .birthday-marquee [data-copy] {
+    display: none;
+  }
+}

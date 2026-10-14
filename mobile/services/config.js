@@ -39,8 +39,11 @@ export const API_URL = API_ORIGIN ? `${API_ORIGIN}/api/v1` : '';
 export const SOCKET_PATH = '/socket.io';
 export const isApiConfigured = Boolean(API_ORIGIN);
 
-// Website pages the app links to for the full legal texts (optional).
-export const WEB_URL = tidy(process.env.EXPO_PUBLIC_WEB_URL);
+// The public MKCGSPANDAN website (EXPO_PUBLIC_WEB_URL, see .env.example): the
+// "Explore MKCGSPANDAN on the Web" card on Home and the full legal texts. Only a
+// full http(s):// address counts; otherwise it is empty and nothing is opened.
+const webUrl = tidy(process.env.EXPO_PUBLIC_WEB_URL);
+export const WEB_URL = /^https?:\/\/[^\s]+$/i.test(webUrl) ? webUrl : '';
 
 export const REQUEST_TIMEOUT_MS = 20000;
 export const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;

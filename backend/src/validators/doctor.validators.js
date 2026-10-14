@@ -1,6 +1,8 @@
 const { z, line, text, httpUrl, year, page, limit, objectId, nullableId } = require('./common');
 const { email, phone } = require('./auth.validators');
 const { normalizeSpecialization, normalizeSubspecialty } = require('../services/specialty.service');
+const { getEnv } = require('../config/env');
+const { calendarDay, isoDay, parseIsoDay } = require('../utils/calendar');
 const {
   EMPLOYMENT_TYPES,
   DEGREE_LEVELS,
@@ -116,6 +118,24 @@ const publication = z.object({
 
 const link = z.object({ label: line(1, 40, 'Label'), url: httpUrl });
 
+// "YYYY-MM-DD", a real calendar date between 1900 and today (in the community's
+// time zone). '' or null clears it. Stored as midnight UTC of that day.
+const dateOfBirth = z
+  .union([z.null(), z.literal(''), z.string()])
+  .transform((value, ctx) => {
+    if (!value) return null;
+    const parsed = parseIsoDay(value);
+    if (!parsed || parsed.getUTCFullYear() < 1900) {
+      ctx.addIssue({ code: 'custom', message: 'Enter a valid date of birth.' });
+      return z.NEVER;
+    }
+    if (value > isoDay(calendarDay(new Date(), getEnv().timeZone))) {
+      ctx.addIssue({ code: 'custom', message: 'The date of birth cannot be in the future.' });
+      return z.NEVER;
+    }
+    return parsed;
+  });
+
 // Every field is optional: doctors can complete their profile gradually and
 // save their progress at any step. The few fields the wizard requires are
 // checked by the controller when the doctor submits (`submit: true`).
@@ -135,6 +155,7 @@ const updateProfile = z.object({
       professionalTitle: line(0, 120, 'Professional title'),
       headline: line(0, 160, 'Headline'),
       bloodGroup: z.enum(['', ...BLOOD_GROUPS], 'Choose one of the listed blood groups.'),
+      dateOfBirth,
       address: line(0, 240, 'Address'),
       // Listed options keep their listed spelling; typed values are tidied into Title Case.
       specialization: line(0, 80, 'Specialization').transform(normalizeSpecialization),
@@ -180,6 +201,7 @@ const updateProfile = z.object({
       showWorkContact: z.boolean(),
       showRegistration: z.boolean(),
       showBloodGroup: z.boolean(),
+      showBirthday: z.boolean(),
       sections: z.object(Object.fromEntries(PROFILE_SECTIONS.map((key) => [key, z.boolean()]))).partial(),
     })
     .partial()

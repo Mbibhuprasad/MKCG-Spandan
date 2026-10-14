@@ -273,35 +273,37 @@ for it.
 
 - **Profile navigation** — back to the directory, the doctor's name, a link to each section that exists, and a
   "Contact" button (it scrolls to the contact section) when the doctor shares contact details or links. The section
-  being read is marked. It is a dark pill pinned under the site header whose links scroll sideways (`PortfolioNav`).
+  being read is marked. It is a brand-blue pill pinned under the site header whose links scroll sideways
+  (`PortfolioNav`); the current link is white and the Contact button brand green.
 - **Hero** — specialization and subspecialization, the name as the page heading (an honorific such as "Dr" is set
-  apart in the text colour), professional title and designation, the headline as a quotation, the opening of the
-  biography, and up to four facts: the highest qualification, the medical college and batch (when saved), the current
-  affiliation (the main hospital or clinic, otherwise the organisation of a position marked current) and the location.
+  apart in the text colour), the designation (the professional title is not shown here), the headline as a quotation,
+  the opening of the biography, and up to four facts: the highest qualification, the batch (when saved — the college
+  name is not shown), "Recently working at" (the main hospital or clinic, otherwise the organisation of the most
+  recent position) and the location.
   The photograph — or the initials — sits in a square frame with rounded corners, a hairline blue border and a blue
   glow, on the right, below the text on small screens. With a mouse it leans and turns towards the pointer while the
-  pointer is over the hero. The buttons are "View career" (it scrolls to the experience timeline) and, for the owner,
-  "Edit profile"; there are no contact buttons here.
-- **Summary bar** — one card overlapping the foot of the hero with up to three facts, each only when the data exists:
-  specialization, current affiliation (the main hospital or clinic, otherwise the organisation of a position marked
-  current) and qualifications.
-- **Sections**, in this order. Each fades in as it scrolls into view (not with reduced motion):
+  pointer is over the hero. The only button is "Edit profile", for the owner; there are no contact buttons here.
+- **Summary** — one box overlapping the foot of the hero with two groups side by side (stacked inside the same box on
+  narrow screens), each only when the data exists: Specialization (with the subspecialization) and Recently Working
+  At (as in the hero, with its location).
+- **Sections**, in this order. Each fades in as it scrolls into view (not with reduced motion). This layout is the
+  website's; the mobile app keeps its own portfolio layout:
 
-1. About — the biography, languages, (when shared) blood group, and a compact career overview: current role, medical
-   college and batch, and professional interests. Left out when none of them is saved
-2. Education and qualifications — the qualification letters, a timeline of academic degrees (highest level first)
-   and one box per detailed qualification or certification. On wide screens it stands beside the experience timeline
-3. Professional experience — a timeline with current positions first, then the most recently held; an ongoing
-   position shows "Present" and a "Current" badge
-4. Expertise and procedures — one ruled sheet of up to three bands, each with its title on the left: scope of
-   practice (field of work and clinical practice area), areas of expertise as a ruled list with a count, and
-   procedures performed as a numbered ruled list with a count
-5. Fellowships and postdoctoral qualifications — one card each, most recent completion first
-6. Awards and memberships — two separate panels
-7. Publications — cards, most recent first, each with a safe external link when one was entered
-8. Current professional affiliations — one card per hospital, clinic or organisation: the main one (when a hospital,
-   practice area or workplace address is saved) and each other saved location, with designation, practice area,
-   address and the contact details the doctor allows. A city on its own is not shown as an affiliation
+1. About — the biography, languages and (when shared) blood group. Left out when none of them is saved. (The former
+   "career overview" is no longer shown.)
+2. Current professional affiliations — one full-width card per row for each hospital, clinic or organisation: the main
+   one (when a hospital, practice area or workplace address is saved) and each other saved location, with
+   designation, practice area, address and the contact details the doctor allows. A city on its own is not shown
+3. Professional experience — a timeline of full-width cards with current positions first, then the most recently
+   held; an ongoing position shows "Present" and a "Current" badge
+4. Education and qualifications — the qualification letters, a timeline of academic degrees (highest level first)
+   and one full-width box per detailed qualification or certification
+5. Expertise and procedures — one ruled sheet of up to three bands, each with its title above its entries: scope of
+   practice (field of work and clinical practice area, one full-width card each), areas of expertise as a ruled list
+   with a count, and procedures performed as a numbered ruled list with a count, below the practice areas
+6. Fellowships and postdoctoral qualifications — one full-width card per row, most recent completion first
+7. Publications — one full-width card per row, most recent first, each with a safe external link when one was entered
+8. Awards and memberships — two separate panels
 9. Contact — the contact details the doctor shares (account email and phone, WhatsApp, and the workplace contact
    when there is no main affiliation card to carry it) and the professional links
 10. Gallery — the doctor's own gallery photos (`GET /memories?owner=`, never the community memories) as a grid of

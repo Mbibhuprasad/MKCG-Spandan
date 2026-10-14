@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { FormScreen } from '@/components/FormScreen';
 import { MediaPicker, mediaState } from '@/components/MediaPicker';
-import { DateField, Input, SelectField, SwitchRow } from '@/components/ui';
+import { Checkbox, DateField, Input, SelectField, SwitchRow, Text } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
-import { fieldErrors } from '@/services/api';
+import { fieldErrors, messageOf } from '@/services/api';
 import { EVENT_TYPES } from '@/utils/constants';
 import { invalidate } from '@/utils/events';
 import { eventsApi } from './api';
+import { TravelFields } from './TravelPlan';
+import { emptyTravel, travelPayload, validateTravel } from './travel';
 
 function validate(form, media) {
   const errors = {};
@@ -35,6 +37,7 @@ export function EventForm({ onDone }) {
     eventType: '',
     city: '',
     venue: '',
+    address: '',
     startsAt: null,
     endsAt: null,
     budgetNote: '',
@@ -47,6 +50,10 @@ export function EventForm({ onDone }) {
   const [failure, setFailure] = useState(null);
   const [busy, setBusy] = useState(false);
   const [soon] = useState(() => new Date(Date.now() + 60 * 60 * 1000)); // earliest start offered by the picker
+  // The organiser's own attendance and travel plan, saved once the event exists.
+  const [withTravel, setWithTravel] = useState(false);
+  const [travel, setTravel] = useState(emptyTravel);
+  const [travelErrors, setTravelErrors] = useState({});
 
   const set = (key) => (value) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -57,9 +64,11 @@ export function EventForm({ onDone }) {
     if (busy) return;
     const media = mediaState(cover);
     const found = validate(form, media);
+    const travelFound = withTravel ? validateTravel(travel, { startsAt: form.startsAt, endsAt: form.endsAt || form.startsAt }) : {};
     setErrors(found);
+    setTravelErrors(travelFound);
     setFailure(null);
-    if (Object.keys(found).length) return;
+    if (Object.keys(found).length || Object.keys(travelFound).length) return;
     setBusy(true);
     try {
       const { data } = await eventsApi.create({
@@ -68,6 +77,7 @@ export function EventForm({ onDone }) {
         eventType: form.eventType,
         city: form.city.trim(),
         venue: form.venue.trim(),
+        address: form.address.trim(),
         startsAt: form.startsAt.toISOString(),
         endsAt: form.endsAt ? form.endsAt.toISOString() : null,
         budgetNote: form.budgetNote.trim(),
@@ -76,6 +86,14 @@ export function EventForm({ onDone }) {
         rsvpDeadline: form.rsvpEnabled && form.rsvpDeadline ? form.rsvpDeadline.toISOString() : null,
         capacity: form.capacity.trim() ? Number(form.capacity.trim()) : null,
       });
+      // The event is saved either way; a refused travel plan can be fixed on the event screen.
+      if (withTravel) {
+        try {
+          await eventsApi.saveTravel(data.id, travelPayload(travel));
+        } catch (travelError) {
+          toast.error(`Your travel plan was not saved: ${messageOf(travelError)}`);
+        }
+      }
       invalidate('events');
       toast.success('Your event is published.');
       onDone(data);
@@ -96,7 +114,8 @@ export function EventForm({ onDone }) {
       <DateField label="Starts" required mode="datetime" value={form.startsAt} onChange={set('startsAt')} minimumDate={soon} error={errors.startsAt} clearable={false} />
       <DateField label="Ends" mode="datetime" value={form.endsAt} onChange={set('endsAt')} minimumDate={form.startsAt || soon} error={errors.endsAt} placeholder="Optional" />
       <Input label="City" required value={form.city} onChangeText={set('city')} error={errors.city} placeholder="Berhampur" maxLength={80} icon="location-outline" />
-      <Input label="Venue" value={form.venue} onChangeText={set('venue')} error={errors.venue} placeholder="Hall, hotel or address" maxLength={200} />
+      <Input label="Venue name" value={form.venue} onChangeText={set('venue')} error={errors.venue} placeholder="Hall or hotel" maxLength={200} />
+      <Input label="Venue address" value={form.address} onChangeText={set('address')} error={errors.address} placeholder="Optional — street, area and PIN code" maxLength={300} icon="map-outline" />
       <Input label="Budget" value={form.budgetNote} onChangeText={set('budgetNote')} error={errors.budgetNote} placeholder="e.g. about ₹2,500 per person" maxLength={140} icon="wallet-outline" />
       <MediaPicker label="Event image" hint="Optional" purpose="event" value={cover} onChange={setCover} max={1} error={errors.cover} />
       <SwitchRow label="Collect RSVPs" description="Members can answer Going, Maybe or Can't go." value={form.rsvpEnabled} onValueChange={set('rsvpEnabled')} icon="checkmark-done-outline" />
@@ -105,6 +124,28 @@ export function EventForm({ onDone }) {
           <DateField label="RSVP deadline" mode="datetime" value={form.rsvpDeadline} onChange={set('rsvpDeadline')} maximumDate={form.startsAt || undefined} error={errors.rsvpDeadline} placeholder="Optional" />
           <Input label="Capacity" value={form.capacity} onChangeText={set('capacity')} error={errors.capacity} placeholder="Optional — number of places" keyboardType="number-pad" maxLength={6} />
         </>
+      ) : null}
+      <Checkbox
+        checked={withTravel}
+        onChange={(next) => {
+          setWithTravel(next);
+          setTravelErrors({});
+        }}
+      >
+        <Text variant="bodyStrong">I am attending — add my arrival and departure</Text>
+        <Text variant="caption" tone="muted">
+          Shown on the Event Schedule. The venue comes from this event, and you can change your plan later.
+        </Text>
+      </Checkbox>
+      {withTravel ? (
+        <TravelFields
+          form={travel}
+          errors={travelErrors}
+          onChange={(key, value) => {
+            setTravel((t) => ({ ...t, [key]: value }));
+            if (travelErrors[key]) setTravelErrors((e) => ({ ...e, [key]: undefined }));
+          }}
+        />
       ) : null}
     </FormScreen>
   );

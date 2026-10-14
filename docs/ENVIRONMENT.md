@@ -73,6 +73,7 @@ Outside production the API starts without Cloudinary credentials and logs a warn
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `DEFAULT_COUNTRY_CODE` | No | `91` | Calling code added to 10-digit phone numbers entered without a prefix |
+| `TIME_ZONE` | No | `Asia/Kolkata` | IANA time zone of the community calendar: decides which day "today" is for Today's Birthdays and the latest allowed date of birth. Keep it equal to the website's `NEXT_PUBLIC_TIME_ZONE` |
 | `BCRYPT_ROUNDS` | No | `12` | bcrypt cost factor (4–15) |
 | `RATE_LIMIT_GLOBAL_MAX` | No | `1500` | Requests per IP per 15 minutes |
 | `RATE_LIMIT_LOGIN_MAX` | No | `10` | Login attempts per IP + identifier per 15 minutes (the per-IP cap is five times this) |
@@ -105,6 +106,7 @@ a secure cookie.
 | `NEXT_PUBLIC_SITE_URL` | Yes in production | `http://localhost:3000` | Yes | Public address of the site: canonical URLs, sitemap, Open Graph |
 | `NEXT_PUBLIC_API_URL` | No | `/api/v1` | Yes | Leave unset to use the same-origin proxy. Set to an absolute URL only for the direct sub-domain mode |
 | `NEXT_PUBLIC_TIME_ZONE` | No | `Asia/Kolkata` | Yes | Time zone used to display dates consistently on server and client. Not listed in `.env.example` |
+| `NEXT_PUBLIC_ANDROID_APK_URL` | No | — | Yes | Full https:// address of the Android APK (or its download page) for the homepage "Download App" button (`site.androidApkUrl` in `src/lib/site.js`). Unset: the button shows "coming soon" and is not a link |
 
 `BACKEND_URL` and the `NEXT_PUBLIC_*` values are read at **build time** for rewrites and client bundles — rebuild the
 web app after changing them.

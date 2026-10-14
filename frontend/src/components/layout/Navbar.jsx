@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, LayoutDashboard, LogOut, Menu, ShieldCheck, UserRound, X, FileText } from 'lucide-react';
+import { CalendarClock, ChevronDown, LayoutDashboard, LogOut, Menu, ShieldCheck, UserRound, X, FileText } from 'lucide-react';
 import { mainNav } from '@/lib/site';
 import { cn } from '@/lib/format';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -14,7 +14,14 @@ import Logo from './Logo';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
 
-const isActive = (pathname, href) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`));
+const SCHEDULE_HREF = '/events/schedule';
+
+const isActive = (pathname, href) => {
+  if (href === '/') return pathname === '/';
+  // The Event Schedule has its own button, so Events is not marked there too.
+  if (href === '/events' && pathname.startsWith(SCHEDULE_HREF)) return false;
+  return pathname === href || pathname.startsWith(`${href}/`);
+};
 
 function UserMenu({ user, isAdmin, onLogout }) {
   const [open, setOpen] = useState(false);
@@ -40,6 +47,7 @@ function UserMenu({ user, isAdmin, onLogout }) {
 
   const items = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: SCHEDULE_HREF, label: 'Event Schedule', icon: CalendarClock },
     { href: '/dashboard/profile', label: 'My profile', icon: UserRound },
     { href: '/dashboard/submissions', label: 'My submissions', icon: FileText },
   ];
@@ -56,7 +64,7 @@ function UserMenu({ user, isAdmin, onLogout }) {
         aria-label="Account menu"
       >
         <Avatar name={user.name} src={user.profile?.photoUrl} size="sm" />
-        <span className="hidden max-w-[9rem] truncate text-sm font-semibold text-fg xl:inline">{user.name}</span>
+        {/* The name is in the menu itself; the header row has no room for it beside the Event Schedule button. */}
         <ChevronDown className={cn('h-4 w-4 text-muted transition-transform', open && 'rotate-180')} aria-hidden="true" />
       </button>
 
@@ -161,7 +169,7 @@ export default function Navbar() {
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'relative rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+                      'relative whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
                       active ? 'text-brand-ink' : 'text-fg-soft hover:text-fg'
                     )}
                   >
@@ -186,6 +194,29 @@ export default function Navbar() {
             <span className="skeleton hidden h-10 w-36 rounded-xl sm:block" aria-hidden="true" />
           ) : isAuthenticated ? (
             <>
+              {/* Wide screens only: below 1280px the header row is full, so the
+                  schedule is in the account menu (and the mobile menu) instead. */}
+              <span className="hidden xl:inline-flex">
+                <Button
+                  href={SCHEDULE_HREF}
+                  variant="outline"
+                  size="sm"
+                  icon={CalendarClock}
+                  aria-current={pathname.startsWith(SCHEDULE_HREF) ? 'page' : undefined}
+                  aria-label="Event Schedule"
+                  className={cn(
+                    'h-10 gap-1.5 px-2.5 text-left text-[0.7rem] leading-[1.1]',
+                    pathname.startsWith(SCHEDULE_HREF) && 'bg-brand-soft'
+                  )}
+                >
+                  {/* Two short lines keep the header row within its width. */}
+                  <span aria-hidden="true">
+                    Event
+                    <br />
+                    Schedule
+                  </span>
+                </Button>
+              </span>
               <NotificationBell />
               <UserMenu user={user} isAdmin={isAdmin} onLogout={handleLogout} />
             </>
@@ -256,6 +287,14 @@ export default function Navbar() {
                     <span className="text-sm font-semibold text-fg-soft">Appearance</span>
                     <ThemeToggle />
                   </div>
+                  <Button
+                    href={SCHEDULE_HREF}
+                    variant="outline"
+                    icon={CalendarClock}
+                    aria-current={pathname.startsWith(SCHEDULE_HREF) ? 'page' : undefined}
+                  >
+                    Event Schedule
+                  </Button>
                   <Button href="/dashboard" variant="secondary" icon={LayoutDashboard}>
                     Dashboard
                   </Button>

@@ -1,36 +1,34 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import { useState } from 'react';
+import { cn } from '@/lib/format';
 import { site } from '@/lib/site';
 
 /**
- * The logo artwork: the file named by `site.logo.image`, or the built-in mark
- * when that file is missing or cannot be shown — the header never carries a
- * broken image. The logo keeps its own proportions at the header's 36px height.
+ * The official logo (`site.logo.image`) on a white rounded tile — the artwork
+ * itself is on white, so the tile keeps it legible in the dark theme. It keeps
+ * its own proportions (object-contain, never stretched or cropped). Next.js
+ * serves a resized copy of the file. If the file is missing, nothing is drawn,
+ * so the header never shows a broken image; the wordmark beside it remains.
  */
-export default function LogoImage() {
-  const ref = useRef(null);
+export default function LogoImage({ size = 36, className }) {
   const [failed, setFailed] = useState(!site.logo.image);
-
-  // An image that failed before React attached its handlers never reports the error.
-  useEffect(() => {
-    const img = ref.current;
-    if (img && img.complete && img.naturalWidth === 0) setFailed(true);
-  }, []);
-
-  if (failed) {
-    return <img src={site.logo.mark} alt={site.logo.alt} width={36} height={36} className="h-9 w-9 shrink-0 rounded-[0.7rem]" />;
-  }
+  if (failed) return null;
   return (
-    <img
-      ref={ref}
-      src={site.logo.image}
-      alt={site.logo.alt}
-      width={site.logo.width}
-      height={site.logo.height}
-      onError={() => setFailed(true)}
-      // text-transparent: no flash of the alt text if the file turns out to be missing
-      className="h-9 w-auto max-w-[9rem] shrink-0 object-contain text-transparent"
-    />
+    <span
+      className={cn('inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-0.5 ring-1 ring-line', className)}
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={site.logo.image}
+        alt={site.logo.alt}
+        width={size * 2}
+        height={Math.round((size * 2 * site.logo.height) / site.logo.width)}
+        sizes={`${size}px`}
+        onError={() => setFailed(true)}
+        className="h-full w-full object-contain"
+      />
+    </span>
   );
 }

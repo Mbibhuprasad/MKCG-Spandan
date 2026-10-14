@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, View, useWindowDimensions } from "react-native";
 import {
   EmptyState,
   ErrorState,
@@ -7,11 +7,12 @@ import {
   ListFooter,
   LoadingState,
   Screen,
+  SegmentedTabs,
   SelectField,
   StackHeader,
   Text,
 } from "@/components/ui";
-import { DoctorRow } from "@/features/doctors/DoctorCard";
+import { DoctorGridCard, DoctorListCard } from "@/features/doctors/DoctorCard";
 import { doctorsApi } from "@/features/doctors/api";
 import { useDebounced } from "@/hooks/useDebounced";
 import { usePagedList } from "@/hooks/usePagedList";
@@ -20,10 +21,20 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { space } from "@/theme/tokens";
 import { plural } from "@/utils/format";
 
+// List (the default on the phone) or a two-column grid of the directory tiles.
+const VIEWS = [
+  { key: "list", label: "List", icon: "list" },
+  { key: "grid", label: "Grid", icon: "grid" },
+];
+const GRID_GAP = 10;
+
 // Friends (member discovery): every active doctor who is listed, with the search and
 // the two filters the API supports (GET /doctors?q=&specialization=&city=).
 export default function DoctorsDirectory() {
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const [view, setView] = useState("list");
+  const tileWidth = Math.floor((width - space.lg * 2 - GRID_GAP) / 2);
   const [query, setQuery] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [city, setCity] = useState("");
@@ -43,13 +54,21 @@ export default function DoctorsDirectory() {
       keyboard
     >
       <FlatList
+        // A different column count needs a fresh list.
+        key={view}
+        numColumns={view === "grid" ? 2 : 1}
+        columnWrapperStyle={view === "grid" ? styles.gridRow : undefined}
         data={list.items}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <DoctorRow doctor={item} />
-          </View>
-        )}
+        renderItem={({ item }) =>
+          view === "grid" ? (
+            <DoctorGridCard doctor={item} width={tileWidth} />
+          ) : (
+            <View style={styles.row}>
+              <DoctorListCard doctor={item} />
+            </View>
+          )
+        }
         ListHeaderComponent={
           <View style={styles.filters}>
             <Input
@@ -84,12 +103,14 @@ export default function DoctorsDirectory() {
                 style={styles.select}
               />
             </View>
-            {list.status === "ready" ? (
-              <Text variant="caption" tone="muted">
-                {plural(list.total, "friend")}{" "}
-                {filtered ? "found" : "in the community"}
+            <View style={styles.bar}>
+              <Text variant="caption" tone="muted" style={styles.flex}>
+                {list.status === "ready"
+                  ? `${plural(list.total, "friend")} ${filtered ? "found" : "in the community"}`
+                  : ""}
               </Text>
-            ) : null}
+              <SegmentedTabs tabs={VIEWS} value={view} onChange={setView} style={styles.views} />
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -142,5 +163,9 @@ const styles = StyleSheet.create({
   selects: { flexDirection: "row", gap: 10 },
   select: { flex: 1, marginBottom: 0 },
   row: { paddingHorizontal: space.lg, marginBottom: 10 },
+  gridRow: { paddingHorizontal: space.lg, gap: GRID_GAP, marginBottom: GRID_GAP },
+  bar: { flexDirection: "row", alignItems: "center", gap: 10 },
+  views: { width: 176 },
+  flex: { flex: 1 },
   list: { paddingTop: space.lg, paddingBottom: 40, flexGrow: 1 },
 });

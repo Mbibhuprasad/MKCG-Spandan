@@ -23,6 +23,7 @@ import {
 } from "@/features/community/api";
 import { doctorsApi } from "@/features/doctors/api";
 import { eventsApi } from "@/features/events/api";
+import { travelPayload, validateTravel } from "@/features/events/travel";
 import { memoriesApi } from "@/features/memories/api";
 import { notificationsApi } from "@/features/notifications/api";
 import { routeForLink } from "@/features/notifications/links";
@@ -631,6 +632,84 @@ await test("an event is published immediately; RSVP is one answer per member; on
     "FORBIDDEN",
     403,
   );
+});
+await test("event schedule: each doctor saves their own travel plan; the schedule lists them by arrival", async () => {
+  const viewer = await newDoctor("Viewer");
+  const day = 86400000;
+  const start = new Date(event.startsAt).getTime();
+  const plan = (from, offsetHours) => ({
+    travelFrom: from,
+    arrivalAt: new Date(start - offsetHours * 3600000),
+    departureAt: new Date(start + day),
+    note: "",
+  });
+  // The app checks what the server checks.
+  const blank = validateTravel({ ...plan("", 2), arrivalAt: null }, event);
+  assert.ok(blank.travelFrom && blank.arrivalAt);
+  const backwards = validateTravel({ ...plan("Puri", 2), departureAt: new Date(start - 3 * 3600000) }, event);
+  assert.ok(backwards.departureAt);
+  const late = validateTravel({ ...plan("Puri", 2), arrivalAt: new Date(start + 2 * day), departureAt: new Date(start + 3 * day) }, event);
+  assert.ok(late.arrivalAt);
+  assert.deepEqual(validateTravel(plan("Puri", 2), event), {});
+
+  const err = await rejects(
+    as(bob, () => eventsApi.saveTravel(event.id, { ...travelPayload(plan("Puri", 2)), travelFrom: "" })),
+    "VALIDATION_ERROR",
+    400,
+  );
+  assert.ok(err.details.travelFrom);
+
+  const own = await as(alice, () => eventsApi.saveTravel(event.id, travelPayload(plan("Bhubaneswar", 20))));
+  assert.equal(own.data.rsvp.mine.status, "GOING");
+  assert.equal(own.data.rsvp.mine.travel.from, "Bhubaneswar");
+  const bobs = await as(bob, () => eventsApi.saveTravel(event.id, travelPayload(plan("Cuttack", 4))));
+  assert.equal(bobs.data.rsvp.mine.status, "MAYBE"); // an existing answer is kept
+  const again = await as(bob, () => eventsApi.saveTravel(event.id, travelPayload(plan("Cuttack Cantonment", 4))));
+  assert.equal(again.data.rsvp.mine.travel.from, "Cuttack Cantonment");
+
+  const list = await as(viewer, () => eventsApi.schedule(event.id, { limit: 100 }));
+  assert.deepEqual(
+    list.data.map((row) => [row.doctor.id, row.travel.from]),
+    [
+      [alice.id, "Bhubaneswar"],
+      [bob.id, "Cuttack Cantonment"],
+    ],
+  );
+  assert.ok(list.data.every((row) => !row.isMine));
+  assert.ok(!JSON.stringify(list.data).includes(bob.body.email));
+
+  // Only administrators may take down someone else's plan.
+  await rejects(as(bob, () => api.delete(`/events/${event.id}/schedule/${alice.id}`)), "FORBIDDEN", 403);
+  const removed = await as(bob, () => eventsApi.removeTravel(event.id));
+  assert.equal(removed.data.rsvp.mine.travel, null);
+  const after = await as(viewer, () => eventsApi.schedule(event.id, { limit: 100 }));
+  assert.deepEqual(after.data.map((row) => row.doctor.id), [alice.id]);
+});
+await test("date of birth: the profile editor saves a calendar date, refuses future dates, and keeps it private", async () => {
+  const section = sectionByKey("basic");
+  const form = sectionToForm(section, alice);
+  form.fields.dateOfBirth = "2999-01-01";
+  assert.ok(validateSection(section, form).dateOfBirth);
+  form.fields.dateOfBirth = "1985-02-30";
+  assert.ok(validateSection(section, form).dateOfBirth);
+  form.fields.dateOfBirth = "1984-02-29";
+  assert.deepEqual(validateSection(section, form), {});
+  const { data } = await as(alice, () => profileApi.update(sectionToPayload(section, form)));
+  assert.equal(data.profile.dateOfBirth, "1984-02-29");
+  alice = { ...alice, ...data };
+  const seen = await as(bob, () => doctorsApi.get(alice.id));
+  assert.equal(seen.data.profile.dateOfBirth, null);
+  const birthdays = await as(bob, () => api.get("/doctors/birthdays"));
+  assert.ok(Array.isArray(birthdays.data.doctors));
+});
+await test("Friends cards carry a contact number only when the doctor allows it", async () => {
+  const cardOf = async () =>
+    (await as(bob, () => doctorsApi.list({ limit: 48, q: "Alice" }))).data.find((d) => d.id === alice.id);
+  assert.deepEqual((await cardOf()).contact, {});
+  await as(alice, () => profileApi.update({ visibility: { showPhone: true } }));
+  assert.equal((await cardOf()).contact.phone, alice.phone);
+  await as(alice, () => profileApi.update({ visibility: { showPhone: false } }));
+  assert.equal((await cardOf()).contact.phone, undefined);
 });
 await test("community post: publish, like (idempotent), comment, and only the author can delete", async () => {
   post = (

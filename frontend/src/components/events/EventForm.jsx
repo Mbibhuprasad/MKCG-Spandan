@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowLeft, Plane, Send } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Plane, Send } from 'lucide-react';
 import { api, formErrors } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { EVENT_TYPES } from '@/lib/constants';
@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button';
 import { Checkbox, Field, FormMessage, SelectField, TextAreaField, TextField } from '@/components/ui/Form';
 import { ErrorState, ModerationNotice, PageLoader } from '@/components/ui/Feedback';
 import MediaUploader from '@/components/content/MediaUploader';
+import { EMPTY_TRAVEL, TravelFields, travelPayload, travelToValues, validateTravel } from './TravelPlan';
 
 const ID_RE = /^[a-f\d]{24}$/i;
 const TYPE_VALUES = EVENT_TYPES.map((t) => t.value);
@@ -24,6 +25,7 @@ function initialValues(event, presetType) {
       description: '',
       eventType: presetType || 'REUNION',
       venue: '',
+      address: '',
       city: '',
       startsAt: '',
       endsAt: '',
@@ -40,6 +42,7 @@ function initialValues(event, presetType) {
     description: event.description,
     eventType: event.eventType,
     venue: event.venue || '',
+    address: event.address || '',
     city: event.city,
     startsAt: toLocalInputValue(event.startsAt),
     endsAt: sameMoment ? '' : toLocalInputValue(event.endsAt),
@@ -90,6 +93,13 @@ function EventFormInner({ initial, presetType }) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // The organiser's own attendance and travel plan, saved on their RSVP through
+  // PUT /events/:id/schedule once the event itself is saved.
+  const savedTravel = (initial && initial.rsvp && initial.rsvp.mine && initial.rsvp.mine.travel) || null;
+  const [withTravel, setWithTravel] = useState(Boolean(savedTravel));
+  const [travel, setTravel] = useState(() => (savedTravel ? travelToValues(savedTravel) : { ...EMPTY_TRAVEL }));
+  const [travelErrors, setTravelErrors] = useState({});
+
   const isVisit = values.eventType === 'VISIT_PLAN';
   const noun = isVisit ? 'visit plan' : 'event';
 
@@ -108,9 +118,13 @@ function EventFormInner({ initial, presetType }) {
     const datesChanged = !isEdit || values.startsAt !== startValues.startsAt || values.endsAt !== startValues.endsAt;
 
     const fieldErrors = validate(values, { datesChanged });
+    const travelFound = withTravel
+      ? validateTravel(travel, { startsAt: values.startsAt, endsAt: values.endsAt || values.startsAt })
+      : {};
     setErrors(fieldErrors);
+    setTravelErrors(travelFound);
     setMessage('');
-    if (Object.keys(fieldErrors).length) {
+    if (Object.keys(fieldErrors).length || Object.keys(travelFound).length) {
       setMessage('Please check the highlighted fields.');
       return;
     }
@@ -120,6 +134,7 @@ function EventFormInner({ initial, presetType }) {
       description: values.description,
       eventType: values.eventType,
       venue: values.venue,
+      address: values.address,
       city: values.city,
       budgetNote: values.budgetNote,
       coverId: cover[0] ? cover[0].id : null,
@@ -138,6 +153,14 @@ function EventFormInner({ initial, presetType }) {
       const { data } = isEdit ? await api.patch(`/events/${initial.id}`, body) : await api.post('/events', body);
       const label = isVisit ? 'Visit plan' : 'Event';
       toast.success(isEdit ? 'Changes saved.' : `${label} published. Members can see it now.`);
+      // The event is saved either way; a travel plan the API refuses can be
+      // corrected on the event page, which has the same form.
+      try {
+        if (withTravel) await api.put(`/events/${data.id}/schedule`, travelPayload(travel));
+        else if (savedTravel) await api.delete(`/events/${data.id}/schedule`);
+      } catch (travelError) {
+        toast.error(`Your travel plan was not saved: ${travelError.message}`);
+      }
       router.push(`/events/${data.id}`);
     } catch (error) {
       const parsed = formErrors(error);
@@ -224,7 +247,7 @@ function EventFormInner({ initial, presetType }) {
             required
           />
           <TextField
-            label={isVisit ? 'Area or place to meet' : 'Venue'}
+            label={isVisit ? 'Area or place to meet' : 'Venue name'}
             name="venue"
             value={values.venue}
             onChange={set('venue')}
@@ -234,6 +257,20 @@ function EventFormInner({ initial, presetType }) {
             optional
           />
         </div>
+
+        {!isVisit && (
+          <TextField
+            label="Venue address"
+            name="address"
+            value={values.address}
+            onChange={set('address')}
+            error={errors.address}
+            placeholder="e.g. MKCG Medical College, Ganjam Road, Berhampur 760004"
+            hint="The full address shown on the Event Schedule. The city above is added after it."
+            maxLength={300}
+            optional
+          />
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <TextField
@@ -325,6 +362,33 @@ function EventFormInner({ initial, presetType }) {
                 optional
               />
             </div>
+          )}
+        </fieldset>
+
+        <fieldset className="space-y-4 rounded-xl border border-line p-4">
+          <legend className="flex items-center gap-1.5 px-1.5 text-sm font-bold text-fg">
+            <CalendarClock className="h-4 w-4 text-brand-ink" aria-hidden="true" />
+            Your attendance and travel
+          </legend>
+          <Checkbox
+            checked={withTravel}
+            onChange={(e) => {
+              setWithTravel(e.target.checked);
+              setTravelErrors({});
+            }}
+            label={savedTravel ? 'Keep my travel plan on the Event Schedule' : 'I am attending — add my arrival and departure'}
+            description={`Batchmates see where you travel from and when you arrive and leave on the Event Schedule. The venue comes from this ${noun}. You can change it later.`}
+          />
+          {withTravel && (
+            <TravelFields
+              values={travel}
+              errors={travelErrors}
+              onChange={(key, value) => {
+                setTravel((t) => ({ ...t, [key]: value }));
+                if (travelErrors[key]) setTravelErrors((e) => ({ ...e, [key]: undefined }));
+              }}
+              idPrefix="organiser-travel"
+            />
           )}
         </fieldset>
 

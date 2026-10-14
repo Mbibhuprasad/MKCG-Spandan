@@ -4,6 +4,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   Button,
   Card,
+  DateField,
   FieldError,
   Input,
   SelectField,
@@ -14,7 +15,9 @@ import {
 } from "@/components/ui";
 import { useTheme } from "@/theme/ThemeProvider";
 import { HIT_SLOP, space } from "@/theme/tokens";
-import { emptyItem, validateItem } from "./model";
+import { dateOfIsoDay, emptyItem, isoDayOf, validateItem } from "./model";
+
+const EARLIEST_BIRTH = new Date(1900, 0, 1);
 
 const KEYBOARD = {
   year: "number-pad",
@@ -49,6 +52,28 @@ export function ProfileField({
         placeholder={field.placeholder}
         error={error}
       />
+    );
+  }
+
+  if (field.type === "date") {
+    return (
+      <>
+        <DateField
+          label={field.label}
+          required={field.required}
+          value={dateOfIsoDay(value)}
+          onChange={(date) => onChange(date ? isoDayOf(date) : "")}
+          minimumDate={EARLIEST_BIRTH}
+          maximumDate={new Date()}
+          placeholder="Not stated"
+          error={error}
+        />
+        {field.help && !error ? (
+          <Text variant="caption" tone="muted" style={styles.dateHelp}>
+            {field.help}
+          </Text>
+        ) : null}
+      </>
     );
   }
 
@@ -305,4 +330,5 @@ const styles = StyleSheet.create({
   item: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12 },
   sheet: { paddingHorizontal: space.xl, paddingBottom: 12, gap: 2 },
   pair: { flexDirection: "row", gap: 12 },
+  dateHelp: { marginTop: -10, marginBottom: space.lg },
 });

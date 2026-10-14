@@ -5,6 +5,7 @@ import Providers from '@/components/providers/Providers';
 import { themeInitScript } from '@/components/providers/ThemeProvider';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import BirthdayBanner from '@/components/layout/BirthdayBanner';
 
 const body = Manrope({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 const heading = Fraunces({ subsets: ['latin'], variable: '--font-heading', display: 'swap', axes: ['opsz'] });
@@ -53,6 +54,7 @@ export default function RootLayout({ children }) {
       <body className="flex min-h-dvh flex-col">
         <Providers>
           <Navbar />
+          <BirthdayBanner />
           <main id="main" className="flex-1">
             {children}
           </main>

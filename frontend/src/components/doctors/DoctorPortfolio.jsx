@@ -7,7 +7,6 @@ import {
   Activity,
   ArrowLeft,
   Award,
-  BookOpen,
   BriefcaseMedical,
   Building2,
   ExternalLink,
@@ -84,18 +83,17 @@ const place = (...parts) => parts.filter(Boolean).join(", ");
 const levelLabel = (level) =>
   level ? labelOf(DEGREE_LEVELS, level).replace(/ \(.*\)$/, "") : "";
 
-// Summary bar: its columns follow the number of facts the profile has.
-const SUMMARY_COLUMNS = { 1: "", 2: "grid-cols-2", 3: "sm:grid-cols-3" };
-const SUMMARY_TONES = ["text-brand-ink", "text-fg", "text-leaf-strong"];
+// Summary box under the hero: one container, its two groups side by side.
+const SUMMARY_TONES = ["text-brand-ink", "text-leaf-strong"];
 
 /**
  * One band of the clinical-practice sheet: its title (and a count of the
- * entries) in a column on the left, the entries on the right.
+ * entries) above the entries, which use the full width of the sheet.
  */
 function PracticeBand({ icon, title, note, children }) {
   return (
-    <div className="grid gap-x-10 gap-y-5 p-5 sm:p-7 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <div className="flex items-center gap-3.5 lg:items-start">
+    <div className="grid gap-y-5 p-5 sm:p-7">
+      <div className="flex items-center gap-3.5">
         <IconTile icon={icon} className="h-10 w-10" />
         <div className="min-w-0">
           <h3 className={cn(HEADING, "text-lg leading-snug")}>{title}</h3>
@@ -129,44 +127,46 @@ function AffiliationCard({
   return (
     <li
       className={cn(
-        "flex h-full flex-col rounded-[1.5rem] border border-line bg-surface p-6 shadow-soft",
+        "grid gap-x-10 gap-y-4 rounded-[1.5rem] border border-line bg-surface p-6 shadow-soft md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
         LIFT,
       )}
     >
-      <div className="flex items-start gap-3.5">
-        <IconTile icon={Building2} />
-        <div className="min-w-0">
+      <div className="min-w-0">
+        <div className="flex items-start gap-3.5">
+          <IconTile icon={Building2} />
+          <div className="min-w-0">
+            <p
+              className={cn(
+                "text-[0.68rem] font-extrabold uppercase tracking-[0.14em]",
+                main ? "text-leaf-strong" : "text-muted",
+              )}
+            >
+              {main ? "Current affiliation" : "Also affiliated with"}
+            </p>
+            <h3 className={cn(HEADING, "mt-1 break-words text-lg leading-snug")}>
+              {name}
+            </h3>
+          </div>
+        </div>
+        {designation && (
+          <p className="mt-4 break-words font-bold text-brand-ink">
+            {designation}
+          </p>
+        )}
+        {area && (
           <p
             className={cn(
-              "text-[0.68rem] font-extrabold uppercase tracking-[0.14em]",
-              main ? "text-leaf-strong" : "text-muted",
+              "break-words text-sm text-fg-soft",
+              designation ? "mt-1" : "mt-4",
             )}
           >
-            {main ? "Current affiliation" : "Also affiliated with"}
+            {area}
           </p>
-          <h3 className={cn(HEADING, "mt-1 break-words text-lg leading-snug")}>
-            {name}
-          </h3>
-        </div>
+        )}
       </div>
-      {designation && (
-        <p className="mt-4 break-words font-bold text-brand-ink">
-          {designation}
-        </p>
-      )}
-      {area && (
-        <p
-          className={cn(
-            "break-words text-sm text-fg-soft",
-            designation ? "mt-1" : "mt-4",
-          )}
-        >
-          {area}
-        </p>
-      )}
 
       {(address || location || phone || email) && (
-        <ul className="mt-4 space-y-3 text-sm text-fg-soft">
+        <ul className="space-y-3 text-sm text-fg-soft md:self-center">
           {(address || location) && (
             <li className="flex items-start gap-3">
               <MapPin
@@ -335,10 +335,12 @@ function PortfolioSkeleton() {
 
 /**
  * A doctor's professional portfolio, built entirely from their saved profile:
- * the hero, a bar of summary facts, then about, education and qualifications
- * beside professional experience (two timelines), expertise and procedures,
- * fellowships, awards and memberships, publications, professional affiliations,
- * contact, gallery and blogs. It is read by fellow members, not by patients.
+ * the hero, two summary cards (specialization, recently working at), then
+ * about, current professional affiliations, professional experience, education
+ * and qualifications, scope of practice (with procedures), fellowships and
+ * postdoctoral qualifications, publications, awards and memberships, contact,
+ * gallery and blogs — every card on a row of its own. It is read by fellow
+ * members, not by patients.
  * Sections and cards without data are not rendered, and nothing is estimated.
  *
  * The API returns the repeated sections already in display order (highest or
@@ -478,44 +480,40 @@ export default function DoctorPortfolio() {
   const hasMainPractice = Boolean(
     p.hospital || p.practiceArea || p.workAddress,
   );
-  const currentRole = experience.find((item) => item.current);
+  // "Recently working at": the main hospital or clinic, otherwise the
+  // organisation of the most recent position (the API lists current positions
+  // first, then the most recently held).
+  const recentRole = experience.find((item) => item.organization) || null;
+  const recentlyWorkingAt = p.hospital || (recentRole && recentRole.organization) || "";
+  // Its location: the practice location for the main hospital, otherwise the position's own.
+  const recentlyWorkingHint = p.hospital
+    ? location
+    : recentRole
+      ? place(recentRole.city, recentRole.state)
+      : "";
 
-  // Highest qualification and primary medical college. The API returns education
-  // by level (highest first), so the first entry is the highest qualification;
-  // batchYear and the medical college are shown only when saved.
+  // Highest qualification. The API returns education by level (highest first),
+  // so the first entry is the highest qualification; batchYear is shown only when saved.
   const highestEducation = education[0] || null;
   const highestQualification = highestEducation
     ? joined(highestEducation.degree, highestEducation.fieldOfStudy)
     : qualifications.join(", ");
-  // Dots are ignored, as in the API's own ordering, so "M.B.B.S." is recognised as well as "MBBS".
-  const primaryMedical =
-    education.find((item) =>
-      /\b(mbbs|bds|bams|bhms)\b|bachelor of medicine/i.test(
-        String(item.degree || "").replace(/\./g, ""),
-      ),
-    ) || null;
-  const medicalCollege = (primaryMedical && primaryMedical.institution) || "";
   const batch = p.batchYear ? `Batch of ${p.batchYear}` : "";
-  const collegeLine = joined(medicalCollege, batch);
 
-  // Summary bar: each fact is built from saved data and left out when there is none.
+  // Summary cards: specialization and where the doctor recently worked, each
+  // built from saved data and left out when there is none.
   const summary = [
     p.specialization && {
+      icon: Stethoscope,
       label: "Specialization",
       value: p.specialization,
       hint: p.subspecialty,
     },
-    (p.hospital || (currentRole && currentRole.organization)) && {
-      label: "Current affiliation",
-      value: p.hospital || currentRole.organization,
-      hint: p.hospital ? joined(p.designation, location) : currentRole.role,
-    },
-    (qualifications.length > 0 || education.length > 0) && {
-      label: "Qualifications",
-      value: qualifications.length
-        ? qualifications.join(", ")
-        : joined(education[0].degree, education[0].fieldOfStudy),
-      hint: education.length ? education[0].institution : "",
+    recentlyWorkingAt && {
+      icon: Building2,
+      label: "Recently working at",
+      value: recentlyWorkingAt,
+      hint: recentlyWorkingHint,
     },
   ].filter(Boolean);
 
@@ -545,32 +543,8 @@ export default function DoctorPortfolio() {
   ].filter(Boolean);
   const hasContactPanel = hasContact || links.length > 0;
 
-  // Compact career overview shown under the biography.
-  const aboutFacts = [
-    (p.designation ||
-      p.hospital ||
-      (currentRole && currentRole.organization)) && {
-      icon: BriefcaseMedical,
-      label: "Current role",
-      value: joined(
-        p.designation,
-        p.hospital || (currentRole && currentRole.organization),
-      ),
-    },
-    collegeLine && {
-      icon: GraduationCap,
-      label: "Medical college",
-      value: medicalCollege || batch,
-      sub: medicalCollege ? batch : "",
-    },
-    list("interests").length > 0 && {
-      icon: BookOpen,
-      label: "Professional interests",
-      value: p.interests.join(", "),
-    },
-  ].filter(Boolean);
   const hasAboutText = Boolean(
-    p.bio || list("languages").length || p.bloodGroup || aboutFacts.length,
+    p.bio || list("languages").length || p.bloodGroup,
   );
 
   // Whether the owner has switched the academic or the qualifications half off for others.
@@ -589,24 +563,24 @@ export default function DoctorPortfolio() {
   // In-page navigation, in the order the sections appear.
   const nav = [
     hasAboutText && { id: "about", label: "About" },
+    clinics.length > 0 && { id: "locations", label: "Affiliations" },
+    experience.length > 0 && { id: "experience", label: "Experience" },
     (education.length > 0 ||
       credentials.length > 0 ||
       qualifications.length > 0) && { id: "education", label: "Education" },
-    experience.length > 0 && { id: "experience", label: "Experience" },
     hasServices && { id: "services", label: "Expertise" },
     list("fellowships").length > 0 && {
       id: "fellowships",
       label: "Fellowships",
     },
-    (hasAwards || hasMemberships) && {
-      id: "awards",
-      label: "Awards & memberships",
-    },
     list("publications").length > 0 && {
       id: "publications",
       label: "Publications",
     },
-    clinics.length > 0 && { id: "locations", label: "Affiliations" },
+    (hasAwards || hasMemberships) && {
+      id: "awards",
+      label: "Awards & memberships",
+    },
     hasContactPanel && { id: "contact", label: "Contact" },
     // The owner always gets these two, so there is somewhere to add from without opening the profile form.
     (photos.length > 0 || mine) && { id: "gallery", label: "Gallery" },
@@ -626,8 +600,8 @@ export default function DoctorPortfolio() {
     : [];
   const contactHref = hasContactPanel ? "#contact" : null;
 
-  // The hero is a professional summary: highest qualification, college and batch,
-  // current affiliation and location. Members reach a colleague through the
+  // The hero is a professional summary: highest qualification, batch, where the
+  // doctor recently worked and location. Members reach a colleague through the
   // contact section, so there are no phone or WhatsApp buttons here.
   const heroFacts = [
     highestQualification && {
@@ -635,24 +609,15 @@ export default function DoctorPortfolio() {
       label: "Highest qualification",
       text: highestQualification,
     },
-    collegeLine && {
-      icon: BookOpen,
-      label: "Medical college",
-      text: collegeLine,
-    },
-    (p.hospital || (currentRole && currentRole.organization)) && {
+    batch && { icon: UsersRound, label: "Batch", text: batch },
+    recentlyWorkingAt && {
       icon: Building2,
-      label: "Current affiliation",
-      text: p.hospital || currentRole.organization,
+      label: "Recently working at",
+      text: `Recently working at ${recentlyWorkingAt}`,
     },
     location && { icon: MapPin, label: "Location", text: location },
   ].filter(Boolean);
   const heroActions = [
-    shows("experience") && {
-      href: "#experience",
-      label: "View career",
-      icon: BriefcaseMedical,
-    },
     mine && { href: "/dashboard/profile", label: "Edit profile", icon: Pencil },
   ].filter(Boolean);
 
@@ -667,7 +632,7 @@ export default function DoctorPortfolio() {
         name={doctor.name}
         photoUrl={p.photoUrl}
         eyebrow={joined(p.specialization, p.subspecialty)}
-        title={joined(p.professionalTitle, p.designation)}
+        title={p.designation}
         headline={p.headline}
         bio={p.bio}
         facts={heroFacts}
@@ -675,36 +640,43 @@ export default function DoctorPortfolio() {
       />
 
       <div className="container-page relative pb-14 sm:pb-20">
-        {/* ── Summary bar: overlaps the foot of the hero ── */}
+        {/* ── Summary: one box overlapping the foot of the hero, its two
+            groups side by side (stacked inside the same box on narrow screens) ── */}
         {summary.length > 0 ? (
           <dl
             className={cn(
-              "rise-in relative -mt-14 grid gap-px overflow-hidden rounded-[1.75rem] border border-line bg-line shadow-lift sm:-mt-16",
-              SUMMARY_COLUMNS[summary.length],
+              "rise-in relative -mt-14 grid divide-y divide-line overflow-hidden rounded-[1.5rem] border border-line bg-surface shadow-lift sm:-mt-16",
+              summary.length > 1 && "md:grid-cols-2 md:divide-x md:divide-y-0",
             )}
             style={{ "--delay": "420ms" }}
           >
             {summary.map((item, index) => (
               <div
                 key={item.label}
-                className="flex flex-col items-center bg-surface px-4 py-5 text-center sm:px-6 sm:py-6"
+                className="flex min-w-0 items-center gap-4 px-5 py-4 sm:gap-5 sm:px-7 sm:py-5"
               >
-                <dt className="order-2 mt-1 text-sm font-semibold text-fg-soft">
-                  {item.label}
-                </dt>
-                <dd
-                  className={cn(
-                    "order-1 line-clamp-3 break-words font-sans text-base font-extrabold leading-tight tracking-tight sm:text-lg",
-                    SUMMARY_TONES[index],
-                  )}
-                >
-                  {item.value}
-                </dd>
-                {item.hint && (
-                  <dd className="order-3 mt-1 line-clamp-2 break-words text-xs text-muted">
-                    {item.hint}
+                <IconTile
+                  icon={item.icon}
+                  tone={index === 1 ? "leaf" : "brand"}
+                />
+                <div className="flex min-w-0 flex-col">
+                  <dt className="text-xs font-bold uppercase tracking-[0.12em] text-fg-soft">
+                    {item.label}
+                  </dt>
+                  <dd
+                    className={cn(
+                      "mt-0.5 break-words font-sans text-lg font-extrabold leading-snug tracking-tight sm:text-xl",
+                      SUMMARY_TONES[index],
+                    )}
+                  >
+                    {item.value}
                   </dd>
-                )}
+                  {item.hint && (
+                    <dd className="mt-0.5 break-words text-sm text-muted">
+                      {item.hint}
+                    </dd>
+                  )}
+                </div>
               </div>
             ))}
           </dl>
@@ -773,180 +745,176 @@ export default function DoctorPortfolio() {
                         </Private>
                       </div>
                     )}
-                    {aboutFacts.length > 0 && (
-                      <div className="mt-7">
-                        <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                          Career overview
-                        </p>
-                        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          {aboutFacts.map((item) => (
-                            <InfoBox as="li" key={item.label} {...item} />
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 </Reveal>
               </section>
             )}
 
-            {/* ── Education and qualifications, beside professional experience ── */}
-            {(shows("experience") || shows("education")) && (
-              <div
-                className={cn(
-                  "grid gap-x-12",
-                  shows("experience") && shows("education") && "lg:grid-cols-2",
-                )}
+            {/* ── Hospitals, clinics and organisations the doctor is affiliated with ── */}
+            {shows("locations") && (
+              <Section
+                id="locations"
+                overline="Professional affiliations"
+                title="Current professional affiliations"
               >
-                {shows("education") && (
-                  <Section
-                    id="education"
-                    overline="Education & qualifications"
-                    title="Education and qualifications"
-                    hidden={educationHidden || qualificationsHidden}
-                  >
-                    {qualifications.length > 0 && (
-                      <div
-                        className={cn(
-                          education.length > 0 || credentials.length > 0
-                            ? "mb-7"
-                            : "",
-                        )}
-                      >
-                        <p className="mb-2.5 text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                          Qualification letters
-                        </p>
-                        <Tags items={qualifications} />
+                <ul className="grid gap-5">
+                  {clinics.map(({ id: clinicId, ...clinic }) => (
+                    <AffiliationCard key={clinicId} {...clinic} />
+                  ))}
+                </ul>
+              </Section>
+            )}
+
+            {/* ── Professional experience: one full-width card per position ── */}
+            {shows("experience") && (
+              <Section
+                id="experience"
+                overline="Experience"
+                title="Professional experience"
+                hidden={hiddenFromOthers("experience")}
+              >
+                {/* Current positions first, then the most recently held. */}
+                <Timeline items={experience}>
+                  {(item) => (
+                    <>
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
+                          {item.role}
+                        </h3>
+                        {item.current && <Badge tone="leaf">Current</Badge>}
                       </div>
-                    )}
-                    {/* Highest qualification first. */}
-                    {education.length > 0 && (
-                      <Timeline items={education} accent="ink">
-                        {(item) => (
-                          <>
-                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                              <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
-                                {item.degree}
-                              </h3>
-                              {item.level && (
-                                <Badge>{levelLabel(item.level)}</Badge>
-                              )}
-                            </div>
-                            {item.fieldOfStudy && (
-                              <p className="mt-1 break-words text-sm font-bold text-fg">
-                                {item.fieldOfStudy}
-                              </p>
-                            )}
-                            {item.institution && (
-                              <p className="mt-0.5 break-words text-sm text-fg-soft">
-                                {item.institution}
-                              </p>
-                            )}
-                            {(item.startYear || item.year) && (
-                              <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted">
-                                {item.year && !item.startYear
-                                  ? `Class of ${item.year}`
-                                  : yearRange(item.startYear, item.year)}
-                              </p>
-                            )}
-                            {item.certification && (
-                              <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-leaf-strong">
-                                <Award
-                                  className="mt-0.5 h-4 w-4 shrink-0"
-                                  aria-hidden="true"
-                                />
-                                <span className="min-w-0 break-words">
-                                  {item.certification}
-                                </span>
-                              </p>
-                            )}
-                            <Prose>{item.details}</Prose>
-                          </>
-                        )}
-                      </Timeline>
-                    )}
-                    {credentials.length > 0 && (
-                      <ul
-                        className={cn(
-                          "grid gap-4 sm:grid-cols-2",
-                          education.length > 0 && "mt-7",
-                        )}
-                      >
-                        {credentials.map((item) => (
-                          <InfoBox
-                            as="li"
-                            key={item.id}
-                            icon={ScrollText}
-                            label={
-                              item.type
-                                ? labelOf(CREDENTIAL_TYPES, item.type)
-                                : "Qualification"
-                            }
-                            value={item.title}
-                            sub={joined(item.institution, item.year)}
-                          >
-                            {item.registration && (
-                              <Private show={numbersPrivate}>
-                                Registration: {item.registration}
-                              </Private>
-                            )}
-                            <Prose>{item.details}</Prose>
-                          </InfoBox>
-                        ))}
-                      </ul>
-                    )}
-                  </Section>
-                )}
-                {shows("experience") && (
-                  <Section
-                    id="experience"
-                    overline="Experience"
-                    title="Professional experience"
-                    hidden={hiddenFromOthers("experience")}
-                  >
-                    {/* Current positions first, then the most recently held. */}
-                    <Timeline items={experience}>
-                      {(item) => (
-                        <>
-                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                            <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
-                              {item.role}
-                            </h3>
-                            {item.current && <Badge tone="leaf">Current</Badge>}
-                          </div>
-                          {item.organization && (
-                            <p className="mt-1 break-words text-sm font-bold text-fg">
-                              {item.organization}
-                            </p>
-                          )}
-                          {(item.city || item.state || item.employmentType) && (
-                            <p className="mt-0.5 break-words text-sm text-fg-soft">
-                              {joined(
-                                place(item.city, item.state),
-                                item.employmentType &&
-                                  labelOf(
-                                    EMPLOYMENT_TYPES,
-                                    item.employmentType,
-                                  ),
-                              )}
-                            </p>
-                          )}
-                          {(item.startYear || item.endYear || item.current) && (
-                            <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted">
-                              {yearRange(
-                                item.startYear,
-                                item.endYear,
-                                item.current,
-                              )}
-                            </p>
-                          )}
-                          <Prose>{item.description}</Prose>
-                        </>
+                      {item.organization && (
+                        <p className="mt-1 break-words text-sm font-bold text-fg">
+                          {item.organization}
+                        </p>
                       )}
-                    </Timeline>
-                  </Section>
+                      {(item.city || item.state || item.employmentType) && (
+                        <p className="mt-0.5 break-words text-sm text-fg-soft">
+                          {joined(
+                            place(item.city, item.state),
+                            item.employmentType &&
+                              labelOf(
+                                EMPLOYMENT_TYPES,
+                                item.employmentType,
+                              ),
+                          )}
+                        </p>
+                      )}
+                      {(item.startYear || item.endYear || item.current) && (
+                        <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted">
+                          {yearRange(
+                            item.startYear,
+                            item.endYear,
+                            item.current,
+                          )}
+                        </p>
+                      )}
+                      <Prose>{item.description}</Prose>
+                    </>
+                  )}
+                </Timeline>
+              </Section>
+            )}
+
+            {/* ── Education and qualifications: one full-width card per entry ── */}
+            {shows("education") && (
+              <Section
+                id="education"
+                overline="Education & qualifications"
+                title="Education and qualifications"
+                hidden={educationHidden || qualificationsHidden}
+              >
+                {qualifications.length > 0 && (
+                  <div
+                    className={cn(
+                      education.length > 0 || credentials.length > 0
+                        ? "mb-7"
+                        : "",
+                    )}
+                  >
+                    <p className="mb-2.5 text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                      Qualification letters
+                    </p>
+                    <Tags items={qualifications} />
+                  </div>
                 )}
-              </div>
+                {/* Highest qualification first. */}
+                {education.length > 0 && (
+                  <Timeline items={education} accent="ink">
+                    {(item) => (
+                      <>
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                          <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
+                            {item.degree}
+                          </h3>
+                          {item.level && (
+                            <Badge>{levelLabel(item.level)}</Badge>
+                          )}
+                        </div>
+                        {item.fieldOfStudy && (
+                          <p className="mt-1 break-words text-sm font-bold text-fg">
+                            {item.fieldOfStudy}
+                          </p>
+                        )}
+                        {item.institution && (
+                          <p className="mt-0.5 break-words text-sm text-fg-soft">
+                            {item.institution}
+                          </p>
+                        )}
+                        {(item.startYear || item.year) && (
+                          <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted">
+                            {item.year && !item.startYear
+                              ? `Class of ${item.year}`
+                              : yearRange(item.startYear, item.year)}
+                          </p>
+                        )}
+                        {item.certification && (
+                          <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-leaf-strong">
+                            <Award
+                              className="mt-0.5 h-4 w-4 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0 break-words">
+                              {item.certification}
+                            </span>
+                          </p>
+                        )}
+                        <Prose>{item.details}</Prose>
+                      </>
+                    )}
+                  </Timeline>
+                )}
+                {credentials.length > 0 && (
+                  <ul
+                    className={cn(
+                      "grid gap-4",
+                      education.length > 0 && "mt-7",
+                    )}
+                  >
+                    {credentials.map((item) => (
+                      <InfoBox
+                        as="li"
+                        key={item.id}
+                        icon={ScrollText}
+                        label={
+                          item.type
+                            ? labelOf(CREDENTIAL_TYPES, item.type)
+                            : "Qualification"
+                        }
+                        value={item.title}
+                        sub={joined(item.institution, item.year)}
+                      >
+                        {item.registration && (
+                          <Private show={numbersPrivate}>
+                            Registration: {item.registration}
+                          </Private>
+                        )}
+                        <Prose>{item.details}</Prose>
+                      </InfoBox>
+                    ))}
+                  </ul>
+                )}
+              </Section>
             )}
 
             {/* ── Clinical practice: one ruled sheet — scope, areas of expertise, procedures ── */}
@@ -966,9 +934,9 @@ export default function DoctorPortfolio() {
                       icon={BriefcaseMedical}
                       title="Scope of practice"
                     >
-                      <dl className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+                      <dl className="grid gap-4">
                         {p.fieldOfWork && (
-                          <div className="min-w-0 border-l-2 border-brand pl-4">
+                          <div className="min-w-0 rounded-xl border border-line border-l-4 border-l-brand bg-surface px-4 py-3.5">
                             <dt className="text-xs font-bold uppercase tracking-[0.12em] text-muted">
                               Field of work
                             </dt>
@@ -978,7 +946,7 @@ export default function DoctorPortfolio() {
                           </div>
                         )}
                         {p.practiceArea && (
-                          <div className="min-w-0 border-l-2 border-leaf pl-4">
+                          <div className="min-w-0 rounded-xl border border-line border-l-4 border-l-leaf bg-surface px-4 py-3.5">
                             <dt className="text-xs font-bold uppercase tracking-[0.12em] text-muted">
                               Clinical practice area
                             </dt>
@@ -1050,7 +1018,7 @@ export default function DoctorPortfolio() {
                 title="Fellowships and postdoctoral qualifications"
                 hidden={hiddenFromOthers("fellowships")}
               >
-                <ul className="grid gap-4 md:grid-cols-2">
+                <ul className="grid gap-4">
                   {p.fellowships.map((item) => (
                     <li
                       key={item.id}
@@ -1089,6 +1057,76 @@ export default function DoctorPortfolio() {
                     </li>
                   ))}
                 </ul>
+              </Section>
+            )}
+
+            {/* ── Publications ── */}
+            {shows("publications") && (
+              <Section
+                id="publications"
+                overline="Research"
+                title="Publications"
+                hidden={hiddenFromOthers("publications")}
+              >
+                <ol className="grid gap-4">
+                  {p.publications.map((item) => {
+                    const href = safeHref(item.url);
+                    return (
+                      <li
+                        key={item.id}
+                        className={cn(
+                          "flex h-full flex-col rounded-2xl border border-line bg-surface p-5 shadow-soft",
+                          LIFT,
+                        )}
+                      >
+                        {item.year && (
+                          <p className="mb-2">
+                            <Badge tone="brand" className="tabular-nums">
+                              {item.year}
+                            </Badge>
+                          </p>
+                        )}
+                        <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
+                          {item.title}
+                        </h3>
+                        {item.journal && (
+                          <p className="mt-1 break-words text-sm font-semibold italic text-fg-soft">
+                            {item.journal}
+                          </p>
+                        )}
+                        {item.authors && (
+                          <p className="mt-0.5 break-words text-sm text-fg-soft">
+                            {item.authors}
+                          </p>
+                        )}
+                        <Prose>{item.description}</Prose>
+                        {href && (
+                          <p className="mt-auto pt-3">
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer nofollow"
+                              className="inline-flex max-w-full items-center gap-1.5 text-sm font-bold text-brand-ink hover:underline"
+                            >
+                              <ExternalLink
+                                className="h-3.5 w-3.5 shrink-0"
+                                aria-hidden="true"
+                              />
+                              <span className="truncate">
+                                {/doi\.org\//i.test(href)
+                                  ? "View DOI"
+                                  : "View publication"}
+                              </span>
+                              <span className="sr-only">
+                                (opens in a new tab)
+                              </span>
+                            </a>
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
               </Section>
             )}
 
@@ -1197,91 +1235,6 @@ export default function DoctorPortfolio() {
                     </Panel>
                   )}
                 </div>
-              </Section>
-            )}
-
-            {/* ── Publications ── */}
-            {shows("publications") && (
-              <Section
-                id="publications"
-                overline="Research"
-                title="Publications"
-                hidden={hiddenFromOthers("publications")}
-              >
-                <ol className="grid gap-4 lg:grid-cols-2">
-                  {p.publications.map((item) => {
-                    const href = safeHref(item.url);
-                    return (
-                      <li
-                        key={item.id}
-                        className={cn(
-                          "flex h-full flex-col rounded-2xl border border-line bg-surface p-5 shadow-soft",
-                          LIFT,
-                        )}
-                      >
-                        {item.year && (
-                          <p className="mb-2">
-                            <Badge tone="brand" className="tabular-nums">
-                              {item.year}
-                            </Badge>
-                          </p>
-                        )}
-                        <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
-                          {item.title}
-                        </h3>
-                        {item.journal && (
-                          <p className="mt-1 break-words text-sm font-semibold italic text-fg-soft">
-                            {item.journal}
-                          </p>
-                        )}
-                        {item.authors && (
-                          <p className="mt-0.5 break-words text-sm text-fg-soft">
-                            {item.authors}
-                          </p>
-                        )}
-                        <Prose>{item.description}</Prose>
-                        {href && (
-                          <p className="mt-auto pt-3">
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noopener noreferrer nofollow"
-                              className="inline-flex max-w-full items-center gap-1.5 text-sm font-bold text-brand-ink hover:underline"
-                            >
-                              <ExternalLink
-                                className="h-3.5 w-3.5 shrink-0"
-                                aria-hidden="true"
-                              />
-                              <span className="truncate">
-                                {/doi\.org\//i.test(href)
-                                  ? "View DOI"
-                                  : "View publication"}
-                              </span>
-                              <span className="sr-only">
-                                (opens in a new tab)
-                              </span>
-                            </a>
-                          </p>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ol>
-              </Section>
-            )}
-
-            {/* ── Hospitals, clinics and organisations the doctor is affiliated with ── */}
-            {shows("locations") && (
-              <Section
-                id="locations"
-                overline="Professional affiliations"
-                title="Current professional affiliations"
-              >
-                <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {clinics.map(({ id: clinicId, ...clinic }) => (
-                    <AffiliationCard key={clinicId} {...clinic} />
-                  ))}
-                </ul>
               </Section>
             )}
 

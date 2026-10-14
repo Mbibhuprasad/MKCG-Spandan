@@ -143,6 +143,9 @@ const profileSchema = new Schema(
     headline: { type: String, trim: true, maxlength: 160, default: '' },
     // Optional and private: other members see it only with visibility.showBloodGroup.
     bloodGroup: { type: String, enum: ['', ...BLOOD_GROUPS], default: '' },
+    // Optional, stored as midnight UTC of the calendar date. Only the doctor and
+    // admins ever receive it; members only see the doctor in "Today's Birthdays".
+    dateOfBirth: { type: Date, default: null },
     address: { type: String, trim: true, maxlength: 240, default: '' }, // area or locality, entered in the basic profile step
     specialization: { type: String, trim: true, maxlength: 80, default: '' },
     subspecialty: { type: String, trim: true, maxlength: 80, default: '' },
@@ -223,6 +226,7 @@ const userSchema = new Schema(
       showWorkContact: { type: Boolean, default: true }, // workplace email / phone visible to members
       showRegistration: { type: Boolean, default: false }, // registration details visible to members
       showBloodGroup: { type: Boolean, default: false }, // blood group visible to members
+      showBirthday: { type: Boolean, default: true }, // listed in "Today's Birthdays" on their birthday (the date itself is never shown)
       // Portfolio sections shown to other members (the doctor and admins always see all).
       sections: Object.fromEntries(PROFILE_SECTIONS.map((key) => [key, { type: Boolean, default: true }])),
     },

@@ -4,10 +4,11 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Avatar, Banner, Card, ErrorState, LoadingState, PressableScale, Screen, StackHeader, Text } from '@/components/ui';
+import { Avatar, Banner, Button, Card, ErrorState, LoadingState, PressableScale, Screen, StackHeader, Text } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { Comments, ContentMenu } from '@/features/community/Interactions';
 import { AuthorLine } from '@/features/community/PostCard';
+import { TravelPlanCard } from '@/features/events/TravelPlan';
 import { eventsApi } from '@/features/events/api';
 import { useResource } from '@/hooks/useResource';
 import { messageOf } from '@/services/api';
@@ -112,7 +113,7 @@ export default function EventDetail() {
         <Card style={styles.facts}>
           <Fact icon="time-outline" label="Starts" value={formatDateTime(event.startsAt)} />
           <Fact icon="flag-outline" label="Ends" value={event.endsAt && event.endsAt !== event.startsAt ? formatDateTime(event.endsAt) : ''} />
-          <Fact icon="location-outline" label="Where" value={joinParts([event.venue, event.city], ', ')} />
+          <Fact icon="location-outline" label="Where" value={joinParts([event.venue, event.address, event.city], ', ')} />
           <Fact icon="wallet-outline" label="Budget" value={event.budgetNote} />
           <Fact icon="people-outline" label="Capacity" value={event.capacity ? plural(event.capacity, 'place') : ''} />
         </Card>
@@ -191,6 +192,17 @@ export default function EventDetail() {
         ) : (
           <Banner tone="info" message="The organiser is not collecting RSVPs for this event." />
         )}
+
+        {/* Travel plan and the event's schedule */}
+        <TravelPlanCard
+          key={`travel-${event.id}`}
+          event={event}
+          onUpdated={(data) => {
+            res.setData((e) => ({ ...e, ...data }));
+            attendees.reloadSilently();
+          }}
+        />
+        <Button title="View the event schedule" icon="time-outline" variant="secondary" onPress={() => router.push(`/events/schedule?event=${event.id}`)} full />
 
         <Comments targetType="event" targetId={event.id} onCountChange={(delta) => res.setData((e) => ({ ...e, commentCount: Math.max(0, e.commentCount + delta) }))} />
       </View>

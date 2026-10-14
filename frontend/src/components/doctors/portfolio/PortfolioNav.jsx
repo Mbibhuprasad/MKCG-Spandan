@@ -58,7 +58,7 @@ function useActiveSection(sections) {
 }
 
 /**
- * Profile navigation: a dark pill that floats over the portfolio with back to
+ * Profile navigation: a brand-blue pill that floats over the portfolio with back to
  * the directory, the doctor's name, a sideways-scrolling link to each section
  * and — when the doctor shares contact details — a Contact button (which is why
  * Contact is not also in the links). It stays below the site header while
@@ -90,7 +90,7 @@ export default function PortfolioNav({ name, sections, contactHref }) {
       <div className="container-page pt-3">
         <nav
           aria-label="Sections of this profile"
-          className="pointer-events-auto flex h-14 items-center gap-2 rounded-full border border-white/10 bg-[#0a1b42]/90 pl-2 pr-2 text-white shadow-lift backdrop-blur-md sm:gap-3 sm:pl-3"
+          className="pointer-events-auto flex h-14 items-center gap-2 rounded-full border border-white/15 bg-[#14398a] pl-2 pr-2 text-white shadow-lift sm:gap-3 sm:pl-3"
         >
           <Link
             href="/doctors"
@@ -103,7 +103,7 @@ export default function PortfolioNav({ name, sections, contactHref }) {
             className="hidden min-w-0 max-w-[13rem] shrink-0 items-center gap-2 lg:flex"
             aria-hidden="true"
           >
-            <Activity className="h-4 w-4 shrink-0 text-[#22bef2]" />
+            <Activity className="h-4 w-4 shrink-0 text-[#6fe3ad]" />
             <span className="truncate text-sm font-extrabold uppercase tracking-[0.08em]">
               {name}
             </span>
@@ -122,8 +122,8 @@ export default function PortfolioNav({ name, sections, contactHref }) {
                     className={cn(
                       "inline-flex whitespace-nowrap rounded-full px-3 py-2 text-sm font-bold transition-colors",
                       active === section.id
-                        ? "bg-white/15 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white",
+                        ? "bg-white text-[#14398a]"
+                        : "text-white/80 hover:bg-white/15 hover:text-white",
                     )}
                   >
                     {section.label}
@@ -140,7 +140,7 @@ export default function PortfolioNav({ name, sections, contactHref }) {
           {contactHref && (
             <a
               href={contactHref}
-              className="ml-auto inline-flex h-10 shrink-0 items-center rounded-full bg-[#1a4fff] px-4 text-sm font-extrabold text-white shadow-[0_4px_18px_rgba(26,79,255,0.45)] transition-colors hover:bg-[#3d6bff] sm:px-5"
+              className="ml-auto inline-flex h-10 shrink-0 items-center rounded-full bg-[#14864f] px-4 text-sm font-extrabold text-white transition-colors hover:bg-[#0e6a3e] sm:px-5"
             >
               Contact
             </a>

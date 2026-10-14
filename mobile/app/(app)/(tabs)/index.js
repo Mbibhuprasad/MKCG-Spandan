@@ -28,6 +28,8 @@ import { doctorsApi } from "@/features/doctors/api";
 import { EventCard } from "@/features/events/EventCard";
 import { eventsApi } from "@/features/events/api";
 import { MemoryTile } from "@/features/memories/MemoryCard";
+import { WEB_URL } from "@/services/config";
+import { openLink } from "@/utils/phone";
 import { memoriesApi } from "@/features/memories/api";
 import { useNotifications } from "@/features/notifications/NotificationsContext";
 import { useResource } from "@/hooks/useResource";
@@ -317,6 +319,40 @@ export default function Home() {
           }
         </Section>
 
+        {/* More to Explore — the full website. Its address is EXPO_PUBLIC_WEB_URL
+            (services/config.js); until it is set the card says so and opens nothing. */}
+        <View style={styles.section}>
+          <SectionHeader title="More to Explore" eyebrow="Beyond the app" />
+          <Card
+            style={[styles.inset, styles.explore, !WEB_URL && styles.dim]}
+            onPress={WEB_URL ? () => openLink(WEB_URL) : undefined}
+            accessibilityLabel={
+              WEB_URL
+                ? "Explore MKCGSPANDAN on the Web. Opens the website in your browser."
+                : "Explore MKCGSPANDAN on the Web. Coming soon."
+            }
+          >
+            <View style={[styles.exploreIcon, { backgroundColor: colors.brandSoft }]}>
+              <Ionicons name="globe-outline" size={24} color={colors.brandInk} />
+            </View>
+            <View style={styles.flex}>
+              <Text variant="h3">Explore MKCGSPANDAN on the Web</Text>
+              <Text variant="small" tone="soft">
+                Open the full website for the complete directory, event
+                schedules, blogs and memories on a larger screen.
+              </Text>
+              {!WEB_URL ? (
+                <Text variant="caption" tone="muted" style={styles.soon}>
+                  Coming soon
+                </Text>
+              ) : null}
+            </View>
+            {WEB_URL ? (
+              <Ionicons name="open-outline" size={20} color={colors.muted} />
+            ) : null}
+          </Card>
+        </View>
+
         <Section
           title="Community"
           eyebrow="Latest posts"
@@ -429,4 +465,14 @@ const styles = StyleSheet.create({
   inset: { marginHorizontal: space.lg },
   about: { gap: 12 },
   aboutHead: { flexDirection: "row", alignItems: "center", gap: 4 },
+  explore: { flexDirection: "row", alignItems: "center", gap: 14 },
+  exploreIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dim: { opacity: 0.7 },
+  soon: { marginTop: 4 },
 });

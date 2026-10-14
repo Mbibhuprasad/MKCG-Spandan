@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   ArrowRight,
+  Download,
   LayoutDashboard,
   ShieldCheck,
   Stethoscope,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import Button from "@/components/ui/Button";
+import { site } from "@/lib/site";
 import HeroVisual from "./HeroVisual";
 
 const assurances = [
@@ -124,6 +126,28 @@ export default function Hero() {
             <Button href="/doctors" variant="secondary" size="lg">
               Explore Friends
             </Button>
+          </div>
+
+          {/* Android app: a link only once its address is configured (site.androidApkUrl). */}
+          <div
+            className="rise-in mt-3 flex flex-wrap items-center gap-x-3 gap-y-1"
+            style={{ "--delay": "245ms" }}
+          >
+            {site.androidApkUrl ? (
+              <a
+                href={site.androidApkUrl}
+                rel="noopener"
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-line-strong bg-surface px-4 text-sm font-semibold text-fg transition-colors hover:bg-surface-2"
+              >
+                <Download className="h-4 w-4 text-leaf" aria-hidden="true" />
+                Download App
+                <span className="text-xs font-medium text-muted">Android</span>
+              </a>
+            ) : (
+              <Button variant="secondary" size="sm" icon={Download} disabled className="h-10">
+                Download App — coming soon
+              </Button>
+            )}
           </div>
 
           <ul
