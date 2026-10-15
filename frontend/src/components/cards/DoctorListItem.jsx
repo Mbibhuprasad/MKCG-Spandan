@@ -15,21 +15,22 @@ export default function DoctorListItem({ doctor }) {
   const title = doctor.professionalTitle || doctor.designation;
 
   return (
-    <article className="card flex flex-col gap-4 p-4 transition-shadow duration-200 hover:shadow-lift sm:flex-row sm:items-center sm:p-5">
+    <article className="card flex flex-col gap-4 p-3 transition-shadow duration-200 hover:shadow-lift sm:flex-row sm:items-center sm:p-3">
       <div className="flex min-w-0 items-center gap-4 sm:w-[16rem] sm:shrink-0 lg:w-[18rem]">
-        <Avatar name={doctor.name} src={doctor.photoUrl} size="lg" />
+        <Avatar name={doctor.name} src={doctor.photoUrl} size="md" />
         <div className="min-w-0">
           <h3 className="break-words text-base font-bold text-fg">
             {doctor.name}
           </h3>
           {title && (
-            <p className="mt-0.5 line-clamp-2 text-sm text-fg-soft">{title}</p>
+            <p className="mt-0.5 line-clamp-2 text-[0.8rem] text-fg-soft">{title}</p>
           )}
         </div>
       </div>
 
-      <dl className="grid min-w-0 flex-1 gap-x-6 gap-y-2 text-sm text-fg-soft md:grid-cols-2 xl:grid-cols-3">
-        <div className="flex min-w-0 items-start gap-2">
+      {/* On phones the specialization takes a row of its own and location and phone share the next one. */}
+      <dl className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 text-sm text-fg-soft md:grid-cols-2 md:gap-x-6 xl:grid-cols-3">
+        <div className="col-span-2 flex min-w-0 items-start gap-2 md:col-span-1">
           <dt className="sr-only">Specialization</dt>
           <Stethoscope
             className="mt-0.5 h-4 w-4 shrink-0 text-leaf"
@@ -59,7 +60,7 @@ export default function DoctorListItem({ doctor }) {
             <dd className="min-w-0">
               <a
                 href={`tel:${phone}`}
-                className="break-all font-semibold text-fg hover:text-brand-ink hover:underline"
+                className="whitespace-nowrap font-semibold text-fg hover:text-brand-ink hover:underline md:whitespace-normal md:break-all"
               >
                 {phone}
               </a>

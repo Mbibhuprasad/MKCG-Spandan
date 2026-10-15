@@ -148,7 +148,8 @@ const profileSchema = new Schema(
     dateOfBirth: { type: Date, default: null },
     address: { type: String, trim: true, maxlength: 240, default: '' }, // area or locality, entered in the basic profile step
     specialization: { type: String, trim: true, maxlength: 80, default: '' },
-    subspecialty: { type: String, trim: true, maxlength: 80, default: '' },
+    // One or more subspecializations, separated by commas (see services/specialty.service.js).
+    subspecialty: { type: String, trim: true, maxlength: 700, default: '' },
     fieldOfWork: { type: String, trim: true, maxlength: 120, default: '' },
     expertise: { type: [{ type: String, trim: true, maxlength: 80 }], default: [] },
     procedures: { type: [{ type: String, trim: true, maxlength: 100 }], default: [] },

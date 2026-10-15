@@ -8,20 +8,31 @@ import { cn } from "@/lib/format";
 // Distance from the top of the window at which a section counts as being read (site header + the bar).
 const READING_LINE = 200;
 
+// The elements in the order they appear on the page.
+const inPageOrder = (elements) =>
+  [...elements].sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+  );
+
 /**
- * Scroll spy: the id of the section being read — the last one whose top has
- * passed the reading line — or '' above the first section.
+ * Scroll spy. `order` lists the section ids in the order the sections appear
+ * on the page, so rearranging the sections rearranges the bar too. `active` is
+ * the section being read — the last one whose top has passed the reading
+ * line — or '' above the first section.
  */
-function useActiveSection(sections) {
-  const [active, setActive] = useState("");
+function useSectionSpy(sections) {
+  const [spy, setSpy] = useState({ order: "", active: "" });
   const ids = sections.map((section) => section.id).join(",");
 
   useEffect(() => {
     if (!ids) return undefined;
-    const targets = ids
-      .split(",")
-      .map((id) => document.getElementById(id))
-      .filter(Boolean);
+    const targets = inPageOrder(
+      ids
+        .split(",")
+        .map((id) => document.getElementById(id))
+        .filter(Boolean),
+    );
+    const order = targets.map((target) => target.id).join(",");
     let frame = 0;
     const update = () => {
       frame = 0;
@@ -35,11 +46,19 @@ function useActiveSection(sections) {
           current = target.id;
         }
       }
+      // A last section too short to reach the reading line is marked once the
+      // page is scrolled to its end — but not before any scrolling: a short
+      // page is at its top and its end at once, and its top is the hero.
       const atEnd =
+        window.scrollY > 0 &&
         window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 2;
+          document.documentElement.scrollHeight - 2;
       if (atEnd && targets.length) current = targets[targets.length - 1].id;
-      setActive(current);
+      setSpy((prev) =>
+        prev.order === order && prev.active === current
+          ? prev
+          : { order, active: current },
+      );
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -47,14 +66,27 @@ function useActiveSection(sections) {
     schedule();
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
+    // Content that loads or grows later (images, gallery, blogs) moves the sections without a scroll.
+    const resized = new ResizeObserver(schedule);
+    resized.observe(document.body);
     return () => {
       cancelAnimationFrame(frame);
+      resized.disconnect();
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
   }, [ids]);
 
-  return active;
+  return spy;
+}
+
+/** The links sorted into page order; a link whose section is not on the page goes last. */
+function sortByPage(sections, order) {
+  if (!order) return sections;
+  const rank = new Map(order.split(",").map((id, index) => [id, index]));
+  const place = (section) =>
+    rank.has(section.id) ? rank.get(section.id) : rank.size;
+  return [...sections].sort((a, b) => place(a) - place(b));
 }
 
 /**
@@ -64,8 +96,9 @@ function useActiveSection(sections) {
  * Contact is not also in the links). It stays below the site header while
  * scrolling and marks the section being read.
  */
-export default function PortfolioNav({ name, sections, contactHref }) {
-  const active = useActiveSection(sections);
+export default function PortfolioNav({ name, sections: links, contactHref }) {
+  const { order, active } = useSectionSpy(links);
+  const sections = sortByPage(links, order);
   const list = useRef(null);
 
   // Keep the current link in view when the links overflow (small screens).

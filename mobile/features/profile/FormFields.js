@@ -17,6 +17,23 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { HIT_SLOP, space } from "@/theme/tokens";
 import { dateOfIsoDay, emptyItem, isoDayOf, validateItem } from "./model";
 
+// A doctor may hold several subspecializations; the API keeps them in the one
+// `subspecialty` text, separated by commas ("Spine Surgery, Sports Medicine").
+function splitSubspecialties(value) {
+  const seen = new Set();
+  return String(value || "")
+    .split(",")
+    .map((sub) => sub.replace(/\s+/g, " ").trim())
+    .filter((sub) => {
+      const key = sub.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+const joinSubspecialties = (values) =>
+  splitSubspecialties(values.join(",")).join(", ");
+
 const EARLIEST_BIRTH = new Date(1900, 0, 1);
 
 const KEYBOARD = {
@@ -123,18 +140,21 @@ export function ProfileField({
       (s) => s.name.toLowerCase() === String(specialization).toLowerCase(),
     );
     const options = entry ? entry.subspecializations || [] : [];
+    // Several may be chosen; the API keeps them in one comma-separated value.
     return (
       <SelectField
         label={field.label}
-        value={value}
-        onChange={onChange}
+        value={splitSubspecialties(value)}
+        onChange={(values) => onChange(joinSubspecialties(values))}
         options={options}
         searchable
         allowCustom
         clearable
+        multiple
+        max={8}
         placeholder={
           specialization
-            ? "Choose or type your own"
+            ? "Choose one or more, or type your own"
             : "Choose a specialization first"
         }
         error={error}

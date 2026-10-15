@@ -53,7 +53,7 @@ const splitHonorific = (name) => {
  *  - `actions`  buttons under the text:      [{ href, label, icon }] — the owner's "Edit profile";
  *               there are no contact buttons here, the contact section has those
  */
-export default function PortfolioHero({ name, photoUrl, eyebrow, title, headline, bio, facts = [], actions = [] }) {
+export default function PortfolioHero({ id, name, photoUrl, eyebrow, title, headline, bio, facts = [], actions = [] }) {
   const root = useRef(null);
   const photo = useRef(null);
   const [honorific, rest] = splitHonorific(name);
@@ -130,7 +130,7 @@ export default function PortfolioHero({ name, photoUrl, eyebrow, title, headline
   }, []);
 
   return (
-    <header ref={root} className="relative -mt-[4.25rem] overflow-hidden border-b border-line bg-bg text-fg" style={{ backgroundImage: HERO_BACKGROUND }}>
+    <header ref={root} id={id} className="relative -mt-[4.25rem] scroll-mt-40 overflow-hidden border-b border-line bg-bg text-fg" style={{ backgroundImage: HERO_BACKGROUND }}>
       {/* Soft blue shapes that drift, then the particles; the content sits above both. */}
       <div data-orb className="pointer-events-none absolute -right-24 -top-32 h-[26rem] w-[26rem] rounded-full bg-[#3b82f6]/[0.12] blur-3xl sm:bg-[#3b82f6]/[0.2]" aria-hidden="true" />
       <div data-orb className="pointer-events-none absolute -bottom-36 -left-20 h-[24rem] w-[24rem] rounded-full bg-[#38bdf8]/[0.2] blur-3xl" aria-hidden="true" />
@@ -193,7 +193,7 @@ export default function PortfolioHero({ name, photoUrl, eyebrow, title, headline
             </div>
           )}
 
-          {facts.length > 0 && (
+          {/* {facts.length > 0 && (
             <dl className="rise-in mt-8 flex flex-col gap-x-6 gap-y-3 sm:flex-row sm:flex-wrap sm:items-center" style={{ '--delay': '360ms' }}>
               {facts.map((fact) => (
                 <div key={fact.label} className="flex items-start gap-2 text-sm font-bold text-fg sm:border-r sm:border-line-strong sm:pr-6 sm:last:border-r-0 sm:last:pr-0">
@@ -203,7 +203,7 @@ export default function PortfolioHero({ name, photoUrl, eyebrow, title, headline
                 </div>
               ))}
             </dl>
-          )}
+          )} */}
         </div>
 
         <div className="rise-in flex justify-center" style={{ '--delay': '220ms' }}>

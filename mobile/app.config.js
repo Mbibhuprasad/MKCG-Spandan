@@ -29,7 +29,7 @@ module.exports = {
       package: "com.mkcgspandan.app",
       versionCode: 1,
       adaptiveIcon: {
-        backgroundColor: "#14398a",
+        backgroundColor: "#ffffff",
         foregroundImage: "./assets/android-icon-foreground.png",
         backgroundImage: "./assets/android-icon-background.png",
         monochromeImage: "./assets/android-icon-monochrome.png",

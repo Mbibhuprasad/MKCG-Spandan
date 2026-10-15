@@ -916,6 +916,39 @@ await test('unread count rises for the receiver and is cleared by "read"', async
     "the sender has nothing unread",
   );
 });
+await test("reactions: one per doctor, changed or removed, delivered live to the other side", async () => {
+  const sent = await emitWithAck(sa, "message:send", {
+    conversationId: direct.id,
+    body: "React to this",
+    clientId: newClientId(),
+  });
+  const messageId = sent.message.id;
+  let incoming = nextEvent(sa, "message:reaction");
+  const liked = await as(bob, () =>
+    chatApi.react(direct.id, messageId, "👍"),
+  );
+  assert.deepEqual(liked.data.reactions, [
+    { emoji: "👍", userIds: [bob.id] },
+  ]);
+  assert.deepEqual((await incoming).reactions, liked.data.reactions);
+
+  incoming = nextEvent(sa, "message:reaction");
+  const changed = await emitWithAck(sb, "message:react", {
+    conversationId: direct.id,
+    messageId,
+    emoji: "❤️",
+  });
+  assert.deepEqual(changed.reactions, [{ emoji: "❤️", userIds: [bob.id] }]);
+  assert.deepEqual((await incoming).reactions, changed.reactions);
+
+  const removed = await as(bob, () => chatApi.react(direct.id, messageId, ""));
+  assert.deepEqual(removed.data.reactions, []);
+  await rejects(
+    as(bob, () => chatApi.react(direct.id, messageId, "🔥")),
+    "VALIDATION_ERROR",
+    400,
+  );
+});
 let sc;
 await test("privacy: a third doctor cannot read, list, or send into the one-to-one conversation, and receives none of its messages", async () => {
   carol = await newDoctor("Carol");

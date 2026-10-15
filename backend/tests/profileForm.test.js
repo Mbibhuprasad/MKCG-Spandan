@@ -198,6 +198,43 @@ describe("specialization and subspecialization", () => {
       subspecialty: "Robotic Stone Surgery",
     });
   });
+
+  test("a doctor may hold several subspecializations", async () => {
+    const doctor = await registerDoctor(ctx.app);
+    let saved = await save(doctor, {
+      profile: {
+        specialization: "Orthopaedics",
+        subspecialty: "spine surgery, joint replacement,, Spine Surgery , limb lengthening",
+      },
+    });
+    expect(saved.status).toBe(200);
+    // Listed spellings, typed ones tidied, repeats and blanks dropped.
+    expect(saved.body.data.profile.subspecialty).toBe(
+      "Spine Surgery, Joint Replacement, Limb Lengthening",
+    );
+
+    // Each one is offered on its own, never the combined text.
+    const viewer = await registerDoctor(ctx.app);
+    const ortho = (
+      await viewer.get("/api/v1/doctors/specialties")
+    ).body.data.specializations.find((s) => s.name === "Orthopaedics");
+    expect(ortho.subspecializations).toContain("Limb Lengthening");
+    expect(
+      ortho.subspecializations.filter((sub) => sub.includes(",")),
+    ).toEqual([]);
+
+    // Changing only the specialization keeps the ones that are also its options.
+    saved = await save(doctor, { profile: { specialization: "Neurosurgery" } });
+    expect(saved.body.data.profile.subspecialty).toBe("Spine Surgery");
+
+    const tooMany = Array.from({ length: 9 }, (_, i) => `Focus ${i + 1}`).join(", ");
+    expect(
+      (await save(doctor, { profile: { subspecialty: tooMany } })).status,
+    ).toBe(400);
+    expect(
+      (await save(doctor, { profile: { subspecialty: `Spine Surgery, ${"x".repeat(81)}` } })).status,
+    ).toBe(400);
+  });
 });
 
 describe("basic profile additions", () => {

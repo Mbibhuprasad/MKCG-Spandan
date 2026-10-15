@@ -332,7 +332,7 @@ export const SECTIONS = [
         type: "specialization",
         required: true,
       },
-      { key: "subspecialty", label: "Subspecialization", type: "subspecialty" },
+      { key: "subspecialty", label: "Subspecializations", type: "subspecialty" },
       { key: "fieldOfWork", label: "Field of work", max: 120 },
       {
         key: "expertise",

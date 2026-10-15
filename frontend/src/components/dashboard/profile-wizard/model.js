@@ -13,7 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { DEFAULT_COUNTRY, PROFILE_SECTIONS } from "@/lib/constants";
-import { sameText } from "@/lib/specialties";
+import { sameText, splitSubspecialties } from "@/lib/specialties";
 
 export const YEAR_MIN = 1940;
 export const YEAR_MAX = 2100;
@@ -554,17 +554,20 @@ export function stepOfErrorKey(key) {
 }
 
 /**
- * True while the doctor has changed the specialization but still holds a
- * subspecialization chosen for the previous one that is not an option of the
- * new one. It must then be replaced, cleared or explicitly kept — it is never
- * carried over silently. `isListed(specialization, subspecialty)` comes from
- * the specialty catalogue.
+ * The subspecializations the doctor chose for a previous specialization that
+ * are not options of the current one. While there are any, they must be
+ * replaced, removed or explicitly kept — they are never carried over silently.
+ * `isListed(specialization, subspecialty)` comes from the specialty catalogue.
  */
-export function subspecialtyNeedsReview(form, isListed = () => false) {
-  if (!form.subspecialty.trim()) return false;
-  if (sameText(form.specialization, form.subspecialtyFor)) return false;
-  return !isListed(form.specialization, form.subspecialty);
+export function unlistedSubspecialties(form, isListed = () => false) {
+  if (sameText(form.specialization, form.subspecialtyFor)) return [];
+  return splitSubspecialties(form.subspecialty).filter(
+    (sub) => !isListed(form.specialization, sub),
+  );
 }
+
+export const subspecialtyNeedsReview = (form, isListed) =>
+  unlistedSubspecialties(form, isListed).length > 0;
 
 /**
  * After a save, shows the specialization and subspecialization as the API
@@ -662,9 +665,10 @@ export function validateStep(
           "Choose or type your primary specialization.",
         );
       if (subspecialtyNeedsReview(form, isListedSubspecialty)) {
+        const unlisted = unlistedSubspecialties(form, isListedSubspecialty).join(", ");
         put(
           "profile.subspecialty",
-          `You changed your specialization. Choose a subspecialization that fits it, clear this one, or confirm that “${form.subspecialty.trim()}” still applies.`,
+          `You changed your specialization. Choose subspecializations that fit it, remove the old ones, or confirm that “${unlisted}” still applies.`,
         );
       }
       form.experience.forEach((e, i) => {

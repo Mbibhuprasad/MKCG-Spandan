@@ -34,4 +34,9 @@ async function markRead(req, res) {
   return ok(res, await chat.markRead(req.valid.params.id, req.user));
 }
 
-module.exports = { listConversations, unreadCount, openDirect, getConversation, listMessages, sendMessage, markRead };
+async function react(req, res) {
+  const { id: conversationId, messageId } = req.valid.params;
+  return ok(res, await chat.reactToMessage(req.user, { conversationId, messageId, emoji: req.valid.body.emoji }));
+}
+
+module.exports = { listConversations, unreadCount, openDirect, getConversation, listMessages, sendMessage, markRead, react };

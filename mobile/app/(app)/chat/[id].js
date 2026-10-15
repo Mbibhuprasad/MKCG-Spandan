@@ -17,9 +17,9 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  KeyboardView,
   LoadingState,
   Screen,
+  Sheet,
   StackHeader,
   Text,
 } from "@/components/ui";
@@ -29,9 +29,11 @@ import {
   RESYNC_TOPIC,
   useChat,
   useConversationMessages,
+  useConversationReactions,
 } from "@/features/chat/ChatContext";
-import { chatApi } from "@/features/chat/api";
+import { REACTIONS, chatApi } from "@/features/chat/api";
 import { ConnectionBanner } from "@/features/chat/components";
+import { useKeyboardOverlap } from "@/hooks/useKeyboardOverlap";
 import { useTheme } from "@/theme/ThemeProvider";
 import { radius, space, type } from "@/theme/tokens";
 import { subscribe } from "@/utils/events";
@@ -47,6 +49,31 @@ import { openWhatsApp } from "@/utils/phone";
 const PAGE = 30;
 const MAX_LENGTH = 4000; // MESSAGE_MAX_LENGTH on the API
 
+const reactionsKey = (message) => JSON.stringify(message.reactions || []);
+
+// The reactions after this doctor sets `emoji` ('' removes theirs): one per person.
+function withReaction(reactions = [], userId, emoji) {
+  const next = reactions
+    .map((group) => ({
+      ...group,
+      userIds: group.userIds.filter((id) => id !== userId),
+    }))
+    .filter((group) => group.userIds.length);
+  if (!emoji) return next;
+  const at = next.findIndex((group) => group.emoji === emoji);
+  if (at === -1) return [...next, { emoji, userIds: [userId] }];
+  return next.map((group, i) =>
+    i === at ? { ...group, userIds: [...group.userIds, userId] } : group,
+  );
+}
+
+const myReactionOf = (message, userId) => {
+  const group = (message.reactions || []).find((g) =>
+    g.userIds.includes(userId),
+  );
+  return group ? group.emoji : "";
+};
+
 // Adds messages to a newest-first list without ever showing one twice: a
 // message is matched by its server id, or by the clientId this phone gave it.
 function merge(current, incoming) {
@@ -58,7 +85,11 @@ function merge(current, incoming) {
         (message.clientId && m.clientId === message.clientId),
     );
     if (at === -1) list = [message, ...list];
-    else if (list[at].status || list[at].id !== message.id)
+    else if (
+      list[at].status ||
+      list[at].id !== message.id ||
+      reactionsKey(list[at]) !== reactionsKey(message)
+    )
       list = list.map((m, i) => (i === at ? message : m));
   }
   return list === current
@@ -66,10 +97,23 @@ function merge(current, incoming) {
     : [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
-function Bubble({ message, mine, group, showName, showAvatar, onRetry }) {
+function Bubble({
+  message,
+  mine,
+  group,
+  showName,
+  showAvatar,
+  onRetry,
+  myId,
+  onReactions,
+  onToggleReaction,
+}) {
   const { colors } = useTheme();
   const failed = message.status === "failed";
   const sending = message.status === "sending";
+  // Only a message the server has stored can be reacted to.
+  const canReact = !message.status;
+  const reactions = message.reactions || [];
   return (
     <View style={[styles.messageRow, mine ? styles.rowMine : styles.rowTheirs]}>
       {group && !mine ? (
@@ -83,72 +127,122 @@ function Bubble({ message, mine, group, showName, showAvatar, onRetry }) {
           ) : null}
         </View>
       ) : null}
-      <Pressable
-        onPress={failed ? onRetry : undefined}
-        disabled={!failed}
+      <View
         style={[
-          styles.bubble,
-          mine
-            ? { backgroundColor: colors.bubbleMine, borderBottomRightRadius: 6 }
-            : {
-                backgroundColor: colors.bubbleTheirs,
-                borderBottomLeftRadius: 6,
-              },
-          failed && { backgroundColor: colors.dangerSoft },
-          sending && styles.sending,
+          styles.bubbleColumn,
+          mine ? styles.alignMine : styles.alignTheirs,
         ]}
-        accessibilityLabel={`${mine ? "You" : message.sender.name}: ${message.body}. ${failed ? "Not sent. Tap to retry." : formatTime(message.createdAt)}`}
       >
-        {group && !mine && showName ? (
-          <Text
-            variant="caption"
-            tone="leaf"
-            style={styles.sender}
-            numberOfLines={1}
-          >
-            {message.sender.name}
-          </Text>
-        ) : null}
-        <Text
-          color={
-            failed
-              ? colors.danger
-              : mine
-                ? colors.bubbleMineFg
-                : colors.bubbleTheirsFg
+        <Pressable
+          onPress={failed ? onRetry : undefined}
+          onLongPress={canReact ? onReactions : undefined}
+          delayLongPress={300}
+          disabled={!failed && !canReact}
+          accessibilityHint={canReact ? "Long press to react" : undefined}
+          accessibilityActions={
+            canReact ? [{ name: "longpress", label: "React" }] : undefined
           }
-          selectable
+          onAccessibilityAction={canReact ? onReactions : undefined}
+          style={({ pressed }) => [
+            styles.bubble,
+            mine
+              ? {
+                  backgroundColor: colors.bubbleMine,
+                  borderBottomRightRadius: 6,
+                }
+              : {
+                  backgroundColor: colors.bubbleTheirs,
+                  borderBottomLeftRadius: 6,
+                },
+            failed && { backgroundColor: colors.dangerSoft },
+            sending && styles.sending,
+            pressed && canReact && styles.pressed,
+          ]}
+          accessibilityLabel={`${mine ? "You" : message.sender.name}: ${message.body}. ${failed ? "Not sent. Tap to retry." : formatTime(message.createdAt)}`}
         >
-          {message.body}
-        </Text>
-        <View style={styles.meta}>
-          {failed ? (
-            <>
-              <Ionicons name="alert-circle" size={12} color={colors.danger} />
-              <Text variant="caption" color={colors.danger}>
-                {message.error || "Not sent"} · Tap to retry
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text
-                variant="caption"
-                color={mine ? "rgba(255,255,255,0.72)" : colors.muted}
-                style={styles.time}
-              >
-                {sending ? "Sending…" : formatTime(message.createdAt)}
-              </Text>
-              {mine && !sending ? (
-                <Ionicons
-                  name="checkmark"
-                  size={12}
-                  color="rgba(255,255,255,0.72)"
-                />
-              ) : null}
-            </>
-          )}
-        </View>
-      </Pressable>
+          {group && !mine && showName ? (
+            <Text
+              variant="caption"
+              tone="leaf"
+              style={styles.sender}
+              numberOfLines={1}
+            >
+              {message.sender.name}
+            </Text>
+          ) : null}
+          <Text
+            color={
+              failed
+                ? colors.danger
+                : mine
+                  ? colors.bubbleMineFg
+                  : colors.bubbleTheirsFg
+            }
+          >
+            {message.body}
+          </Text>
+          <View style={styles.meta}>
+            {failed ? (
+              <>
+                <Ionicons name="alert-circle" size={12} color={colors.danger} />
+                <Text variant="caption" color={colors.danger}>
+                  {message.error || "Not sent"} · Tap to retry
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text
+                  variant="caption"
+                  color={mine ? "rgba(255,255,255,0.72)" : colors.muted}
+                  style={styles.time}
+                >
+                  {sending ? "Sending…" : formatTime(message.createdAt)}
+                </Text>
+                {mine && !sending ? (
+                  <Ionicons
+                    name="checkmark"
+                    size={12}
+                    color="rgba(255,255,255,0.72)"
+                  />
+                ) : null}
+              </>
+            )}
+          </View>
+        </Pressable>
+        {reactions.length ? (
+          <View style={styles.reactions}>
+            {reactions.map((reaction) => {
+              const own = reaction.userIds.includes(myId);
+              const count = reaction.userIds.length;
+              return (
+                <Pressable
+                  key={reaction.emoji}
+                  onPress={() => onToggleReaction(reaction.emoji)}
+                  onLongPress={onReactions}
+                  hitSlop={4}
+                  style={[
+                    styles.reaction,
+                    {
+                      backgroundColor: own ? colors.brandSoft : colors.surface,
+                      borderColor: own ? colors.brand : colors.line,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: own }}
+                  accessibilityLabel={`${reaction.emoji} ${count}${own ? ", including you. Tap to remove yours" : ". Tap to add yours"}`}
+                >
+                  <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+                  {count > 1 ? (
+                    <Text variant="caption" tone={own ? "brand" : "muted"}>
+                      {count}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -165,6 +259,7 @@ export default function Conversation() {
     conversations,
     connection,
     sendMessage,
+    reactToMessage,
     markRead,
     setActiveConversation,
     upsertConversation,
@@ -182,6 +277,10 @@ export default function Conversation() {
   const [olderError, setOlderError] = useState(null);
   const [draft, setDraft] = useState("");
   const [blocked, setBlocked] = useState(null); // a server rule that stops sending (e.g. WHATSAPP_REQUIRED)
+  const [reacting, setReacting] = useState(null); // the message whose reaction sheet is open
+  const body = useRef(null);
+  // Lifts the message box above the keyboard (see hooks/useKeyboardOverlap.js).
+  const keyboardOverlap = useKeyboardOverlap(body);
   const cursor = useRef(null);
   const focused = useRef(false);
   const mounted = useRef(true);
@@ -256,6 +355,13 @@ export default function Conversation() {
     setMessages((current) => merge(current, [message]));
     if (focused.current && message.sender && message.sender.id !== user.id)
       markRead(conversationId);
+  });
+
+  // Reactions added or removed by anyone in this conversation.
+  useConversationReactions(conversationId, ({ messageId, reactions }) => {
+    setMessages((current) =>
+      current.map((m) => (m.id === messageId ? { ...m, reactions } : m)),
+    );
   });
 
   // After a reconnect, fetch the newest page again: anything sent while the
@@ -340,6 +446,35 @@ export default function Conversation() {
     setDraft("");
     deliver(local);
   };
+
+  // Shown at once; the server's answer (or the live event) then confirms it.
+  // If it fails, the message's previous reactions come back.
+  const react = async (message, emoji) => {
+    setReacting(null);
+    // The sheet may have been open while others reacted: start from the newest copy.
+    const latest = messages.find((m) => m.id === message.id) || message;
+    const before = latest.reactions || [];
+    const update = (reactions) =>
+      setMessages((current) =>
+        current.map((m) => (m.id === message.id ? { ...m, reactions } : m)),
+      );
+    update(withReaction(before, user.id, emoji));
+    try {
+      await reactToMessage(conversationId, message.id, emoji);
+    } catch (err) {
+      if (!mounted.current) return;
+      update(before);
+      toast.error(
+        err.isNetwork
+          ? "No connection — the reaction was not saved."
+          : err.message,
+      );
+    }
+  };
+
+  // Tapping a reaction under a message adds that one, or removes it if it is yours.
+  const toggleReaction = (message, emoji) =>
+    react(message, myReactionOf(message, user.id) === emoji ? "" : emoji);
 
   // A failed message is sent again with the SAME clientId, so if the first
   // attempt did reach the server it is recognised and not stored twice.
@@ -439,6 +574,9 @@ export default function Conversation() {
         showName={!sameAsOlder}
         showAvatar={!sameAsNewer}
         onRetry={() => retry(item)}
+        myId={user.id}
+        onReactions={() => setReacting(item)}
+        onToggleReaction={(emoji) => toggleReaction(item, emoji)}
       />
     );
     return (
@@ -468,7 +606,10 @@ export default function Conversation() {
   return (
     <Screen header={header} padded={false} bottomInset={false}>
       <ConnectionBanner connection={connection} />
-      <KeyboardView>
+      <View
+        ref={body}
+        style={[styles.flex, { paddingBottom: keyboardOverlap }]}
+      >
         {status === "loading" ? (
           <LoadingState label="Loading messages…" style={styles.flex} />
         ) : status === "error" ? (
@@ -546,7 +687,10 @@ export default function Conversation() {
               {
                 borderTopColor: colors.line,
                 backgroundColor: colors.bg,
-                paddingBottom: Math.max(insets.bottom, 10),
+                // Over the keyboard there is no navigation bar to clear, just a small gap.
+                paddingBottom: keyboardOverlap
+                  ? 12
+                  : Math.max(insets.bottom, 10),
               },
             ]}
           >
@@ -606,7 +750,83 @@ export default function Conversation() {
             </Text>
           </View>
         )}
-      </KeyboardView>
+      </View>
+
+      <Sheet
+        visible={Boolean(reacting)}
+        onClose={() => setReacting(null)}
+        title="React to message"
+      >
+        {reacting ? (
+          <View style={styles.sheetBody}>
+            <View style={styles.emojiRow}>
+              {REACTIONS.map((emoji) => {
+                const chosen = myReactionOf(reacting, user.id) === emoji;
+                return (
+                  <Pressable
+                    key={emoji}
+                    onPress={() => react(reacting, chosen ? "" : emoji)}
+                    style={({ pressed }) => [
+                      styles.emojiButton,
+                      {
+                        backgroundColor: chosen
+                          ? colors.brandSoft
+                          : pressed
+                            ? colors.surface2
+                            : "transparent",
+                        borderColor: chosen ? colors.brand : "transparent",
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: chosen }}
+                    accessibilityLabel={
+                      chosen
+                        ? `Remove your ${emoji} reaction`
+                        : `React with ${emoji}`
+                    }
+                  >
+                    <Text style={styles.emojiChoice}>{emoji}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {/* Long pressing a message opens this sheet, so its text can be selected and copied here. */}
+            <View
+              style={[
+                styles.quote,
+                { backgroundColor: colors.surface2, borderColor: colors.line },
+              ]}
+            >
+              <Text variant="caption" tone="muted" style={styles.quoteName}>
+                {reacting.sender && reacting.sender.id === user.id
+                  ? "You"
+                  : reacting.sender
+                    ? reacting.sender.name
+                    : ""}
+                {" · "}
+                {formatTime(reacting.createdAt)}
+              </Text>
+              <Text selectable numberOfLines={8}>
+                {reacting.body}
+              </Text>
+            </View>
+            {myReactionOf(reacting, user.id) ? (
+              <Pressable
+                onPress={() => react(reacting, "")}
+                style={styles.sheetAction}
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name="close-circle-outline"
+                  size={20}
+                  color={colors.muted}
+                />
+                <Text tone="muted">Remove my reaction</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </Sheet>
     </Screen>
   );
 }
@@ -618,15 +838,59 @@ const styles = StyleSheet.create({
   messageRow: { flexDirection: "row", alignItems: "flex-end", gap: 6 },
   rowMine: { justifyContent: "flex-end" },
   rowTheirs: { justifyContent: "flex-start" },
+  alignMine: { alignItems: "flex-end" },
+  alignTheirs: { alignItems: "flex-start" },
   avatarSlot: { width: 30 },
+  bubbleColumn: { maxWidth: "80%" },
   bubble: {
-    maxWidth: "80%",
+    maxWidth: "100%",
     borderRadius: radius.xl,
     paddingHorizontal: 13,
     paddingTop: 8,
     paddingBottom: 6,
   },
   sending: { opacity: 0.7 },
+  pressed: { opacity: 0.82 },
+  reactions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 3,
+  },
+  reaction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+  },
+  reactionEmoji: { fontSize: 14, lineHeight: 18 },
+  sheetBody: { paddingHorizontal: space.xl, paddingBottom: 8, gap: 14 },
+  emojiRow: { flexDirection: "row", justifyContent: "space-between" },
+  emojiButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emojiChoice: { fontSize: 28, lineHeight: 34 },
+  quote: {
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    padding: 12,
+    gap: 4,
+  },
+  quoteName: { fontWeight: "700" },
+  sheetAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+  },
   sender: { fontWeight: "700", marginBottom: 2 },
   meta: {
     flexDirection: "row",

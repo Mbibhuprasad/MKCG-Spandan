@@ -102,6 +102,17 @@ async function conversationIdsOf(userId) {
 
 /* ───────────── Serialisation ───────────── */
 
+// Reactions grouped by emoji, in the order each emoji was first added:
+// [{ emoji: '👍', userIds: ['…', '…'] }]. Each viewer finds their own by id.
+function serializeReactions(reactions = []) {
+  const groups = new Map();
+  for (const { emoji, user } of reactions) {
+    if (!groups.has(emoji)) groups.set(emoji, []);
+    groups.get(emoji).push(String(user));
+  }
+  return [...groups].map(([emoji, userIds]) => ({ emoji, userIds }));
+}
+
 function serializeMessage(message) {
   return {
     id: String(message._id),
@@ -109,6 +120,7 @@ function serializeMessage(message) {
     body: message.body,
     sender: authorSummary(message.sender),
     clientId: message.clientId || null,
+    reactions: serializeReactions(message.reactions),
     createdAt: message.createdAt,
   };
 }
@@ -341,6 +353,48 @@ async function sendMessage(user, { conversationId, body, clientId }) {
   return { message: out, duplicate: false };
 }
 
+// Sets the caller's reaction to a message ('' removes it). A member has at most
+// one reaction per message, so a new emoji replaces the previous one. Reacting
+// follows the same rules as sending: members only, and not to a member who is
+// no longer available. It does not change the conversation's latest message or
+// anyone's unread count.
+async function reactToMessage(user, { conversationId, messageId, emoji }) {
+  const { conversation } = await requireMembership(conversationId, user);
+
+  if (conversation.type === 'DIRECT') {
+    assertDirectEligible(user);
+    const peer = await User.findById(peerIdOf(conversation, user._id)).select('status');
+    if (!peer || peer.status !== ACCOUNT_STATUS.ACTIVE) {
+      throw ApiError.conflict('This member is no longer available.', undefined, 'PEER_UNAVAILABLE');
+    }
+  }
+
+  consumeSendQuota(user._id);
+
+  // One atomic update: drop this member's reaction, then add the new one.
+  const message = await Message.findOneAndUpdate(
+    { _id: messageId, conversation: conversation._id },
+    [
+      {
+        $set: {
+          reactions: {
+            $concatArrays: [
+              { $filter: { input: { $ifNull: ['$reactions', []] }, cond: { $ne: ['$$this.user', user._id] } } },
+              emoji ? [{ user: user._id, emoji }] : [],
+            ],
+          },
+        },
+      },
+    ],
+    { returnDocument: 'after', updatePipeline: true }
+  ).select('reactions');
+  if (!message) throw ApiError.notFound('That message could not be found.');
+
+  const out = { conversationId: String(conversation._id), messageId: String(message._id), reactions: serializeReactions(message.reactions) };
+  realtime.emitToConversation(conversation._id, 'message:reaction', out);
+  return out;
+}
+
 /* ───────────── Account deletion ───────────── */
 
 async function refreshLastMessage(conversationId) {
@@ -371,6 +425,7 @@ async function removeUserChatData(userId) {
 
   const touched = await Message.distinct('conversation', { sender: id });
   await Message.deleteMany({ sender: id });
+  await Message.updateMany({ 'reactions.user': id }, { $pull: { reactions: { user: id } } });
   for (const conversationId of touched) await refreshLastMessage(conversationId);
 
   await ConversationMember.deleteMany({ user: id });
@@ -388,5 +443,6 @@ module.exports = {
   openDirect,
   markRead,
   sendMessage,
+  reactToMessage,
   removeUserChatData,
 };

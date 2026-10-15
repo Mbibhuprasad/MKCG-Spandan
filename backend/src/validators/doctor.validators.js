@@ -1,6 +1,6 @@
 const { z, line, text, httpUrl, year, page, limit, objectId, nullableId } = require('./common');
 const { email, phone } = require('./auth.validators');
-const { normalizeSpecialization, normalizeSubspecialty } = require('../services/specialty.service');
+const { normalizeSpecialization, normalizeSubspecialty, splitSubspecialties } = require('../services/specialty.service');
 const { getEnv } = require('../config/env');
 const { calendarDay, isoDay, parseIsoDay } = require('../utils/calendar');
 const {
@@ -159,7 +159,11 @@ const updateProfile = z.object({
       address: line(0, 240, 'Address'),
       // Listed options keep their listed spelling; typed values are tidied into Title Case.
       specialization: line(0, 80, 'Specialization').transform(normalizeSpecialization),
-      subspecialty: line(0, 80, 'Subspecialization').transform(normalizeSubspecialty),
+      // Several subspecializations are sent as one comma-separated value.
+      subspecialty: line(0, 700, 'Subspecializations')
+        .refine((value) => splitSubspecialties(value).length <= 8, 'Add at most 8 subspecializations.')
+        .refine((value) => splitSubspecialties(value).every((sub) => sub.length <= 80), 'Keep each subspecialization under 80 characters.')
+        .transform(normalizeSubspecialty),
       fieldOfWork: line(0, 120, 'Field of work'),
       expertise: tagList(20, 80, 'Area of expertise'),
       procedures: tagList(30, 100, 'Procedure'),

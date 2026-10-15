@@ -101,11 +101,7 @@ function ProfilePeek({ form, photoUrl }) {
         <p className="truncate text-sm font-bold text-fg">
           {form.name.trim() || "Your name"}
         </p>
-        <p className="truncate text-xs text-fg-soft">
-          {form.professionalTitle.trim() ||
-            form.designation.trim() ||
-            "Professional title"}
-        </p>
+        
         <p className="truncate text-xs text-muted">
           {[form.specialization.trim(), place].filter(Boolean).join(" · ") ||
             "Specialization · City"}

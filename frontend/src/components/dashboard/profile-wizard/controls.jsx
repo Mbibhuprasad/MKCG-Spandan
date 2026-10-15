@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronsUpDown, CircleAlert, ImagePlus, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, CircleAlert, ImagePlus, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { api, uploadMedia } from '@/lib/api';
 import { UPLOAD_LIMITS } from '@/lib/constants';
 import { cn } from '@/lib/format';
@@ -164,6 +164,227 @@ export function ComboField({ label, value, onChange, options = [], keywords, err
               </li>
             )}
           </ul>
+        </div>
+      )}
+    </Field>
+  );
+}
+
+/**
+ * Like ComboField, but several values can be chosen: each choice is shown as a
+ * chip, and the list stays open so more can be ticked. Clicking a ticked option
+ * removes it. A typed value is added with Enter, a comma or the Add button; one
+ * that matches an option apart from capitals takes the option's spelling.
+ *   values   the chosen values (array)
+ *   onChange(next values)
+ */
+export function MultiComboField({
+  label,
+  values,
+  onChange,
+  options = [],
+  keywords,
+  error,
+  hint,
+  required,
+  optional,
+  className,
+  placeholder,
+  max = 8,
+  maxLength = 80,
+}) {
+  const listId = useId();
+  const listRef = useRef(null);
+  const [draft, setDraft] = useState('');
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+
+  const keyOf = (text) => String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+  const chosen = new Set(values.map(keyOf));
+  const full = values.length >= max;
+  const query = keyOf(draft);
+  const searchText = (option) => (keywords ? `${option} ${keywords(option)}` : option).toLowerCase();
+  const matches = !query
+    ? options
+    : [
+        ...options.filter((o) => o.toLowerCase().startsWith(query)),
+        ...options.filter((o) => !o.toLowerCase().startsWith(query) && searchText(o).includes(query)),
+      ];
+  const showList = open && options.length > 0;
+
+  useEffect(() => {
+    if (!showList || active < 0 || !listRef.current) return;
+    const option = listRef.current.children[active];
+    if (option) option.scrollIntoView({ block: 'nearest' });
+  }, [active, showList]);
+
+  const close = () => {
+    setOpen(false);
+    setActive(-1);
+  };
+  const remove = (value) => onChange(values.filter((v) => keyOf(v) !== keyOf(value)));
+  const toggle = (option) => {
+    if (chosen.has(keyOf(option))) remove(option);
+    else if (!full) onChange([...values, option]);
+    setDraft('');
+  };
+  // Adds what was typed (a comma separates several), using an option's spelling where one matches.
+  const commit = (raw) => {
+    setDraft('');
+    const next = [...values];
+    const keys = new Set(chosen);
+    for (const part of String(raw).split(',')) {
+      const text = part.replace(/\s+/g, ' ').trim().slice(0, maxLength);
+      const key = keyOf(text);
+      if (!key || keys.has(key) || next.length >= max) continue;
+      next.push(options.find((o) => o.toLowerCase() === key) || text);
+      keys.add(key);
+    }
+    if (next.length !== values.length) onChange(next);
+  };
+
+  function onKeyDown(event) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        setActive(event.key === 'ArrowDown' ? 0 : matches.length - 1);
+        return;
+      }
+      if (!matches.length) return;
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      setActive((i) => (i + step + matches.length) % matches.length);
+    } else if (event.key === 'Enter') {
+      event.preventDefault(); // never move to the next step from here
+      if (showList && active >= 0 && matches[active]) toggle(matches[active]);
+      else commit(draft);
+    } else if (event.key === ',') {
+      event.preventDefault();
+      commit(draft);
+    } else if (event.key === 'Backspace' && !draft && values.length) {
+      onChange(values.slice(0, -1));
+    } else if (event.key === 'Escape' && open) {
+      event.preventDefault();
+      close();
+    }
+  }
+
+  return (
+    <Field label={label} error={error} hint={hint} required={required} optional={optional} className={className}>
+      {(props) => (
+        <div>
+          {values.length > 0 && (
+            <ul className="mb-2 flex flex-wrap gap-2" aria-label={`${label}: chosen`}>
+              {values.map((value) => (
+                <li
+                  key={keyOf(value)}
+                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-brand/15 bg-brand-soft py-1 pl-3 pr-1 text-sm font-medium text-brand-ink"
+                >
+                  <span className="truncate">{value}</span>
+                  <button
+                    type="button"
+                    onClick={() => remove(value)}
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full hover:bg-brand/15"
+                    aria-label={`Remove ${value}`}
+                  >
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Input
+                {...props}
+                required={undefined}
+                role="combobox"
+                aria-expanded={showList}
+                aria-controls={listId}
+                aria-autocomplete="list"
+                aria-activedescendant={showList && active >= 0 ? `${listId}-${active}` : undefined}
+                autoComplete="off"
+                error={error}
+                value={draft}
+                maxLength={maxLength}
+                placeholder={full ? `Limit reached (${max})` : placeholder}
+                className="pr-10"
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  setOpen(true);
+                  setActive(-1);
+                }}
+                onClick={() => setOpen(true)}
+                onKeyDown={onKeyDown}
+                onBlur={() => {
+                  commit(draft);
+                  close();
+                }}
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-label={`Show suggestions for ${label}`}
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-xl text-muted hover:text-fg"
+                onMouseDown={(event) => event.preventDefault()} // keep focus in the input
+                onClick={() => (open ? close() : setOpen(true))}
+              >
+                <ChevronsUpDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <ul
+                ref={listRef}
+                id={listId}
+                role="listbox"
+                aria-label={`${label} suggestions`}
+                aria-multiselectable="true"
+                hidden={!showList}
+                onMouseDown={(event) => event.preventDefault()} // scrolling the list must not blur the input
+                className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-line-strong bg-surface p-1 shadow-lift"
+              >
+                {showList && matches.length === 0 && (
+                  <li role="presentation" className="px-3 py-2 text-sm text-muted">
+                    Nothing in the list matches — press Enter to add “{draft.trim()}” as your own.
+                  </li>
+                )}
+                {showList &&
+                  matches.map((option, index) => {
+                    const selected = chosen.has(keyOf(option));
+                    return (
+                      // Keyboard users choose with the arrow keys and Enter on the input (combobox pattern).
+                      // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+                      <li
+                        key={option}
+                        id={`${listId}-${index}`}
+                        role="option"
+                        aria-selected={selected}
+                        aria-disabled={!selected && full}
+                        className={cn(
+                          'flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm',
+                          index === active ? 'bg-brand-soft text-brand-ink' : 'text-fg hover:bg-surface-2',
+                          !selected && full && 'cursor-not-allowed opacity-50'
+                        )}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onMouseEnter={() => setActive(index)}
+                        onClick={() => toggle(option)}
+                      >
+                        <span className="truncate">{option}</span>
+                        {selected && <Check className="h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />}
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
+            <Button
+              variant="secondary"
+              icon={Plus}
+              onClick={() => commit(draft)}
+              disabled={full || !draft.trim()}
+              aria-label={`Add to ${label}`}
+              className="shrink-0"
+            >
+              Add
+            </Button>
+          </div>
         </div>
       )}
     </Field>

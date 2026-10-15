@@ -17,5 +17,11 @@ module.exports = function chatRoutes(limiters) {
   // Sending has its own per-member limit inside chat.service (shared with sockets).
   router.post('/conversations/:id/messages', byId, validate({ body: v.sendMessage }), chat.sendMessage);
   router.post('/conversations/:id/read', byId, chat.markRead);
+  // Reactions share the per-member sending limit inside chat.service.
+  router.put(
+    '/conversations/:id/messages/:messageId/reaction',
+    validate({ params: v.messageParams, body: v.react }),
+    chat.react
+  );
   return router;
 };

@@ -452,8 +452,8 @@ export default function Home() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingTop: space.lg, paddingBottom: space.xxxl },
-  hero: { marginHorizontal: space.lg, borderRadius: radius.xxl },
-  heroFill: { borderRadius: radius.xxl, padding: space.xl, gap: 14 },
+  hero: { marginHorizontal: space.lg, borderRadius: radius.xl },
+  heroFill: { borderRadius: radius.xl, padding: space.xl, gap: 14 },
   heroTop: { flexDirection: "row", alignItems: "center", gap: 12 },
   heroProgress: { gap: 8 },
   heroProgressHead: { flexDirection: "row", alignItems: "center", gap: 10 },

@@ -7,7 +7,7 @@ const { escapeRegex } = require('../utils/text');
 const { ROLES, ACCOUNT_STATUS, PROFILE_WIZARD_LAYOUT } = require('../config/constants');
 const { getEnv } = require('../config/env');
 const { calendarDay, isoDay, birthdayMatches } = require('../utils/calendar');
-const { buildCatalogue, isListedSubspecialty } = require('../services/specialty.service');
+const { buildCatalogue, isListedSubspecialty, splitSubspecialties, SUBSPECIALTY_SEPARATOR } = require('../services/specialty.service');
 const { claimMedia, destroyMedia, unclaim, syncMedia } = require('../services/media.service');
 const cloud = require('../services/cloudinary.service');
 const {
@@ -147,13 +147,15 @@ async function updateMe(req, res) {
   const { achievements: awards, ...fields } = profile || {};
   if (profile) {
     // A subspecialization belongs to its specialization. When only the
-    // specialization changes, the old subspecialization is kept if it is also an
+    // specialization changes, each old subspecialization is kept if it is also an
     // option of the new one and dropped otherwise — it is never carried over
     // silently. A request that names both is the doctor's explicit choice.
     const changesSpecialization =
       fields.specialization !== undefined && fields.specialization.toLowerCase() !== (user.profile.specialization || '').toLowerCase();
-    if (changesSpecialization && fields.subspecialty === undefined && !isListedSubspecialty(fields.specialization, user.profile.subspecialty)) {
-      fields.subspecialty = '';
+    if (changesSpecialization && fields.subspecialty === undefined) {
+      fields.subspecialty = splitSubspecialties(user.profile.subspecialty)
+        .filter((sub) => isListedSubspecialty(fields.specialization, sub))
+        .join(SUBSPECIALTY_SEPARATOR);
     }
     // Assign field by field: the photo sub-document is managed separately.
     for (const [key, value] of Object.entries(fields)) user.profile[key] = value;

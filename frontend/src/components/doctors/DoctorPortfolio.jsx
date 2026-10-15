@@ -560,19 +560,21 @@ export default function DoctorPortfolio() {
   const hasAwards = list("achievements").length > 0;
   const hasMemberships = list("memberships").length > 0;
 
-  // In-page navigation, in the order the sections appear.
+  // The sections on the page. The profile bar shows their links in the order
+  // the sections appear below (PortfolioNav reads it from the page), so moving
+  // a section moves its link; this list only decides which sections show.
   const nav = [
     hasAboutText && { id: "about", label: "About" },
     clinics.length > 0 && { id: "locations", label: "Affiliations" },
     experience.length > 0 && { id: "experience", label: "Experience" },
-    (education.length > 0 ||
-      credentials.length > 0 ||
-      qualifications.length > 0) && { id: "education", label: "Education" },
-    hasServices && { id: "services", label: "Expertise" },
     list("fellowships").length > 0 && {
       id: "fellowships",
       label: "Fellowships",
     },
+    (education.length > 0 ||
+      credentials.length > 0 ||
+      qualifications.length > 0) && { id: "education", label: "Education" },
+    hasServices && { id: "services", label: "Expertise" },
     list("publications").length > 0 && {
       id: "publications",
       label: "Publications",
@@ -594,9 +596,12 @@ export default function DoctorPortfolio() {
     photos.length > 0 ||
     articles.length > 0;
 
-  // The profile navigation links every section; Contact is its button.
+  // The profile navigation starts at the hero, then links every section; Contact is its button.
   const navLinks = hasDetails
-    ? nav.filter((section) => section.id !== "contact")
+    ? [
+        { id: "overview", label: "Overview" },
+        ...nav.filter((section) => section.id !== "contact"),
+      ]
     : [];
   const contactHref = hasContactPanel ? "#contact" : null;
 
@@ -629,6 +634,7 @@ export default function DoctorPortfolio() {
         contactHref={contactHref}
       />
       <PortfolioHero
+        id="overview"
         name={doctor.name}
         photoUrl={p.photoUrl}
         eyebrow={joined(p.specialization, p.subspecialty)}
@@ -793,10 +799,7 @@ export default function DoctorPortfolio() {
                           {joined(
                             place(item.city, item.state),
                             item.employmentType &&
-                              labelOf(
-                                EMPLOYMENT_TYPES,
-                                item.employmentType,
-                              ),
+                              labelOf(EMPLOYMENT_TYPES, item.employmentType),
                           )}
                         </p>
                       )}
@@ -813,6 +816,55 @@ export default function DoctorPortfolio() {
                     </>
                   )}
                 </Timeline>
+              </Section>
+            )}
+            {/* ── Fellowships and postdoctoral qualifications ── */}
+            {shows("fellowships") && (
+              <Section
+                id="fellowships"
+                overline="Advanced training"
+                title="Fellowships and postdoctoral qualifications"
+                hidden={hiddenFromOthers("fellowships")}
+              >
+                <ul className="grid gap-4">
+                  {p.fellowships.map((item) => (
+                    <li
+                      key={item.id}
+                      className={cn(
+                        "flex h-full gap-4 rounded-2xl border border-line bg-surface p-5 shadow-soft",
+                        LIFT,
+                      )}
+                    >
+                      <IconTile icon={Medal} tone="leaf" />
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
+                          {item.title}
+                        </h3>
+                        {(item.institution || item.specialty) && (
+                          <p className="mt-1 break-words text-sm font-bold text-fg">
+                            {joined(item.institution, item.specialty)}
+                          </p>
+                        )}
+                        {(item.startYear || item.endYear) && (
+                          <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted">
+                            {yearRange(item.startYear, item.endYear)}
+                          </p>
+                        )}
+                        <Prose>{item.description}</Prose>
+                        {item.certificate && (
+                          <p className="mt-auto pt-3">
+                            <Badge
+                              tone="brand"
+                              className="max-w-full whitespace-normal break-words"
+                            >
+                              {item.certificate}
+                            </Badge>
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </Section>
             )}
 
@@ -886,10 +938,7 @@ export default function DoctorPortfolio() {
                 )}
                 {credentials.length > 0 && (
                   <ul
-                    className={cn(
-                      "grid gap-4",
-                      education.length > 0 && "mt-7",
-                    )}
+                    className={cn("grid gap-4", education.length > 0 && "mt-7")}
                   >
                     {credentials.map((item) => (
                       <InfoBox
@@ -1007,56 +1056,6 @@ export default function DoctorPortfolio() {
                     </PracticeBand>
                   )}
                 </div>
-              </Section>
-            )}
-
-            {/* ── Fellowships and postdoctoral qualifications ── */}
-            {shows("fellowships") && (
-              <Section
-                id="fellowships"
-                overline="Advanced training"
-                title="Fellowships and postdoctoral qualifications"
-                hidden={hiddenFromOthers("fellowships")}
-              >
-                <ul className="grid gap-4">
-                  {p.fellowships.map((item) => (
-                    <li
-                      key={item.id}
-                      className={cn(
-                        "flex h-full gap-4 rounded-2xl border border-line bg-surface p-5 shadow-soft",
-                        LIFT,
-                      )}
-                    >
-                      <IconTile icon={Medal} tone="leaf" />
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <h3 className="break-words text-[1.05rem] font-extrabold leading-snug text-fg">
-                          {item.title}
-                        </h3>
-                        {(item.institution || item.specialty) && (
-                          <p className="mt-1 break-words text-sm font-bold text-fg">
-                            {joined(item.institution, item.specialty)}
-                          </p>
-                        )}
-                        {(item.startYear || item.endYear) && (
-                          <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted">
-                            {yearRange(item.startYear, item.endYear)}
-                          </p>
-                        )}
-                        <Prose>{item.description}</Prose>
-                        {item.certificate && (
-                          <p className="mt-auto pt-3">
-                            <Badge
-                              tone="brand"
-                              className="max-w-full whitespace-normal break-words"
-                            >
-                              {item.certificate}
-                            </Badge>
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
               </Section>
             )}
 

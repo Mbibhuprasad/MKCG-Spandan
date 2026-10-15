@@ -77,7 +77,7 @@ function summaries(form, user, counts) {
         <Avatar name={form.name} src={user.profile ? user.profile.photoUrl : ''} size="lg" />
         <dl className="min-w-0 flex-1 space-y-2">
           <Row label="Full name">{form.name}</Row>
-          <Row label="Professional title">{form.professionalTitle}</Row>
+          {/* <Row label="Professional title">{form.professionalTitle}</Row> */}
           <Row label="Current designation">{form.designation}</Row>
           <Row label="Professional headline">{form.headline}</Row>
           <Row label="Blood group">{form.bloodGroup && `${form.bloodGroup} (${shown(v.showBloodGroup)})`}</Row>
@@ -95,7 +95,7 @@ function summaries(form, user, counts) {
       <div className="space-y-3">
         <dl className="space-y-2">
           <Row label="Primary specialization">{form.specialization}</Row>
-          <Row label="Subspecialization">{form.subspecialty}</Row>
+          <Row label="Subspecializations">{form.subspecialty}</Row>
           <Row label="Field of work">{form.fieldOfWork}</Row>
           <Row label="Areas of expertise">{tagRow(form.expertise)}</Row>
           <Row label="Procedures performed">{tagRow(form.procedures)}</Row>

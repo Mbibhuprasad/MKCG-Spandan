@@ -120,8 +120,8 @@ export default function DoctorsDirectory() {
   const cities = filters.data ? filters.data.cities : [];
 
   return (
-    <div className="container-page py-6 sm:py-6">
-      <p className="mb-5 max-w-2xl text-base leading-relaxed text-fg-soft">
+    <div className="container-page py-4 sm:py-4">
+      <p className="mb-5 max-w-4xl text-base leading-relaxed text-fg-soft">
         Find batchmates by name, specialization or city, and see where their
         journeys in medicine have taken them.
       </p>
@@ -129,7 +129,7 @@ export default function DoctorsDirectory() {
         role="search"
         aria-label="Find friends"
         onSubmit={(event) => event.preventDefault()}
-        className="card grid gap-4 p-4 sm:p-5 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-end"
+        className="card grid gap-4 p-4 sm:p-4 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-end"
       >
         <Field label="Search by name">
           {(props) => (

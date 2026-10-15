@@ -33,6 +33,7 @@ async function mobileDoctor(overrides = {}) {
     post: (url, body) => auth(request(ctx.app).post(`${API}${url}`)).send(body),
     patch: (url, body) =>
       auth(request(ctx.app).patch(`${API}${url}`)).send(body),
+    put: (url, body) => auth(request(ctx.app).put(`${API}${url}`)).send(body),
   };
 }
 
@@ -433,6 +434,89 @@ describe("one-to-one chat", () => {
   });
 });
 
+describe("reactions", () => {
+  test("a member keeps one reaction per message, can change or remove it, and outsiders cannot react", async () => {
+    const [a, b, outsider] = await Promise.all([
+      chatReadyDoctor(),
+      chatReadyDoctor(),
+      chatReadyDoctor(),
+    ]);
+    const { id } = (await a.post("/chat/direct", { doctorId: b.user.id })).body
+      .data;
+    const sent = await a.post(`/chat/conversations/${id}/messages`, {
+      body: "React to me",
+    });
+    expect(sent.body.data.reactions).toEqual([]);
+    const url = `/chat/conversations/${id}/messages/${sent.body.data.id}/reaction`;
+
+    let res = await b.put(url, { emoji: "👍" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      conversationId: id,
+      messageId: sent.body.data.id,
+      reactions: [{ emoji: "👍", userIds: [b.user.id] }],
+    });
+    await a.put(url, { emoji: "👍" });
+    // A new emoji replaces the member's previous one.
+    res = await b.put(url, { emoji: "❤️" });
+    expect(res.body.data.reactions).toEqual([
+      { emoji: "👍", userIds: [a.user.id] },
+      { emoji: "❤️", userIds: [b.user.id] },
+    ]);
+
+    // History carries the reactions, and reacting does not count as unread.
+    const history = await b.get(`/chat/conversations/${id}/messages`);
+    expect(history.body.data[0].reactions).toEqual(res.body.data.reactions);
+    const listed = (await a.get("/chat/conversations?type=DIRECT")).body.data;
+    expect(listed[0]).toMatchObject({ unreadCount: 0 });
+    expect(listed[0].lastMessage.preview).toBe("React to me");
+
+    res = await a.put(url, { emoji: "" });
+    expect(res.body.data.reactions).toEqual([
+      { emoji: "❤️", userIds: [b.user.id] },
+    ]);
+
+    expect((await b.put(url, { emoji: "🔥" })).status).toBe(400);
+    expect((await outsider.put(url, { emoji: "👍" })).status).toBe(404);
+    // A message id from another conversation is not found here.
+    const group = await communityOf(a);
+    const other = await a.post(`/chat/conversations/${group.id}/messages`, {
+      body: "Group message",
+    });
+    expect(
+      (
+        await a.put(
+          `/chat/conversations/${id}/messages/${other.body.data.id}/reaction`,
+          { emoji: "👍" },
+        )
+      ).status,
+    ).toBe(404);
+  });
+
+  test("a deleted account's reactions are removed", async () => {
+    const [a, b] = await Promise.all([mobileDoctor(), mobileDoctor()]);
+    const admin = await createAdmin(ctx.app);
+    const group = await communityOf(a);
+    const sent = await a.post(`/chat/conversations/${group.id}/messages`, {
+      body: "Stays after b leaves",
+    });
+    await b.put(
+      `/chat/conversations/${group.id}/messages/${sent.body.data.id}/reaction`,
+      { emoji: "😂" },
+    );
+    expect(
+      (
+        await admin.delete(`${API}/admin/doctors/${b.user.id}`, {
+          reason: "Test removal",
+        })
+      ).status,
+    ).toBe(200);
+    const Message = require("../src/models/Message");
+    const stored = await Message.findById(sent.body.data.id).lean();
+    expect(stored.reactions).toEqual([]);
+  });
+});
+
 describe("real-time delivery (Socket.IO)", () => {
   let server;
   let io;
@@ -624,6 +708,39 @@ describe("real-time delivery (Socket.IO)", () => {
       conversationId: group.id,
     });
     expect(read).toMatchObject({ ok: true, unreadCount: 0 });
+  });
+
+  test("reactions reach every member live", async () => {
+    const [a, b] = await Promise.all([mobileDoctor(), mobileDoctor()]);
+    const [sa, sb] = await Promise.all([open(a.token), open(b.token)]);
+    const reactions = [];
+    sa.on("message:reaction", (payload) => reactions.push(payload));
+    const group = await communityOf(a);
+    const sent = await emit(sa, "message:send", {
+      conversationId: group.id,
+      body: "Live reaction please",
+    });
+    const ack = await emit(sb, "message:react", {
+      conversationId: group.id,
+      messageId: sent.message.id,
+      emoji: "🙏",
+    });
+    expect(ack).toMatchObject({
+      ok: true,
+      reactions: [{ emoji: "🙏", userIds: [b.user.id] }],
+    });
+    await settle();
+    expect(reactions).toContainEqual({
+      conversationId: group.id,
+      messageId: sent.message.id,
+      reactions: [{ emoji: "🙏", userIds: [b.user.id] }],
+    });
+    const refused = await emit(sb, "message:react", {
+      conversationId: group.id,
+      messageId: sent.message.id,
+      emoji: "not an emoji",
+    });
+    expect(refused).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
   });
 
   test("signing out ends the live connection", async () => {

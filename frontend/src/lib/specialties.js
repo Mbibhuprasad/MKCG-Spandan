@@ -13,6 +13,26 @@ const keyOf = (value) =>
 export const sameText = (a, b) => keyOf(a) === keyOf(b);
 
 /**
+ * A doctor may hold several subspecializations; the API keeps them in the one
+ * `subspecialty` text, separated by commas ("Spine Surgery, Sports Medicine").
+ */
+export function splitSubspecialties(value) {
+  const seen = new Set();
+  return String(value || "")
+    .split(",")
+    .map((sub) => sub.replace(/\s+/g, " ").trim())
+    .filter((sub) => {
+      const key = sub.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+export const joinSubspecialties = (values) =>
+  splitSubspecialties(values.join(",")).join(", ");
+
+/**
  * The specialization and subspecialization options of the profile form.
  *
  * They are defined once, on the API (GET /doctors/specialties: the predefined

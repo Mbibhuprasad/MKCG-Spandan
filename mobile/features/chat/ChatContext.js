@@ -18,6 +18,7 @@ const ChatContext = createContext(null);
 const PREVIEW_LENGTH = 140;
 const UNREAD_CAP = 99;
 const messageTopic = (conversationId) => `chat:message:${conversationId}`;
+const reactionTopic = (conversationId) => `chat:reaction:${conversationId}`;
 export const RESYNC_TOPIC = 'chat:resync';
 
 const byActivity = (a, b) => new Date(b.lastActivityAt || 0) - new Date(a.lastActivityAt || 0);
@@ -146,11 +147,16 @@ export function ChatProvider({ children }) {
       if (!payload || !payload.message || !payload.conversationId) return;
       applyIncoming(String(payload.conversationId), payload.message);
     };
+    const onReaction = (payload) => {
+      if (!payload || !payload.conversationId || !payload.messageId) return;
+      publish(reactionTopic(String(payload.conversationId)), payload);
+    };
 
     socket.on('ready', onReady);
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
     socket.on('message:new', onMessage);
+    socket.on('message:reaction', onReaction);
     socket.io.on('reconnect_attempt', () => setConnection('connecting'));
     socket.connect();
 
@@ -166,6 +172,7 @@ export function ChatProvider({ children }) {
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);
       socket.off('message:new', onMessage);
+      socket.off('message:reaction', onReaction);
       socket.io.off('reconnect_attempt');
       socket.disconnect();
       if (socketRef.current === socket) socketRef.current = null;
@@ -197,6 +204,23 @@ export function ChatProvider({ children }) {
     },
     [applyIncoming]
   );
+
+  // Sets this doctor's reaction to a message ('' removes it), over the live
+  // connection or else through REST. Setting a reaction twice is harmless.
+  const reactToMessage = useCallback(async (conversationId, messageId, emoji) => {
+    const socket = socketRef.current;
+    let result;
+    if (socket && socket.connected) {
+      try {
+        result = await emitWithAck(socket, 'message:react', { conversationId, messageId, emoji });
+      } catch (err) {
+        if (!(err instanceof ApiError) || (err.code !== 'SOCKET_TIMEOUT' && err.code !== 'SOCKET_OFFLINE')) throw err;
+      }
+    }
+    if (!result) result = (await chatApi.react(conversationId, messageId, emoji)).data;
+    publish(reactionTopic(conversationId), result);
+    return result;
+  }, []);
 
   const markRead = useCallback(async (conversationId) => {
     setConversations((list) => list.map((c) => (c.id === conversationId && c.unreadCount ? { ...c, unreadCount: 0 } : c)));
@@ -237,11 +261,24 @@ export function ChatProvider({ children }) {
       unread,
       refreshConversations,
       sendMessage,
+      reactToMessage,
       markRead,
       setActiveConversation,
       upsertConversation,
     }),
-    [connection, conversations, status, error, unread, refreshConversations, sendMessage, markRead, setActiveConversation, upsertConversation]
+    [
+      connection,
+      conversations,
+      status,
+      error,
+      unread,
+      refreshConversations,
+      sendMessage,
+      reactToMessage,
+      markRead,
+      setActiveConversation,
+      upsertConversation,
+    ]
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
@@ -262,5 +299,17 @@ export function useConversationMessages(conversationId, listener) {
   useEffect(() => {
     if (!conversationId) return undefined;
     return subscribe(messageTopic(conversationId), (message) => ref.current(message));
+  }, [conversationId]);
+}
+
+// Calls `listener({ messageId, reactions })` whenever reactions change in one conversation.
+export function useConversationReactions(conversationId, listener) {
+  const ref = useRef(listener);
+  useEffect(() => {
+    ref.current = listener;
+  });
+  useEffect(() => {
+    if (!conversationId) return undefined;
+    return subscribe(reactionTopic(conversationId), (payload) => ref.current(payload));
   }, [conversationId]);
 }

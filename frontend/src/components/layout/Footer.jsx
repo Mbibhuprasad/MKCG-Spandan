@@ -42,8 +42,9 @@ export default function Footer() {
         <div className="max-w-sm">
           <Logo logoSize={48} />
           <p className="mt-4 text-sm leading-relaxed text-fg-soft">
-            A private community where doctors and medical batchmates reconnect, celebrate one another&apos;s journeys and
-            keep shared memories alive.
+            A private community where doctors and medical batchmates reconnect,
+            celebrate one another&apos;s journeys and keep shared memories
+            alive.
           </p>
           <p className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-muted">
             <HeartPulse className="h-4 w-4 text-leaf" aria-hidden="true" />
@@ -57,7 +58,10 @@ export default function Footer() {
             <ul className="mt-4 space-y-2.5">
               {column.links.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-fg-soft hover:text-brand-ink hover:underline">
+                  <Link
+                    href={link.href}
+                    className="text-sm text-fg-soft hover:text-brand-ink hover:underline"
+                  >
                     {link.label}
                   </Link>
                 </li>
@@ -70,19 +74,27 @@ export default function Footer() {
       <div className="border-t border-line">
         <div className="container-page flex flex-col gap-2 py-5 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} {site.name}. A members&apos; community — not a medical service.
+            © {new Date().getFullYear()} {site.name}. A members&apos; community
+            — not a medical service.
           </p>
           <p>Please never share patient-identifiable information here.</p>
         </div>
         {site.developer.name && (
-          <p className="container-page -mt-2 pb-5 text-md text-muted">
-            Design & Developed by{' '}
+          <p className="container-page -mt-2 pb-5 text-[0.9rem] text-fg-soft">
+            Design & Developed by{" "}
             {developerUrl ? (
-              <a href={developerUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-fg-soft hover:text-brand-ink hover:underline">
+              <a
+                href={developerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-fg-soft hover:text-brand-ink hover:underline"
+              >
                 {site.developer.name}
               </a>
             ) : (
-              <span className="font-semibold text-fg-soft">{site.developer.name}</span>
+              <span className="font-semibold text-fg-soft">
+                {site.developer.name}
+              </span>
             )}
           </p>
         )}

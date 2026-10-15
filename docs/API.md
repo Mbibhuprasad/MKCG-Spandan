@@ -302,12 +302,14 @@ rows on the server; a conversation the caller does not belong to answers `404`, 
 | GET    | `/chat/conversations/:id/messages` | Participant                                                    | `before` (id of the oldest message already loaded), `limit` (30, max 50) | A page of messages, oldest → newest; `meta { hasMore, nextBefore }`                                                                                                           |
 | POST   | `/chat/conversations/:id/messages` | Participant                                                    | `body` (1–4000), optional `clientId` (8–64 of `A–Z a–z 0–9 _ -`)         | `201` the message; `200` the stored message when that `clientId` was already sent. `409 PEER_UNAVAILABLE`, `429 RATE_LIMITED`                                                 |
 | POST   | `/chat/conversations/:id/read`     | Participant                                                    | —                                                                        | `{ conversationId, unreadCount: 0 }`                                                                                                                                          |
+| PUT    | `/chat/conversations/:id/messages/:messageId/reaction` | Participant (same rules as sending)          | `emoji` — one of `👍 ❤️ 😂 😮 😢 🙏`, or `''` to remove                        | `{ conversationId, messageId, reactions }`. One reaction per member: a new emoji replaces theirs. Does not change unread counts. `404` for a message of another conversation, `429 RATE_LIMITED` |
 
 Conversation: `{ id, type, isCommunity, name, description, avatarUrl, peer{ id, name, professionalTitle, specialization,
 photoUrl, city, available, whatsapp | null } | null, memberCount, lastMessage{ id, preview, senderId, senderName, at } | null,
 lastActivityAt, unreadCount, canSend }`. `peer.whatsapp` is present only while that doctor shows their WhatsApp number.
 
-Message: `{ id, conversationId, body, sender: <author summary>, clientId, createdAt }`. Messages are plain text.
+Message: `{ id, conversationId, body, sender: <author summary>, clientId, reactions, createdAt }`. Messages are plain text.
+`reactions` is `[{ emoji, userIds }]`, in the order each emoji was first added.
 
 **Real time** — Socket.IO on the API's own port, path `/socket.io`. The handshake must carry the session token
 (`auth: { token }`); cookies are not read. The server joins the socket to the caller's conversations and emits `ready`.
@@ -316,9 +318,12 @@ Message: `{ id, conversationId, body, sender: <author summary>, clientId, create
 | --------------- | ------------------- | ------------------------------------- | ----------------------------------------------------------------------------- |
 | client → server | `message:send`      | `{ conversationId, body, clientId? }` | `{ ok: true, message, duplicate }` or `{ ok: false, error{ code, message } }` |
 | client → server | `conversation:read` | `{ conversationId }`                  | `{ ok: true, conversationId, unreadCount: 0 }`                                |
+| client → server | `message:react`     | `{ conversationId, messageId, emoji }` | `{ ok: true, conversationId, messageId, reactions }`                         |
 | server → client | `message:new`       | `{ conversationId, message }`         | — sent to every connected member of the conversation                          |
+| server → client | `message:reaction`  | `{ conversationId, messageId, reactions }` | — sent to every connected member of the conversation                     |
 
-Sending is limited to `RATE_LIMIT_CHAT_MAX` messages per member per minute (default 60), REST and sockets together.
+Sending is limited to `RATE_LIMIT_CHAT_MAX` messages per member per minute (default 60), REST and sockets together;
+reactions count towards the same limit.
 
 ## Dashboard
 

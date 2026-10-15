@@ -16,10 +16,11 @@ import Button from '@/components/ui/Button';
 import { Checkbox, Field, FormMessage, SelectField, TextAreaField, TextField, Textarea } from '@/components/ui/Form';
 import { Switch } from '@/components/admin/shared';
 import TagInput from '@/components/dashboard/TagInput';
-import { ComboField, EntryList, ImageAttachment, YearField } from './controls';
+import { joinSubspecialties, splitSubspecialties } from '@/lib/specialties';
+import { ComboField, EntryList, ImageAttachment, MultiComboField, YearField } from './controls';
 import PhotoPicker from './PhotoPicker';
 import PortfolioContent from './PortfolioContent';
-import { BIO_MAX, subspecialtyNeedsReview, todayInputValue } from './model';
+import { BIO_MAX, todayInputValue, unlistedSubspecialties } from './model';
 
 /*
  * One component per wizard step. Each receives `w`, the wizard's form helpers:
@@ -81,29 +82,28 @@ function BasicStep({ w }) {
     <>
       <PhotoPicker />
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextField label="Full name" name="name" autoComplete="name" maxLength={80} required {...w.text('name', 'name')} />
         <TextField
-          label="Professional title"
-          placeholder="e.g. Consultant Cardiologist"
-          hint="Shown under your name on cards and posts."
-          maxLength={120}
-          optional
-          {...w.text('professionalTitle')}
+          label="Full name"
+          name="name"
+          autoComplete="name"
+          maxLength={80}
+          required
+          {...w.text("name", "name")}
         />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
         <TextField
           label="Current designation"
           placeholder="e.g. Associate Professor"
           maxLength={120}
           optional
-          {...w.text('designation')}
+          {...w.text("designation")}
         />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
           label="Blood group"
           hint="Private — only you and the administrators see it unless you choose to show it in the last step."
           optional
-          {...w.text('bloodGroup')}
+          {...w.text("bloodGroup")}
         >
           <option value="">Not stated</option>
           {BLOOD_GROUPS.map((group) => (
@@ -112,8 +112,6 @@ function BasicStep({ w }) {
             </option>
           ))}
         </SelectField>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
         <TextField
           label="Date of birth"
           type="date"
@@ -121,9 +119,10 @@ function BasicStep({ w }) {
           max={todayInputValue()}
           hint="Private — never shown on your profile. Batchmates only see you in Today's Birthdays on the day, unless you turn that off in the last step."
           optional
-          {...w.text('dateOfBirth')}
+          {...w.text("dateOfBirth")}
         />
       </div>
+      
       {/* <TextField
         label="Professional headline"
         placeholder="e.g. Interventional cardiologist and medical teacher"
@@ -138,7 +137,7 @@ function BasicStep({ w }) {
         hint="Shown to signed-in members on your portfolio. Please do not enter a home address — your workplace address belongs in the Practice & contacts step."
         maxLength={240}
         optional
-        {...w.text('address')}
+        {...w.text("address")}
       />
       <Field label="Biography / About the doctor" error={bio.error} optional>
         {(props) => (
@@ -146,7 +145,12 @@ function BasicStep({ w }) {
             <Textarea {...props} rows={6} maxLength={BIO_MAX} {...bio} />
             <p className="flex items-start justify-between gap-4 text-xs text-muted">
               <span>Please do not include patient information.</span>
-              <span className={cn('shrink-0 tabular-nums', length >= BIO_MAX - 100 && 'font-semibold text-warn')}>
+              <span
+                className={cn(
+                  "shrink-0 tabular-nums",
+                  length >= BIO_MAX - 100 && "font-semibold text-warn",
+                )}
+              >
                 <span className="sr-only">Characters used: </span>
                 {length}/{BIO_MAX}
               </span>
@@ -154,7 +158,14 @@ function BasicStep({ w }) {
           </>
         )}
       </Field>
-      <Tags w={w} name="languages" label="Languages" placeholder="e.g. Odia, Hindi, English" max={12} maxLength={40} />
+      <Tags
+        w={w}
+        name="languages"
+        label="Languages"
+        placeholder="e.g. Odia, Hindi, English"
+        max={12}
+        maxLength={40}
+      />
     </>
   );
 }
@@ -163,11 +174,12 @@ function BasicStep({ w }) {
 function ExpertiseStep({ w }) {
   const { form, catalogue } = w;
   const specialization = form.specialization.trim();
-  const subspecialty = form.subspecialty.trim();
+  const subspecialties = splitSubspecialties(form.subspecialty);
   const entry = catalogue.find(specialization);
   const subOptions = catalogue.subspecializationsOf(specialization);
-  // The subspecialization was chosen for a different specialization and is not an option of this one.
-  const needsReview = subspecialtyNeedsReview(form, catalogue.isListed);
+  // Subspecializations chosen for a different specialization that are not options of this one.
+  const unlisted = unlistedSubspecialties(form, catalogue.isListed);
+  const unlistedText = unlisted.map((sub) => `“${sub}”`).join(', ');
 
   return (
     <>
@@ -185,8 +197,8 @@ function ExpertiseStep({ w }) {
         onChange={(value) => w.setValues({ specialization: value }, 'profile.specialization', 'profile.subspecialty')}
         error={w.err('profile.specialization')}
       />
-      <ComboField
-        label="Subspecialization"
+      <MultiComboField
+        label="Subspecializations"
         placeholder={
           subOptions.length
             ? `Search ${entry ? entry.name : specialization} subspecializations, or type your own`
@@ -196,22 +208,25 @@ function ExpertiseStep({ w }) {
         }
         hint={
           subOptions.length
-            ? `The list follows your specialization (${entry ? entry.name : specialization}). If yours is missing, type it.`
-            : 'Optional. Typed entries are tidied into Title Case when saved; abbreviations such as ENT or MCh are kept.'
+            ? `Choose as many as apply (up to 8). The list follows your specialization (${entry ? entry.name : specialization}); if one is missing, type it and press Enter.`
+            : 'Optional. Add as many as apply (up to 8). Typed entries are tidied into Title Case when saved; abbreviations such as ENT or MCh are kept.'
         }
         options={subOptions}
+        max={8}
         maxLength={80}
         optional
-        value={form.subspecialty}
+        values={subspecialties}
         // Choosing or typing one is a decision for the current specialization.
-        onChange={(value) => w.setValues({ subspecialty: value, subspecialtyFor: form.specialization }, 'profile.subspecialty')}
+        onChange={(values) =>
+          w.setValues({ subspecialty: joinSubspecialties(values), subspecialtyFor: form.specialization }, 'profile.subspecialty')
+        }
         error={w.err('profile.subspecialty')}
       />
-      {needsReview && (
+      {unlisted.length > 0 && (
         <div className="rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn" role="status">
           <p className="font-semibold">
-            You changed your specialization{specialization ? ` to ${specialization}` : ''}. “{subspecialty}” is not one of its listed
-            subspecializations.
+            You changed your specialization{specialization ? ` to ${specialization}` : ''}. {unlistedText}{' '}
+            {unlisted.length === 1 ? 'is not one of its listed subspecializations.' : 'are not among its listed subspecializations.'}
           </p>
           <p className="mt-1">Choose a new one above, or tell us what to do with the old one:</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -220,14 +235,22 @@ function ExpertiseStep({ w }) {
               size="sm"
               onClick={() => w.setValues({ subspecialtyFor: form.specialization }, 'profile.subspecialty')}
             >
-              It still applies — keep “{subspecialty}”
+              {unlisted.length === 1 ? 'It still applies' : 'They still apply'} — keep {unlistedText}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => w.setValues({ subspecialty: '', subspecialtyFor: form.specialization }, 'profile.subspecialty')}
+              onClick={() =>
+                w.setValues(
+                  {
+                    subspecialty: joinSubspecialties(subspecialties.filter((sub) => !unlisted.includes(sub))),
+                    subspecialtyFor: form.specialization,
+                  },
+                  'profile.subspecialty',
+                )
+              }
             >
-              Clear it
+              {unlisted.length === 1 ? 'Remove it' : 'Remove them'}
             </Button>
           </div>
         </div>

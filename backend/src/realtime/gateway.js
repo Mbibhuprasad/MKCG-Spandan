@@ -97,6 +97,10 @@ function attachRealtime(httpServer) {
       'conversation:read',
       handle(socket, v.socketRead, (user, data) => chat.markRead(data.conversationId, user))
     );
+    socket.on(
+      'message:react',
+      handle(socket, v.socketReact, (user, data) => chat.reactToMessage(user, data))
+    );
 
     try {
       // Keep the number of simultaneous devices per account bounded.

@@ -40,15 +40,6 @@ import { doctorsApi } from "./api";
 // doctor's visibility choices: hidden sections arrive empty and are not
 // rendered, and `contact` holds only what the doctor decided to share.
 
-const UNDERGRADUATE = /^(mbbs|bds|bams|bhms|bums|bachelorofmedicine)/;
-const isMedicalDegree = (entry) =>
-  entry.level === "UNDERGRADUATE" ||
-  UNDERGRADUATE.test(
-    String(entry.degree || "")
-      .toLowerCase()
-      .replace(/[^a-z]/g, ""),
-  );
-
 function Section({ icon, title, children, delay = 0 }) {
   const { colors } = useTheme();
   return (
@@ -292,13 +283,13 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
     );
   }
 
-  const college = (p.education || []).find(isMedicalDegree);
   const highest = (p.education || [])[0]; // the API returns education highest first
   const currentRoles = (p.experience || []).filter((e) => e.current);
   const years =
     doctor.summary && doctor.summary.experience
       ? doctor.summary.experience.years
       : null;
+  // Education, current work and location; the college is not repeated here.
   const identity = [
     highest && highest.degree
       ? {
@@ -306,17 +297,6 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
           text: joinParts([highest.degree, highest.fieldOfStudy], ", "),
         }
       : null,
-    college && college.institution
-      ? {
-          icon: "business-outline",
-          text: joinParts([
-            college.institution,
-            p.batchYear ? `Batch of ${p.batchYear}` : "",
-          ]),
-        }
-      : p.batchYear
-        ? { icon: "people-outline", text: `Batch of ${p.batchYear}` }
-        : null,
     joinParts([p.designation, p.hospital], ", ")
       ? {
           icon: "briefcase-outline",
@@ -420,20 +400,47 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
           <Section icon="person-outline" title="About" delay={next()}>
             {p.headline ? <Text variant="bodyStrong">{p.headline}</Text> : null}
             {p.bio ? <Text tone="soft">{p.bio}</Text> : null}
-            {years ? (
-              <Fact icon="time-outline">
-                {years === 1
-                  ? "1 year in practice"
-                  : `${years} years in practice`}
-              </Fact>
-            ) : null}
+
             {p.bloodGroup ? (
               <Fact icon="water-outline">Blood group {p.bloodGroup}</Fact>
             ) : null}
             <Tags label="Languages" items={p.languages} />
           </Section>
         ) : null}
-
+        {/* 9 — Current professional affiliations (kept short on purpose) */}
+        {hasAffiliations ? (
+          <Section
+            icon="business-outline"
+            title="Current affiliations"
+            delay={next()}
+          >
+            {p.hospital ? (
+              <Fact icon="medical-outline">
+                {joinParts([
+                  p.hospital,
+                  p.designation,
+                  joinParts([p.city, p.state], ", "),
+                ])}
+              </Fact>
+            ) : null}
+            {currentRoles
+              .filter((r) => r.organization && r.organization !== p.hospital)
+              .map((r) => (
+                <Fact key={r.id} icon="briefcase-outline">
+                  {joinParts([r.organization, r.role])}
+                </Fact>
+              ))}
+            {(p.practiceLocations || []).map((l) => (
+              <Fact key={l.id} icon="location-outline">
+                {joinParts([
+                  l.hospital,
+                  l.designation,
+                  joinParts([l.area, l.city], ", "),
+                ])}
+              </Fact>
+            ))}
+          </Section>
+        ) : null}
         {/* 4 — Professional experience (the API lists current roles first) */}
         {p.experience && p.experience.length ? (
           <Section
@@ -460,45 +467,6 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
                 last={i === p.experience.length - 1}
               />
             ))}
-          </Section>
-        ) : null}
-
-        {/* 3 — Education and qualifications */}
-        {hasEducation ? (
-          <Section
-            icon="school-outline"
-            title="Education & qualifications"
-            delay={next()}
-          >
-            {(p.education || []).map((e, i) => (
-              <Entry
-                key={e.id}
-                title={joinParts([e.degree, e.fieldOfStudy], ", ")}
-                subtitle={e.institution}
-                period={yearRange(e.startYear, e.year)}
-                note={joinParts([e.certification, e.details])}
-                last={
-                  i === p.education.length - 1 && !(p.credentials || []).length
-                }
-              />
-            ))}
-            {(p.credentials || []).map((c, i) => (
-              <Entry
-                key={c.id}
-                title={c.title}
-                subtitle={joinParts([
-                  c.type ? labelOf(CREDENTIAL_TYPES, c.type) : "",
-                  c.institution,
-                ])}
-                period={joinParts([
-                  c.year ? String(c.year) : "",
-                  c.registration ? `Reg. ${c.registration}` : "",
-                ])}
-                note={c.details}
-                last={i === p.credentials.length - 1}
-              />
-            ))}
-            <Tags label="Qualifications" items={p.qualifications} tone="leaf" />
           </Section>
         ) : null}
 
@@ -537,6 +505,44 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
                 last={i === p.fellowships.length - 1}
               />
             ))}
+          </Section>
+        ) : null}
+        {/* 3 — Education and qualifications */}
+        {hasEducation ? (
+          <Section
+            icon="school-outline"
+            title="Education & qualifications"
+            delay={next()}
+          >
+            {(p.education || []).map((e, i) => (
+              <Entry
+                key={e.id}
+                title={joinParts([e.degree, e.fieldOfStudy], ", ")}
+                subtitle={e.institution}
+                period={yearRange(e.startYear, e.year)}
+                note={joinParts([e.certification, e.details])}
+                last={
+                  i === p.education.length - 1 && !(p.credentials || []).length
+                }
+              />
+            ))}
+            {(p.credentials || []).map((c, i) => (
+              <Entry
+                key={c.id}
+                title={c.title}
+                subtitle={joinParts([
+                  c.type ? labelOf(CREDENTIAL_TYPES, c.type) : "",
+                  c.institution,
+                ])}
+                period={joinParts([
+                  c.year ? String(c.year) : "",
+                  c.registration ? `Reg. ${c.registration}` : "",
+                ])}
+                note={c.details}
+                last={i === p.credentials.length - 1}
+              />
+            ))}
+            <Tags label="Qualifications" items={p.qualifications} tone="leaf" />
           </Section>
         ) : null}
 
@@ -618,41 +624,6 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
                   </Text>
                 ) : null}
               </View>
-            ))}
-          </Section>
-        ) : null}
-
-        {/* 9 — Current professional affiliations (kept short on purpose) */}
-        {hasAffiliations ? (
-          <Section
-            icon="business-outline"
-            title="Current affiliations"
-            delay={next()}
-          >
-            {p.hospital ? (
-              <Fact icon="medical-outline">
-                {joinParts([
-                  p.hospital,
-                  p.designation,
-                  joinParts([p.city, p.state], ", "),
-                ])}
-              </Fact>
-            ) : null}
-            {currentRoles
-              .filter((r) => r.organization && r.organization !== p.hospital)
-              .map((r) => (
-                <Fact key={r.id} icon="briefcase-outline">
-                  {joinParts([r.organization, r.role])}
-                </Fact>
-              ))}
-            {(p.practiceLocations || []).map((l) => (
-              <Fact key={l.id} icon="location-outline">
-                {joinParts([
-                  l.hospital,
-                  l.designation,
-                  joinParts([l.area, l.city], ", "),
-                ])}
-              </Fact>
             ))}
           </Section>
         ) : null}

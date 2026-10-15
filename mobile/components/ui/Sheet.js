@@ -69,6 +69,8 @@ export function ActionSheet({ visible, onClose, title, actions }) {
 
 // A field that opens a sheet of options. options: strings or { value, label, description }.
 // With `allowCustom`, whatever the doctor typed can be used as the value.
+// With `multiple`, `value` is an array: options are ticked on and off and the
+// sheet stays open until it is closed; `max` limits how many can be chosen.
 export function SelectField({
   label,
   required,
@@ -82,20 +84,35 @@ export function SelectField({
   clearable = false,
   icon,
   style,
+  multiple = false,
+  max = Infinity,
 }) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const list = useMemo(() => options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o)), [options]);
-  const current = list.find((o) => o.value === value);
+  const chosen = multiple ? value || [] : [];
+  const isChosen = (v) => (multiple ? chosen.some((c) => String(c).toLowerCase() === String(v).toLowerCase()) : v === value);
+  const current = multiple ? null : list.find((o) => o.value === value);
+  const shownValue = multiple
+    ? chosen.map((c) => (list.find((o) => o.value === c) || { label: c }).label).join(', ')
+    : current
+      ? current.label
+      : value;
+  const hasValue = multiple ? chosen.length > 0 : Boolean(value);
+  const full = multiple && chosen.length >= max;
   const q = query.trim().toLowerCase();
   const shown = q ? list.filter((o) => o.label.toLowerCase().includes(q) || (o.keywords || '').toLowerCase().includes(q)) : list;
-  const customOffer = allowCustom && q && !list.some((o) => o.label.toLowerCase() === q);
+  const customOffer = allowCustom && q && !list.some((o) => o.label.toLowerCase() === q) && !(multiple && (isChosen(query.trim()) || full));
 
   const choose = (next) => {
-    onChange(next);
-    setOpen(false);
     setQuery('');
+    if (!multiple) {
+      onChange(next);
+      setOpen(false);
+    } else if (next === '') onChange([]);
+    else if (isChosen(next)) onChange(chosen.filter((c) => String(c).toLowerCase() !== String(next).toLowerCase()));
+    else if (!full) onChange([...chosen, next]);
   };
 
   return (
@@ -105,11 +122,11 @@ export function SelectField({
         onPress={() => setOpen(true)}
         style={[styles.box, { backgroundColor: colors.surface, borderColor: error ? colors.danger : colors.line }]}
         accessibilityRole="button"
-        accessibilityLabel={`${label || placeholder}: ${current ? current.label : value || 'not set'}`}
+        accessibilityLabel={`${label || placeholder}: ${hasValue ? shownValue : 'not set'}`}
       >
         {icon ? <Ionicons name={icon} size={18} color={colors.muted} /> : null}
-        <Text style={styles.flex} tone={value ? 'default' : 'muted'} numberOfLines={1}>
-          {current ? current.label : value || placeholder}
+        <Text style={styles.flex} tone={hasValue ? 'default' : 'muted'} numberOfLines={multiple ? 3 : 1}>
+          {hasValue ? shownValue : placeholder}
         </Text>
         <Ionicons name="chevron-down" size={18} color={colors.muted} />
       </Pressable>
@@ -141,7 +158,7 @@ export function SelectField({
                   </Text>
                 </Pressable>
               ) : null}
-              {clearable && value ? (
+              {clearable && hasValue ? (
                 <Pressable onPress={() => choose('')} style={styles.option} accessibilityRole="button">
                   <Ionicons name="close-circle-outline" size={20} color={colors.muted} />
                   <Text tone="muted" style={styles.flex}>
@@ -159,7 +176,7 @@ export function SelectField({
             )
           }
           renderItem={({ item }) => {
-            const selected = item.value === value;
+            const selected = isChosen(item.value);
             return (
               <Pressable
                 onPress={() => choose(item.value)}

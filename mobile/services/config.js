@@ -42,7 +42,7 @@ export const isApiConfigured = Boolean(API_ORIGIN);
 // The public MKCGSPANDAN website (EXPO_PUBLIC_WEB_URL, see .env.example): the
 // "Explore MKCGSPANDAN on the Web" card on Home and the full legal texts. Only a
 // full http(s):// address counts; otherwise it is empty and nothing is opened.
-const webUrl = tidy(process.env.EXPO_PUBLIC_WEB_URL);
+const webUrl = tidy("https://mkcg-spandan.vercel.app/");
 export const WEB_URL = /^https?:\/\/[^\s]+$/i.test(webUrl) ? webUrl : '';
 
 export const REQUEST_TIMEOUT_MS = 20000;

@@ -76,13 +76,33 @@ function normalizeSpecialization(value) {
   return SPECIALIZATION_TEXT.get(key) || displayCase(value);
 }
 
-function normalizeSubspecialty(value) {
-  const key = keyOf(value);
-  if (!key) return '';
-  return SUBSPECIALTY_TEXT.get(key) || displayCase(value);
+// A doctor may hold several subspecializations. They are stored in the one
+// `subspecialty` text field, separated by commas ("Spine Surgery, Sports Medicine"),
+// so no listed option contains a comma.
+const SUBSPECIALTY_SEPARATOR = ', ';
+
+/** The subspecializations held in a stored `subspecialty` value, without blanks or repeats. */
+function splitSubspecialties(value) {
+  const seen = new Set();
+  return String(value || '')
+    .split(',')
+    .map(cleanLine)
+    .filter((sub) => {
+      const key = sub.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
-/** Whether `subspecialty` is one of the predefined options of `specialization`. */
+/** Each subspecialization keeps its listed spelling, or is tidied into Title Case. */
+function normalizeSubspecialty(value) {
+  return splitSubspecialties(value)
+    .map((sub) => SUBSPECIALTY_TEXT.get(keyOf(sub)) || displayCase(sub))
+    .join(SUBSPECIALTY_SEPARATOR);
+}
+
+/** Whether `subspecialty` (one subspecialization) is one of the predefined options of `specialization`. */
 function isListedSubspecialty(specialization, subspecialty) {
   const entry = findSpecialty(specialization);
   const key = keyOf(subspecialty);
@@ -122,7 +142,7 @@ function buildCatalogue(pairs = [], q = '') {
     if (!name) continue;
     const seed = findSpecialty(name);
     const entry = entries.get(keyOf(seed ? seed.name : name)) || open(name, [], true);
-    add(entry, cleanLine(pair.subspecialty));
+    for (const sub of splitSubspecialties(pair.subspecialty)) add(entry, sub);
   }
 
   const needle = keyOf(q);
@@ -137,6 +157,8 @@ module.exports = {
   findSpecialty,
   normalizeSpecialization,
   normalizeSubspecialty,
+  splitSubspecialties,
+  SUBSPECIALTY_SEPARATOR,
   isListedSubspecialty,
   buildCatalogue,
 };

@@ -214,7 +214,7 @@ export default function DoctorDetail({ doctor, busy, onToggleVisibility }) {
       <Section title="Professional profile">
         <dl className="grid gap-4 sm:grid-cols-2">
           <Fact label="Specialization" value={p.specialization} />
-          <Fact label="Subspecialty" value={p.subspecialty} />
+          <Fact label="Subspecialties" value={p.subspecialty} />
           <Fact label="Hospital or clinic" value={p.hospital} />
           <Fact label="Location" value={location} />
           <Fact label="Batch year" value={p.batchYear} />
