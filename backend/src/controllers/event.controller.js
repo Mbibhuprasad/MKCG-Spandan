@@ -304,35 +304,19 @@ async function attendees(req, res) {
 
 /* ── Travel schedules ── */
 
-// Travel plans are about getting to this event, so the dates must be close to it.
-const SCHEDULE_WINDOW_MS = 60 * 24 * 60 * 60 * 1000; // 60 days either side
-
-function assertTravelDates(event, { arrivalAt, departureAt }) {
-  const details = {};
-  const start = event.startsAt.getTime();
-  const end = event.endsAt.getTime();
-  if (arrivalAt.getTime() > end) details.arrivalAt = 'Your arrival must be before the event ends.';
-  else if (arrivalAt.getTime() < start - SCHEDULE_WINDOW_MS) details.arrivalAt = 'Your arrival must be within 60 days of the event.';
-  if (departureAt.getTime() <= arrivalAt.getTime()) details.departureAt = 'Departure must be after your arrival.';
-  else if (departureAt.getTime() < start) details.departureAt = 'Your departure cannot be before the event starts.';
-  else if (departureAt.getTime() > end + SCHEDULE_WINDOW_MS) details.departureAt = 'Your departure must be within 60 days of the event.';
-  if (Object.keys(details).length) {
-    throw new ApiError(400, 'VALIDATION_ERROR', 'Please check the highlighted fields.', details);
-  }
-}
-
 // Adds or updates the signed-in member's own travel plan. The plan is stored on
 // their RSVP, so it always belongs to exactly one doctor and one event and
 // nobody can write another member's plan. Sharing a plan means attending: a
 // member without a Going/Maybe answer is marked as going under the usual RSVP
-// rules — except the organiser, who may always add their own plan.
+// rules — except the organiser, who may always add their own plan. The arrival
+// and departure may fall at any time, before, during or after the event
+// (scheduleBody only requires the departure to come after the arrival).
 async function setSchedule(req, res) {
   const event = await loadOpenEvent(req.valid.params.id, req.user);
   if (event.endsAt.getTime() < Date.now()) {
     throw ApiError.conflict('This event has already taken place.', undefined, 'SCHEDULE_CLOSED');
   }
   const { travelFrom, arrivalAt, departureAt, note } = req.valid.body;
-  assertTravelDates(event, { arrivalAt, departureAt });
 
   const current = await Rsvp.findOne({ event: event._id, user: req.user._id }).lean();
   const attending = Boolean(current && current.status !== 'NOT_GOING');

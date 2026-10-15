@@ -64,7 +64,7 @@ export function EventForm({ onDone }) {
     if (busy) return;
     const media = mediaState(cover);
     const found = validate(form, media);
-    const travelFound = withTravel ? validateTravel(travel, { startsAt: form.startsAt, endsAt: form.endsAt || form.startsAt }) : {};
+    const travelFound = withTravel ? validateTravel(travel) : {};
     setErrors(found);
     setTravelErrors(travelFound);
     setFailure(null);

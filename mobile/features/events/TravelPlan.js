@@ -112,7 +112,7 @@ export function TravelPlanCard({ event, onUpdated }) {
 
   const save = async () => {
     if (busy) return;
-    const found = validateTravel(form, event);
+    const found = validateTravel(form);
     setErrors(found);
     setFailure('');
     if (Object.keys(found).length) return;

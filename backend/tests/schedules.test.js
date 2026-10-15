@@ -81,18 +81,23 @@ describe('event schedule: travel plans on the existing RSVP', () => {
     expect(backwards.status).toBe(400);
     expect(backwards.body.error.details.departureAt).toBeTruthy();
 
-    const afterEnd = await asha.put(`/api/v1/events/${eventId}/schedule`, plan({ arrivalAt: at(33), departureAt: at(34) }));
-    expect(afterEnd.status).toBe(400);
-    expect(afterEnd.body.error.details.arrivalAt).toMatch(/before the event ends/);
-
-    const leavesEarly = await asha.put(`/api/v1/events/${eventId}/schedule`, plan({ arrivalAt: at(20), departureAt: at(25) }));
-    expect(leavesEarly.status).toBe(400);
-    expect(leavesEarly.body.error.details.departureAt).toMatch(/before the event starts/);
-
-    const farAway = await asha.put(`/api/v1/events/${eventId}/schedule`, plan({ arrivalAt: at(-200), departureAt: at(31) }));
-    expect(farAway.status).toBe(400);
-
     expect(await Rsvp.countDocuments({ event: eventId })).toBe(0);
+  });
+
+  test('arrival and departure may be at any time, before or after the event', async () => {
+    // The event runs from day 30 to day 31.
+    for (const [arrivalAt, departureAt] of [
+      [at(33), at(34)], // arrives after the event has ended
+      [at(20), at(25)], // leaves before the event starts
+      [at(-200), at(31)], // arrives long before the event
+      [at(30), at(300)], // leaves long after the event
+    ]) {
+      const res = await asha.put(`/api/v1/events/${eventId}/schedule`, plan({ arrivalAt, departureAt }));
+      expect(res.status).toBe(200);
+      expect(new Date(res.body.data.rsvp.mine.travel.arrivalAt).toISOString()).toBe(arrivalAt);
+      expect(new Date(res.body.data.rsvp.mine.travel.departureAt).toISOString()).toBe(departureAt);
+    }
+    await Rsvp.deleteMany({ event: eventId }); // the next tests start from no RSVP
   });
 
   test('saving a plan marks the doctor as going and returns it as theirs', async () => {

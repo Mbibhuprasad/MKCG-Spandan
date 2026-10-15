@@ -188,8 +188,8 @@ const rsvpBody = z.object({
   guests: z.number().int().min(0).max(5, 'You can bring at most 5 guests.').default(0),
 });
 
-// A member's own travel plan for an event. How the dates relate to the event
-// is checked by the controller, which has the event.
+// A member's own travel plan for an event. The dates may fall at any time,
+// before or after the event; the departure only has to follow the arrival.
 const scheduleBody = z
   .object({
     travelFrom: line(2, 120, 'Travelling from'),

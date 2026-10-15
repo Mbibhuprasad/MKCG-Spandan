@@ -33,24 +33,18 @@ export const travelPayload = (values) => ({
 });
 
 /**
- * Mirrors the API's rules for quick feedback: an origin, both moments, the
- * departure after the arrival, the arrival before the event ends and the
- * departure after it starts. `startsAt`/`endsAt` are ISO strings or datetime-local values.
+ * Mirrors the API's rules for quick feedback: an origin, both moments, and the
+ * departure after the arrival. The dates may fall at any time, before or after the event.
  */
-export function validateTravel(values, { startsAt, endsAt }) {
+export function validateTravel(values) {
   const errors = {};
   if (values.travelFrom.trim().length < 2) errors.travelFrom = 'Enter the city or area you are travelling from.';
   const arrival = values.arrivalAt ? new Date(values.arrivalAt).getTime() : NaN;
   const departure = values.departureAt ? new Date(values.departureAt).getTime() : NaN;
-  const start = startsAt ? new Date(startsAt).getTime() : NaN;
-  const end = endsAt ? new Date(endsAt).getTime() : start;
   if (Number.isNaN(arrival)) errors.arrivalAt = 'Choose your arrival date and time.';
   if (Number.isNaN(departure)) errors.departureAt = 'Choose your departure date and time.';
-  if (!errors.arrivalAt && !Number.isNaN(end) && arrival > end) errors.arrivalAt = 'Your arrival must be before the event ends.';
-  if (!errors.arrivalAt && !errors.departureAt) {
-    if (departure <= arrival) errors.departureAt = 'Departure must be after your arrival.';
-    else if (!Number.isNaN(start) && departure < start) errors.departureAt = 'Your departure cannot be before the event starts.';
-  }
+  if (!errors.arrivalAt && !errors.departureAt && departure <= arrival)
+    errors.departureAt = 'Departure must be after your arrival.';
   return errors;
 }
 
@@ -181,7 +175,7 @@ export default function TravelPlanPanel({ event, onUpdated, className }) {
   async function save(e) {
     e.preventDefault();
     if (busy) return;
-    const found = validateTravel(values, event);
+    const found = validateTravel(values);
     setErrors(found);
     setMessage('');
     if (Object.keys(found).length) return;

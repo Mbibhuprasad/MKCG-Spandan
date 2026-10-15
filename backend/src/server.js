@@ -9,6 +9,7 @@ async function start() {
   const { createApp } = require('./app');
   const { startJobs } = require('./services/jobs.service');
   const { attachRealtime, closeRealtime } = require('./realtime/gateway');
+  const { startKeepAlive } = require('./services/keepAlive.service');
 
   await connectDatabase(env.mongoUri);
   const app = createApp();
@@ -23,6 +24,7 @@ async function start() {
   // Real-time chat shares the HTTP server and port (path /socket.io).
   const io = attachRealtime(server);
   const stopJobs = env.jobsEnabled ? startJobs() : () => {};
+  const stopKeepAlive = startKeepAlive(env.keepAlive);
 
   let shuttingDown = false;
   async function shutdown(signal) {
@@ -30,6 +32,7 @@ async function start() {
     shuttingDown = true;
     logger.info(`${signal} received — shutting down`);
     stopJobs();
+    stopKeepAlive();
     await closeRealtime(io).catch(() => {});
     server.close(async () => {
       await disconnectDatabase().catch(() => {});

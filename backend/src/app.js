@@ -18,6 +18,14 @@ function createApp() {
   app.set('query parser', 'simple'); // flat query strings only — no nested objects
 
   app.use(helmet());
+
+  // Liveness probe for uptime monitors and the keep-alive timer. Registered
+  // before logging and rate limiting so frequent pings neither flood the logs
+  // nor use up anyone's request budget. No database work: it must stay cheap.
+  app.get('/ping', (_req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ status: 'ok', uptime: Math.round(process.uptime()) });
+  });
   app.use(
     cors({
       origin(origin, callback) {

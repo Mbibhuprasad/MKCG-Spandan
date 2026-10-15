@@ -119,7 +119,7 @@ function EventFormInner({ initial, presetType }) {
 
     const fieldErrors = validate(values, { datesChanged });
     const travelFound = withTravel
-      ? validateTravel(travel, { startsAt: values.startsAt, endsAt: values.endsAt || values.startsAt })
+      ? validateTravel(travel)
       : {};
     setErrors(fieldErrors);
     setTravelErrors(travelFound);

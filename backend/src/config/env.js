@@ -62,6 +62,12 @@ const schema = z.object({
   RATE_LIMIT_UPLOAD_MAX: int(40, 1, 1000000),
   RATE_LIMIT_CHAT_MAX: int(60, 1, 1000000),
   JOBS_ENABLED: bool(true),
+  // Keep-alive for hosts that sleep when idle (Render free tier). The URL defaults
+  // to <RENDER_EXTERNAL_URL>/ping, which Render sets on every web service.
+  KEEP_ALIVE_ENABLED: bool(true),
+  KEEP_ALIVE_URL: optionalString,
+  KEEP_ALIVE_INTERVAL_MINUTES: int(10, 1, 14),
+  RENDER_EXTERNAL_URL: optionalString,
   // Secret that must accompany POST /admin-register. Unset = admin registration disabled.
   ADMIN_REGISTER_KEY: optionalString.refine((v) => v === undefined || v.length >= 16, 'must be at least 16 characters long'),
 });
@@ -101,6 +107,16 @@ function loadEnv(source = process.env) {
       : ['1', 'true', 'yes'].includes(e.COOKIE_SECURE.toLowerCase());
   if (e.COOKIE_SAMESITE === 'none' && !cookieSecure) {
     throw new Error('Invalid environment configuration:\n  - COOKIE_SAMESITE=none requires COOKIE_SECURE=true');
+  }
+
+  let keepAliveUrl = e.KEEP_ALIVE_URL;
+  if (!keepAliveUrl && e.RENDER_EXTERNAL_URL) keepAliveUrl = `${e.RENDER_EXTERNAL_URL.replace(/\/+$/, '')}/ping`;
+  if (keepAliveUrl) {
+    try {
+      if (!['http:', 'https:'].includes(new URL(keepAliveUrl).protocol)) throw new Error('bad protocol');
+    } catch {
+      throw new Error('Invalid environment configuration:\n  - KEEP_ALIVE_URL: must be a valid http(s) URL');
+    }
   }
 
   let trustProxy = e.TRUST_PROXY;
@@ -144,6 +160,10 @@ function loadEnv(source = process.env) {
       chatMax: e.RATE_LIMIT_CHAT_MAX, // chat messages per member per minute
     }),
     jobsEnabled: e.JOBS_ENABLED,
+    keepAlive: Object.freeze({
+      url: e.KEEP_ALIVE_ENABLED && e.NODE_ENV !== 'test' ? keepAliveUrl : undefined,
+      intervalMinutes: e.KEEP_ALIVE_INTERVAL_MINUTES,
+    }),
     adminRegisterKey: e.ADMIN_REGISTER_KEY,
   });
 }

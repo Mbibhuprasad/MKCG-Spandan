@@ -314,9 +314,8 @@ await test("every section of the profile editor produces a body the server accep
   for (const key of [
     "basic",
     "expertise",
-    "education",
-    "practice",
     "fellowships",
+    "education",
     "awards",
     "publications",
   ]) {
@@ -644,13 +643,16 @@ await test("event schedule: each doctor saves their own travel plan; the schedul
     note: "",
   });
   // The app checks what the server checks.
-  const blank = validateTravel({ ...plan("", 2), arrivalAt: null }, event);
+  const blank = validateTravel({ ...plan("", 2), arrivalAt: null });
   assert.ok(blank.travelFrom && blank.arrivalAt);
-  const backwards = validateTravel({ ...plan("Puri", 2), departureAt: new Date(start - 3 * 3600000) }, event);
+  const backwards = validateTravel({ ...plan("Puri", 2), departureAt: new Date(start - 3 * 3600000) });
   assert.ok(backwards.departureAt);
-  const late = validateTravel({ ...plan("Puri", 2), arrivalAt: new Date(start + 2 * day), departureAt: new Date(start + 3 * day) }, event);
-  assert.ok(late.arrivalAt);
-  assert.deepEqual(validateTravel(plan("Puri", 2), event), {});
+  // Any time is allowed, before or after the event.
+  const late = validateTravel({ ...plan("Puri", 2), arrivalAt: new Date(start + 2 * day), departureAt: new Date(start + 3 * day) });
+  assert.deepEqual(late, {});
+  const far = validateTravel({ ...plan("Puri", 2), arrivalAt: new Date(start - 200 * day), departureAt: new Date(start - 190 * day) });
+  assert.deepEqual(far, {});
+  assert.deepEqual(validateTravel(plan("Puri", 2)), {});
 
   const err = await rejects(
     as(bob, () => eventsApi.saveTravel(event.id, { ...travelPayload(plan("Puri", 2)), travelFrom: "" })),

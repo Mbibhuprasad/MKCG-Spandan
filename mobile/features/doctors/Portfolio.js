@@ -441,6 +441,24 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
             ))}
           </Section>
         ) : null}
+
+        {/* 5 — Specialization and expertise */}
+        {hasExpertise ? (
+          <Section
+            icon="medkit-outline"
+            title="Specialization & expertise"
+            delay={next()}
+          >
+            {p.fieldOfWork ? (
+              <Fact icon="pulse-outline">{p.fieldOfWork}</Fact>
+            ) : null}
+            {p.practiceArea ? (
+              <Fact icon="fitness-outline">{p.practiceArea}</Fact>
+            ) : null}
+            <Tags label="Areas of expertise" items={p.expertise} />
+            <Tags label="Procedures" items={p.procedures} tone="leaf" />
+          </Section>
+        ) : null}
         {/* 4 — Professional experience (the API lists current roles first) */}
         {p.experience && p.experience.length ? (
           <Section
@@ -467,24 +485,6 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
                 last={i === p.experience.length - 1}
               />
             ))}
-          </Section>
-        ) : null}
-
-        {/* 5 — Specialization and expertise */}
-        {hasExpertise ? (
-          <Section
-            icon="medkit-outline"
-            title="Specialization & expertise"
-            delay={next()}
-          >
-            {p.fieldOfWork ? (
-              <Fact icon="pulse-outline">{p.fieldOfWork}</Fact>
-            ) : null}
-            {p.practiceArea ? (
-              <Fact icon="fitness-outline">{p.practiceArea}</Fact>
-            ) : null}
-            <Tags label="Areas of expertise" items={p.expertise} />
-            <Tags label="Procedures" items={p.procedures} tone="leaf" />
           </Section>
         ) : null}
 

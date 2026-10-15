@@ -6,7 +6,7 @@ import { Banner, Button, Card, ProgressBar, Screen, StackHeader, Text } from '@/
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { profileApi } from '@/features/profile/api';
-import { SECTIONS, sectionProgress } from '@/features/profile/sections';
+import { SECTIONS, sectionForStep, sectionProgress } from '@/features/profile/sections';
 import { messageOf } from '@/services/api';
 import { useTheme } from '@/theme/ThemeProvider';
 import { invalidate } from '@/utils/events';
@@ -22,7 +22,7 @@ export default function EditProfile() {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState(null);
   const completion = user.profileCompletion;
-  const resume = SECTIONS.find((s) => s.step === completion.resumeStep);
+  const resume = sectionForStep(completion.resumeStep);
 
   const submit = async () => {
     if (busy) return;

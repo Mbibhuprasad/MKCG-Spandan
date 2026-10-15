@@ -322,9 +322,17 @@ export const SECTIONS = [
   {
     key: "expertise",
     step: 1,
+    // Also covers the website's "Practice & contacts" step (3): a doctor who
+    // left off there resumes here, and links to /profile/section/practice
+    // (the WhatsApp prompts) open this section.
+    resumeSteps: [3],
+    aliases: ["practice"],
     icon: "medkit-outline",
-    title: "Specialization & experience",
-    description: "What you do, and where you have worked.",
+    title: "Practice & Expertise",
+    description:
+      "What you do, where you practise and have worked, and your WhatsApp number.",
+    whatsapp: true,
+    visibility: ["showWorkContact"],
     fields: [
       {
         key: "specialization",
@@ -348,37 +356,6 @@ export const SECTIONS = [
         max: 100,
         maxItems: 30,
       },
-    ],
-    lists: ["experience"],
-  },
-  {
-    key: "education",
-    step: 2,
-    icon: "school-outline",
-    title: "Education & qualifications",
-    description: "Academic degrees and professional qualifications.",
-    fields: [
-      {
-        key: "qualifications",
-        label: "Qualifications (short form)",
-        type: "tags",
-        max: 80,
-        maxItems: 12,
-        placeholder: "MBBS, MD, DM…",
-      },
-    ],
-    lists: ["education", "credentials"],
-  },
-  {
-    key: "practice",
-    step: 3,
-    icon: "business-outline",
-    title: "Practice & contacts",
-    description:
-      "Where you practise, and your WhatsApp number for the contact feature.",
-    whatsapp: true,
-    visibility: ["showWorkContact"],
-    fields: [
       { key: "hospital", label: "Hospital or clinic", max: 160 },
       { key: "designation", label: "Designation", max: 120 },
       { key: "practiceArea", label: "Clinical practice area", max: 160 },
@@ -401,16 +378,34 @@ export const SECTIONS = [
       { key: "workPhone", label: "Workplace phone", type: "phone" },
       { key: "workEmail", label: "Workplace email", type: "email" },
     ],
-    lists: ["practiceLocations"],
+    lists: ["experience", "practiceLocations"],
   },
   {
     key: "fellowships",
     step: 4,
     icon: "ribbon-outline",
-    title: "Fellowships",
+    title: "Fellowship & Advanced Training",
     description: "Fellowships and postdoctoral certification.",
     fields: [],
     lists: ["fellowships"],
+  },
+  {
+    key: "education",
+    step: 2,
+    icon: "school-outline",
+    title: "Education & qualifications",
+    description: "Academic degrees and professional qualifications.",
+    fields: [
+      {
+        key: "qualifications",
+        label: "Qualifications (short form)",
+        type: "tags",
+        max: 80,
+        maxItems: 12,
+        placeholder: "MBBS, MD, DM…",
+      },
+    ],
+    lists: ["education", "credentials"],
   },
   {
     key: "awards",
@@ -470,7 +465,14 @@ export const ESSENTIALS = {
 };
 
 export const sectionByKey = (key) =>
-  SECTIONS.find((s) => s.key === key) || null;
+  SECTIONS.find((s) => s.key === key || (s.aliases || []).includes(key)) ||
+  null;
+
+// The section that covers a saved wizard position (see `resumeSteps`).
+export const sectionForStep = (step) =>
+  SECTIONS.find(
+    (s) => s.step === step || (s.resumeSteps || []).includes(step),
+  ) || null;
 
 // How much of a section is filled in, from the saved account (for the hub list).
 export function sectionProgress(section, user) {
