@@ -144,7 +144,13 @@ const EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'web
 // Cloudinary (the app never talks to Cloudinary directly and holds no
 // Cloudinary credentials). Resolves with the Media object; its `id` is what
 // content requests refer to. `asset` is an expo-image-picker asset.
-export function uploadMedia(asset, purpose, { onProgress } = {}) {
+export function uploadMedia(asset, purpose, options) {
+  return uploadFile('/media', asset, { purpose }, options);
+}
+
+// Multipart upload of one picked file to `path`, with `fields` sent before the
+// file (the API reads them first). Reports progress from 0 to 1.
+export function uploadFile(path, asset, fields = {}, { onProgress } = {}) {
   return new Promise((resolve, reject) => {
     if (!isApiConfigured) return reject(notConfigured());
     const sentToken = token;
@@ -152,11 +158,11 @@ export function uploadMedia(asset, purpose, { onProgress } = {}) {
     const name = asset.fileName || `upload.${EXTENSIONS[mimeType] || (asset.type === 'video' ? 'mp4' : 'jpg')}`;
 
     const form = new FormData();
-    form.append('purpose', purpose); // the API expects `purpose` before `file`
+    for (const [key, value] of Object.entries(fields)) form.append(key, value); // e.g. `purpose`, before `file`
     form.append('file', { uri: asset.uri, name, type: mimeType });
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${API_URL}/media`);
+    xhr.open('POST', `${API_URL}${path}`);
     xhr.setRequestHeader('Accept', 'application/json');
     if (sentToken) xhr.setRequestHeader('Authorization', `Bearer ${sentToken}`);
     xhr.timeout = UPLOAD_TIMEOUT_MS;

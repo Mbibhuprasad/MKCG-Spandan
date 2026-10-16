@@ -10,7 +10,7 @@ Object.assign(process.env, {
   MONGODB_URI: `${base.replace(/\/?(\?.*)?$/, '')}/${dbName}`,
   JWT_SECRET: 'test-only-secret-test-only-secret-test-only-secret',
   JWT_EXPIRES_IN_DAYS: '7',
-  FRONTEND_URL: 'http://localhost:3000',
+  FRONTEND_URL: 'http://localhost:5000',
   COOKIE_NAME: 'mkcg_session',
   COOKIE_SAMESITE: 'lax',
   TRUST_PROXY: 'loopback',
@@ -29,6 +29,8 @@ Object.assign(process.env, {
   RATE_LIMIT_WRITE_MAX: '100000',
   RATE_LIMIT_UPLOAD_MAX: '100000',
   RATE_LIMIT_CHAT_MAX: process.env.TEST_RATE_LIMIT_CHAT_MAX || '100000',
+  RATE_LIMIT_POSTER_SAVE_MAX: '100000',
+  RATE_LIMIT_POSTER_EXPORT_MAX: '100000',
   JOBS_ENABLED: 'false',
   // Set explicitly (not deleted) so values from a developer's backend/.env,
   // which dotenv would otherwise load, can never change test behaviour.

@@ -136,8 +136,18 @@ Profile and the profile menu. Whether onboarding is still pending is remembered 
 - **Website link** — `EXPO_PUBLIC_WEB_URL` (see `.env.example`, read in `services/config.js` as `WEB_URL`): the
   "Explore MKCGSPANDAN on the Web" card in the Home "More to Explore" section opens it. While it is empty the card
   shows "Coming soon" and opens nothing.
-- **Developer credit** — `site.developer` in `utils/constants.js` (`name`, optional `url`), rendered by
-  `components/DeveloperCredit.js` at the end of Home and About.
+- **Developer credit** — `site.developer` in `utils/constants.js` (`name`, `portfolioUrl`, `linkedinUrl`; only full
+  `https://` addresses become links, an empty one hides that link), rendered by `components/DeveloperCredit.js` at the
+  end of Home and About. Keep it in sync with `site.developer` in `frontend/src/lib/site.js` (the website footer).
+
+## Batch Profile Poster Maker
+
+Profile → Settings → **Create My Batch Poster** (doctor accounts only, like the API). Screens live under
+`app/(app)/settings/posters/` — the dashboard (drafts and saved posters, create from the six-template gallery, preview,
+export, share, delete), `[id]` (the six-step editor; `new?template=<id>` for a new poster) and `view/[id]` (preview, PNG /
+PDF download, share). No tab or Home entry. Posters are the website's records and are drawn by the website's templates
+in a WebView — see [BATCH_POSTER.md](BATCH_POSTER.md#android-app). Packages added for it: `react-native-webview`
+(rendering with the website's templates) — `expo-file-system` and `expo-sharing` were already installed for chat.
 
 ## Chat
 
@@ -156,6 +166,11 @@ routes under `/chat` and a Socket.IO gateway on the API's own port (path `/socke
 | Unread counts              | From the server per conversation; cleared with `conversation:read`                                                                                                                                                                 |
 | Rate limiting              | `RATE_LIMIT_CHAT_MAX` messages per member per minute, shared by REST and sockets                                                                                                                                                   |
 | Offline / errors           | A banner shows when the live connection is down; sending falls back to REST with the same `clientId`; a message that could not be sent stays in the list marked "Tap to retry"                                                     |
+| Message options            | Long press a message (or its photo) for the menu: the reactions, Copy text, Download / Share image, Remove my reaction, and — on your own messages — Delete for everyone (with a confirmation). Presses in the first 350 ms after the menu opens are ignored, so lifting the finger that opened it cannot pick an emoji or close it |
+| Reactions                  | `👍 ❤️ 😂 😊 😮 😢 🙏`; one per member, tap a badge to add or remove yours, long press a badge to see who reacted. A second tap while a reaction request is on its way is ignored |
+| Photos                     | The image button opens Android's photo picker (no permission); the photo is shown above the message box until sent or removed, uploaded with progress to `POST /chat/conversations/:id/images`, then sent with `mediaId` and an optional caption. A retry after a successful upload does not upload again |
+| Download / share           | `features/chat/media.js` downloads the original through the API with the bearer token (`expo-file-system`), then either writes it into a folder the doctor picks (system folder picker — no media permission) or opens the share sheet (`expo-sharing`). Tapping a photo opens a full-screen viewer with both actions |
+| Delete for everyone        | Sender only, after a native confirmation. Every member sees "This message was deleted" at once (`message:deleted`); members who were offline get the deleted state from history |
 
 `features/chat/ChatContext.js` owns the one socket and the conversation list; screens only render. Voice and video
 calls are not implemented and no camera or microphone permission is requested (both are blocked in `app.config.js`).

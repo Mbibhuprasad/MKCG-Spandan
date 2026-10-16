@@ -86,7 +86,7 @@ function ProfileCard({ user }) {
               color="rgba(255,255,255,0.9)"
               style={styles.flex}
             >
-              Your professional profile is complete. Batchmates can find and
+              Your professional profile is complete. Friends can find and
               recognise you.
             </Text>
           </View>

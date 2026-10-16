@@ -1,0 +1,528 @@
+/* Template 5 — Friends Forever / Inspirational Message. Cream page between two
+   colour bands on the fixed 1240 × 1754 poster canvas. The bands are SVGs
+   stretched behind their own content, so light text always sits on colour.
+   Text regions scale with --fit (../fit.js). */
+
+.ff {
+  position: absolute;
+  inset: 0;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.ffCream {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 30% at 50% 62%, rgb(255 255 255 / 0.65), transparent 72%),
+    radial-gradient(ellipse 50% 24% at 100% 70%, rgb(217 164 65 / 0.1), transparent 70%),
+    radial-gradient(ellipse 50% 24% at 0% 60%, rgb(217 164 65 / 0.08), transparent 70%);
+}
+
+.ffContent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ffBand {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mirrored {
+  transform: scaleX(-1);
+}
+
+.ffSparkle {
+  position: absolute;
+  color: var(--warm);
+  fill: currentColor;
+}
+
+/* ── Top band: theme, batch identity and the hero ── */
+
+.ffTop {
+  position: relative;
+  flex-shrink: 0;
+  padding: 46px 70px 94px;
+  color: #fffaf0;
+}
+
+.ffHeader {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-inline: 60px;
+  text-align: center;
+}
+
+.ffTheme {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--playfair);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 34px;
+  letter-spacing: 0.04em;
+  color: var(--warm);
+}
+
+.ffHeart {
+  width: 20px;
+  height: 20px;
+}
+
+.ffBatchBox {
+  width: 100%;
+  max-height: 96px;
+  overflow: hidden;
+}
+
+.ffBatch {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(25px * var(--fit, 1));
+  line-height: 1.35;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fffaf0;
+  overflow-wrap: anywhere;
+}
+
+.ffCelebration {
+  border-radius: 999px;
+  padding: 6px 22px;
+  box-shadow: inset 0 0 0 1.5px var(--warm);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--warm);
+  overflow-wrap: anywhere;
+}
+
+.ffHero {
+  position: relative;
+  display: grid;
+  align-items: center;
+  gap: 52px;
+  margin-top: 22px;
+}
+
+.ffHeroLeft {
+  grid-template-columns: 270px minmax(0, 1fr);
+}
+
+.ffHeroRight {
+  grid-template-columns: minmax(0, 1fr) 270px;
+}
+
+.ffHeroRight .ffArchRing {
+  order: 2;
+}
+
+.ffHeroRight .ffIdentity {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.ffHeroRight .ffFacts {
+  justify-content: flex-end;
+}
+
+.ffHeroCenter {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 26px;
+}
+
+.ffHeroCenter .ffArchRing {
+  width: 220px;
+  height: 272px;
+}
+
+.ffHeroCenter .ffArch > span {
+  font-size: 100px;
+}
+
+.ffHeroCenter .ffIdentity {
+  text-align: center;
+  align-items: center;
+  max-height: 290px;
+}
+
+.ffHeroCenter .ffFacts {
+  justify-content: center;
+}
+
+.ffArchRing {
+  width: 270px;
+  height: 334px;
+  padding: 7px;
+  border-radius: 999px 999px 30px 30px;
+  background: var(--gold-gradient);
+  box-shadow: 0 26px 50px -24px rgb(0 0 0 / 0.55);
+}
+
+.ffArch {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 999px 999px 24px 24px;
+  border: 7px solid var(--cream);
+  background: var(--cream);
+}
+
+.ffArch > span {
+  background: linear-gradient(170deg, var(--cream), #ffffff);
+  color: var(--main);
+  font-size: 120px;
+}
+
+.ffIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(8px * var(--fit, 1));
+  min-width: 0;
+  max-height: 334px;
+  overflow: hidden;
+}
+
+.ffNameBox {
+  width: 100%;
+  max-height: 190px;
+  overflow: hidden;
+}
+
+.ffName {
+  font-family: var(--playfair);
+  font-weight: 800;
+  font-size: calc(80px * var(--fit, 1));
+  line-height: 1.05;
+  color: #fffaf0;
+  overflow-wrap: anywhere;
+}
+
+.ffTitle {
+  font-family: var(--playfair);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(32px * var(--fit, 1));
+  line-height: 1.2;
+  color: var(--warm);
+  overflow-wrap: anywhere;
+}
+
+.ffSpec {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(23px * var(--fit, 1));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--light);
+  overflow-wrap: anywhere;
+}
+
+.ffRole,
+.ffQual {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(23px * var(--fit, 1));
+  line-height: 1.35;
+  color: rgb(255 250 240 / 0.92);
+  overflow-wrap: anywhere;
+}
+
+.ffQual {
+  font-weight: 500;
+  color: rgb(255 250 240 / 0.8);
+}
+
+.ffFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-top: 8px;
+}
+
+.ffFact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 6px 18px 6px 14px;
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.28);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(20px * var(--fit, 1));
+  color: #fffaf0;
+  overflow-wrap: anywhere;
+}
+
+.ffFact svg {
+  width: 21px;
+  height: 21px;
+  color: var(--warm);
+}
+
+/* ── Cream page: greeting and messages ── */
+
+.ffBody {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: calc(20px * var(--fit, 1));
+  padding: 6px 84px 18px;
+}
+
+.ffGreeting {
+  font-family: var(--script);
+  font-size: calc(86px * var(--fit, 1));
+  line-height: 1.1;
+  color: var(--main);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.ffMessage {
+  font-family: var(--playfair);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(36px * var(--fit, 1));
+  line-height: 1.45;
+  color: var(--ink);
+  text-align: center;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.ffBlock {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--fit, 1));
+}
+
+.ffLabel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(17px * var(--fit, 1));
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--warm);
+}
+
+.ffLabel::before {
+  content: '';
+  width: 34px;
+  height: 2px;
+  background: var(--warm);
+}
+
+.ffText {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: calc(29px * var(--fit, 1));
+  line-height: 1.4;
+  color: #262a36;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.ffList {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--fit, 1));
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: calc(26px * var(--fit, 1));
+  line-height: 1.32;
+  color: #262a36;
+  overflow-wrap: anywhere;
+}
+
+.ffList li {
+  position: relative;
+  padding-left: 24px;
+}
+
+.ffList li::before {
+  content: '♥';
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 0.62em;
+  line-height: 2.1;
+  color: var(--warm);
+}
+
+.ffClosing {
+  margin-top: auto;
+  align-self: center;
+  max-width: 86%;
+  text-align: center;
+}
+
+.ffClosingText {
+  font-family: var(--playfair);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(30px * var(--fit, 1));
+  line-height: 1.35;
+  color: var(--main);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.ffSignature {
+  font-family: var(--script);
+  font-size: calc(60px * var(--fit, 1));
+  line-height: 1.2;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ── Quotation band ── */
+
+.ffQuoteBand {
+  position: relative;
+  flex-shrink: 0;
+  max-height: 330px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(8px * var(--fit, 1));
+  padding: calc(18px * var(--fit, 1)) 120px calc(22px * var(--fit, 1));
+  background: linear-gradient(120deg, var(--deep), var(--main));
+  box-shadow: inset 0 3px 0 var(--warm), inset 0 -3px 0 var(--warm);
+  text-align: center;
+  color: #fffaf0;
+}
+
+.ffQuoteMark {
+  display: block;
+  height: calc(52px * var(--fit, 1));
+  font-family: var(--playfair);
+  font-weight: 800;
+  font-size: calc(128px * var(--fit, 1));
+  line-height: 0.95;
+  color: var(--warm);
+}
+
+.ffQuoteText {
+  font-family: var(--playfair);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(38px * var(--fit, 1));
+  line-height: 1.36;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.ffQuoteBy {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(17px * var(--fit, 1));
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--warm);
+  overflow-wrap: anywhere;
+}
+
+/* ── Photographs ── */
+
+.ffPhotos {
+  display: flex;
+  justify-content: center;
+  gap: 44px;
+  flex-shrink: 0;
+  height: 200px;
+  padding: 18px 70px 0;
+}
+
+.ffPhoto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 270px;
+}
+
+.ffPhotoFrame {
+  width: 270px;
+  height: 138px;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 0 0 4px var(--cream), 0 0 0 7px var(--warm), 0 18px 34px -20px rgb(0 0 0 / 0.5);
+}
+
+.ffPhoto figcaption {
+  margin-top: 4px;
+  font-family: var(--script);
+  font-size: 34px;
+  line-height: 1.2;
+  color: var(--main);
+}
+
+/* ── Contact strip ── */
+
+.ffFooter {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 58px 70px 28px;
+}
+
+.ffContacts {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(10px * var(--fit, 1)) calc(30px * var(--fit, 1));
+  max-height: 100px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.ffContact {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(22px * var(--fit, 1));
+  color: #fffaf0;
+}
+
+.ffContact svg {
+  color: var(--warm);
+}
+
+.ffBrand {
+  position: relative;
+  font-family: var(--caps);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: var(--warm);
+}

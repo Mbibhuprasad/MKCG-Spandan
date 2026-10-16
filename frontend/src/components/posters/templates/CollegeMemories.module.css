@@ -1,0 +1,614 @@
+/* Template 4 — Nostalgic College Memories. Warm ivory "scrapbook" on the
+   fixed 1240 × 1754 poster canvas. Text regions scale with --fit (../fit.js). */
+
+.cm {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Aged paper: darker edges, a soft warm centre and faint fibres. */
+.cmPaper {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 45%, rgb(255 252 242 / 0.75), transparent 75%),
+    radial-gradient(ellipse 40% 30% at 0% 0%, rgb(120 80 30 / 0.1), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 100% 100%, rgb(120 80 30 / 0.12), transparent 70%),
+    repeating-linear-gradient(115deg, rgb(120 90 40 / 0.025) 0 2px, transparent 2px 9px),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper2) 100%);
+  box-shadow: inset 0 0 160px rgb(110 70 20 / 0.22);
+}
+
+.cmFacade {
+  position: absolute;
+  right: -60px;
+  bottom: 190px;
+  width: 760px;
+  color: var(--ink);
+  opacity: 0.05;
+}
+
+.cmContent {
+  position: absolute;
+  inset: 70px 80px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* ── Header: college name and the batch postmark ── */
+
+.cmHeader {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-height: 150px;
+  padding-right: 230px;
+  flex-shrink: 0;
+}
+
+.cmHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  padding-top: 12px;
+}
+
+.cmCollegeBox {
+  max-height: 112px;
+  overflow: hidden;
+}
+
+.cmCollege {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(44px * var(--fit, 1));
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.cmRule {
+  display: block;
+  width: 100%;
+  height: 0;
+  border-top: 2px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+  padding-top: 4px;
+  opacity: 0.6;
+}
+
+.cmStamp {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 196px;
+  height: 196px;
+  border-radius: 50%;
+  border: 4px solid var(--accent);
+  box-shadow: inset 0 0 0 7px var(--paper), inset 0 0 0 9px var(--accent);
+  color: var(--accent);
+  transform: rotate(-9deg);
+  opacity: 0.9;
+}
+
+.cmStampSmall {
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.cmStampYear {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 64px;
+  line-height: 1;
+}
+
+/* ── Hero: taped polaroid beside the name ── */
+
+.cmHero {
+  display: grid;
+  align-items: center;
+  gap: 54px;
+  height: 470px;
+  flex-shrink: 0;
+}
+
+.cmHeroLeft {
+  grid-template-columns: 384px minmax(0, 1fr);
+}
+
+.cmHeroRight {
+  grid-template-columns: minmax(0, 1fr) 384px;
+}
+
+.cmHeroRight .cmPolaroid {
+  order: 2;
+  transform: rotate(2.6deg);
+}
+
+.cmHeroRight .cmIdentity {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.cmHeroRight .cmFacts {
+  justify-content: flex-end;
+}
+
+.cmPolaroid {
+  position: relative;
+  width: 384px;
+  padding: 20px 20px 74px;
+  background: #fffdf8;
+  box-shadow: 0 22px 40px -22px rgb(60 40 10 / 0.6), 0 0 0 1px rgb(120 90 40 / 0.18);
+  transform: rotate(-3deg);
+}
+
+.cmPortrait {
+  width: 344px;
+  height: 344px;
+  overflow: hidden;
+  background: var(--paper2);
+}
+
+.cmPortrait > img {
+  filter: sepia(0.18) saturate(0.92);
+}
+
+.cmPortrait > span {
+  color: var(--ink);
+  font-size: 130px;
+}
+
+.tape {
+  position: absolute;
+  width: 132px;
+  height: 38px;
+  background: rgb(var(--tape) / 0.62);
+  box-shadow: 0 1px 2px rgb(60 40 10 / 0.15);
+}
+
+.tapeLeft {
+  top: -14px;
+  left: -32px;
+  transform: rotate(-32deg);
+}
+
+.tapeRight {
+  top: -14px;
+  right: -32px;
+  transform: rotate(30deg);
+}
+
+.tapeTop {
+  top: -16px;
+  left: 50%;
+  margin-left: -60px;
+  width: 120px;
+  height: 34px;
+  transform: rotate(-4deg);
+}
+
+.cmIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(8px * var(--fit, 1));
+  min-width: 0;
+  max-height: 470px;
+  overflow: hidden;
+}
+
+.cmGreeting {
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: calc(52px * var(--fit, 1));
+  line-height: 1.1;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.cmNameBox {
+  width: 100%;
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.cmName {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(92px * var(--fit, 1));
+  line-height: 1.02;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.cmTitle {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(33px * var(--fit, 1));
+  line-height: 1.2;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.cmSpec {
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: calc(23px * var(--fit, 1));
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.cmRole,
+.cmQual {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(27px * var(--fit, 1));
+  line-height: 1.25;
+  color: #3a3226;
+  overflow-wrap: anywhere;
+}
+
+.cmQual {
+  font-weight: 500;
+  font-style: italic;
+}
+
+.cmFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+}
+
+.cmFact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px 5px 12px;
+  border: 1.5px dashed var(--accent);
+  border-radius: 6px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(20px * var(--fit, 1));
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.cmFact svg {
+  width: 21px;
+  height: 21px;
+  color: var(--accent);
+}
+
+/* ── Story and collage ── */
+
+.cmMiddle {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 44px;
+}
+
+.cmMiddleCollage {
+  grid-template-columns: minmax(0, 1fr) 330px;
+}
+
+.cmStory {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: calc(24px * var(--fit, 1));
+}
+
+.cmTimeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(20px * var(--fit, 1));
+}
+
+.cmTimeline::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 45px;
+  border-left: 2.5px dashed var(--accent);
+  opacity: 0.55;
+}
+
+.cmMoment {
+  position: relative;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.cmMark {
+  justify-self: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 5px var(--paper);
+}
+
+.cmMarkYear {
+  width: auto;
+  height: auto;
+  margin-top: 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fffaf0;
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.cmMomentBody {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--fit, 1));
+  min-width: 0;
+}
+
+.cmMomentLabel {
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: calc(36px * var(--fit, 1));
+  line-height: 1.05;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.cmText {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: calc(28px * var(--fit, 1));
+  line-height: 1.38;
+  color: #2c261d;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.cmList {
+  display: flex;
+  flex-direction: column;
+  gap: calc(3px * var(--fit, 1));
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: calc(26px * var(--fit, 1));
+  line-height: 1.32;
+  color: #2c261d;
+  overflow-wrap: anywhere;
+}
+
+.cmList li {
+  position: relative;
+  padding-left: 22px;
+}
+
+.cmList li::before {
+  content: '✦';
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 0.7em;
+  line-height: 1.9;
+  color: var(--accent);
+}
+
+/* Lined notepaper for the message to friends. */
+.cmNote {
+  position: relative;
+  padding: calc(14px * var(--fit, 1)) 28px calc(16px * var(--fit, 1)) 64px;
+  background-color: #fffdf6;
+  background-image:
+    linear-gradient(90deg, transparent 44px, rgb(196 82 82 / 0.35) 44px, rgb(196 82 82 / 0.35) 46px, transparent 46px),
+    repeating-linear-gradient(180deg, transparent 0, transparent calc(41px * var(--fit, 1)), rgb(61 90 128 / 0.16) calc(41px * var(--fit, 1)), rgb(61 90 128 / 0.16) calc(42px * var(--fit, 1)));
+  box-shadow: 0 14px 28px -20px rgb(60 40 10 / 0.55), 0 0 0 1px rgb(120 90 40 / 0.15);
+}
+
+.cmNoteLabel {
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: calc(17px * var(--fit, 1));
+  line-height: calc(42px * var(--fit, 1));
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.cmNoteText {
+  font-family: var(--hand);
+  font-weight: 500;
+  font-size: calc(35px * var(--fit, 1));
+  line-height: calc(42px * var(--fit, 1));
+  color: var(--ink);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.cmQuote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(6px * var(--fit, 1));
+  padding: 0 40px;
+  text-align: center;
+}
+
+.cmQuoteMark {
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+}
+
+.cmQuoteText {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: calc(32px * var(--fit, 1));
+  line-height: 1.3;
+  color: var(--ink);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.cmQuoteBy {
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: calc(17px * var(--fit, 1));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.cmClosing {
+  margin-top: auto;
+  align-self: flex-end;
+  max-width: 80%;
+  text-align: right;
+}
+
+.cmClosingText {
+  font-family: var(--hand);
+  font-weight: 500;
+  font-size: calc(34px * var(--fit, 1));
+  line-height: 1.2;
+  color: #3a3226;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.cmSignature {
+  font-family: var(--script);
+  font-size: calc(58px * var(--fit, 1));
+  line-height: 1.2;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.cmCollage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 18px;
+}
+
+.cmSnap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 316px;
+  padding: 12px 12px 0;
+  background: #fffdf8;
+  box-shadow: 0 16px 30px -18px rgb(60 40 10 / 0.6), 0 0 0 1px rgb(120 90 40 / 0.18);
+}
+
+.cmSnap + .cmSnap {
+  margin-top: 10px;
+}
+
+.cmSnap > img {
+  height: 176px;
+  flex-shrink: 0;
+  filter: sepia(0.15) saturate(0.95);
+}
+
+.cmSnap figcaption {
+  display: flex;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: 32px;
+  color: var(--ink);
+}
+
+.tiltA {
+  transform: rotate(3deg);
+}
+
+.tiltB {
+  transform: rotate(-2.5deg) translateX(-8px);
+}
+
+.tiltC {
+  transform: rotate(2deg) translateX(6px);
+}
+
+/* ── Footer ── */
+
+.cmFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-top: 16px;
+  border-top: 2px dashed rgb(0 0 0 / 0.12);
+}
+
+.cmContacts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(10px * var(--fit, 1)) calc(30px * var(--fit, 1));
+  max-height: 100px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.cmContact {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(22px * var(--fit, 1));
+  color: var(--ink);
+}
+
+.cmContact svg {
+  color: var(--accent);
+}
+
+.cmBrand {
+  font-family: var(--caps);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: var(--accent);
+  opacity: 0.85;
+}

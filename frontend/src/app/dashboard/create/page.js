@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BookOpen, CalendarPlus, Images, MessageSquareText, Plane, Vote } from 'lucide-react';
+import { ArrowRight, BookOpen, CalendarPlus, Frame, Images, MessageSquareText, Plane, Vote } from 'lucide-react';
 
 export const metadata = { title: 'Create' };
 
@@ -39,6 +39,12 @@ const options = [
     icon: Vote,
     title: 'Start a poll',
     text: 'Let the batch vote on dates, venues, activities or budgets.',
+  },
+  {
+    href: '/dashboard/posters/new',
+    icon: Frame,
+    title: 'Create My Batch Poster',
+    text: 'Design a personal poster for your batchmates and download it as PNG or PDF. Posters stay private to you.',
   },
 ];
 

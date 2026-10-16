@@ -122,7 +122,7 @@ export default function DoctorsDirectory() {
   return (
     <div className="container-page py-4 sm:py-4">
       <p className="mb-5 max-w-4xl text-base leading-relaxed text-fg-soft">
-        Find batchmates by name, specialization or city, and see where their
+        Find Friends by name, specialization or city, and see where their
         journeys in medicine have taken them.
       </p>
       <form
@@ -241,7 +241,7 @@ export default function DoctorsDirectory() {
             <EmptyState
               icon={Users}
               title="Friends will appear here"
-              description="Friends appear here as they join and complete their profiles. Make sure yours is ready for batchmates to find."
+              description="Friends appear here as they join and complete their profiles. Make sure yours is ready for Friends to find."
               action={
                 <Button href="/dashboard/profile">Complete my profile</Button>
               }

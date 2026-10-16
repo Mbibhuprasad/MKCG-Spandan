@@ -5,11 +5,14 @@ const mongoose = require('mongoose');
 const Conversation = require('../models/Conversation');
 const ConversationMember = require('../models/ConversationMember');
 const Message = require('../models/Message');
+const Media = require('../models/Media');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const { getEnv } = require('../config/env');
 const { ROLES, ACCOUNT_STATUS } = require('../config/constants');
 const { AUTHOR_FIELDS, authorSummary, whatsappOf } = require('./serializers');
+const { createFromUpload, claimMedia, unclaim, destroyMedia } = require('./media.service');
+const cloud = require('./cloudinary.service');
 const realtime = require('../realtime/hub');
 
 const { COMMUNITY_KEY } = Conversation;
@@ -20,8 +23,11 @@ const COMMUNITY_GROUP = Object.freeze({
 const UNREAD_CAP = 99;
 const PREVIEW_LENGTH = 140;
 const PEER_FIELDS = `${AUTHOR_FIELDS} phone whatsapp visibility profile.city`;
+const DELETED_PREVIEW = 'This message was deleted';
+const PHOTO_PREVIEW = '📷 Photo';
 
 const notFound = () => ApiError.notFound('That conversation could not be found.');
+const messageNotFound = () => ApiError.notFound('That message could not be found.');
 const isAdmin = (user) => user.role === ROLES.ADMIN;
 
 /* ───────────── Rate limiting ───────────── */
@@ -113,17 +119,51 @@ function serializeReactions(reactions = []) {
   return [...groups].map(([emoji, userIds]) => ({ emoji, userIds }));
 }
 
+// A chat photo as its conversation's members receive it. The URLs are signed
+// (authenticated delivery), so only the API can produce them, and only members
+// are ever given them. `previewUrl` fits a chat bubble; `url` is the large view.
+// The original file is downloaded through GET …/messages/:messageId/image.
+function serializeChatImage(media) {
+  if (!media || !media.publicId) return null;
+  return {
+    id: String(media._id),
+    width: media.width,
+    height: media.height,
+    format: media.format,
+    bytes: media.bytes,
+    url: cloud.displayUrl(media),
+    previewUrl: cloud.previewUrl(media),
+  };
+}
+
+// A deleted message keeps only who sent it and when: its text, photo and
+// reactions are gone from the database and from every response.
 function serializeMessage(message) {
+  const deleted = Boolean(message.deletedAt);
   return {
     id: String(message._id),
     conversationId: String(message.conversation),
-    body: message.body,
+    type: message.type || 'TEXT',
+    body: deleted ? '' : message.body || '',
+    image: deleted ? null : serializeChatImage(message.media),
+    deleted,
+    deletedAt: message.deletedAt || null,
     sender: authorSummary(message.sender),
     clientId: message.clientId || null,
-    reactions: serializeReactions(message.reactions),
+    reactions: deleted ? [] : serializeReactions(message.reactions),
     createdAt: message.createdAt,
   };
 }
+
+// The one-line summary shown in conversation lists.
+function previewOf(message) {
+  if (message.deletedAt) return DELETED_PREVIEW;
+  const text = String(message.body || '').replace(/\s+/g, ' ').trim();
+  if (message.type === 'IMAGE') return (text ? `📷 ${text}` : PHOTO_PREVIEW).slice(0, PREVIEW_LENGTH);
+  return text.slice(0, PREVIEW_LENGTH);
+}
+
+const MESSAGE_POPULATE = [{ path: 'sender', select: AUTHOR_FIELDS }, { path: 'media' }];
 
 // The other participant of a one-to-one conversation, as this viewer may see
 // them. The WhatsApp number is included only when the doctor allows it.
@@ -228,7 +268,7 @@ async function listMessages(conversationId, user, { before, limit }) {
   const rows = await Message.find(filter)
     .sort({ _id: -1 })
     .limit(limit + 1)
-    .populate({ path: 'sender', select: AUTHOR_FIELDS });
+    .populate(MESSAGE_POPULATE);
   const hasMore = rows.length > limit;
   const page = rows.slice(0, limit).reverse();
   return { messages: page.map(serializeMessage), hasMore, nextBefore: hasMore && page.length ? String(page[0]._id) : null };
@@ -296,20 +336,34 @@ async function markRead(conversationId, user) {
   return { conversationId: String(conversation._id), unreadCount: 0 };
 }
 
-async function sendMessage(user, { conversationId, body, clientId }) {
-  const { conversation, member } = await requireMembership(conversationId, user);
-
-  if (conversation.type === 'DIRECT') {
-    assertDirectEligible(user);
-    const peer = await User.findById(peerIdOf(conversation, user._id)).select('status');
-    if (!peer || peer.status !== ACCOUNT_STATUS.ACTIVE) {
-      throw ApiError.conflict('This member is no longer available.', undefined, 'PEER_UNAVAILABLE');
-    }
+// Sending, reacting and uploading follow the same rules: one-to-one chat needs
+// the caller's WhatsApp number, and the other member must still be available.
+async function assertCanSend(conversation, user) {
+  if (conversation.type !== 'DIRECT') return;
+  assertDirectEligible(user);
+  const peer = await User.findById(peerIdOf(conversation, user._id)).select('status');
+  if (!peer || peer.status !== ACCOUNT_STATUS.ACTIVE) {
+    throw ApiError.conflict('This member is no longer available.', undefined, 'PEER_UNAVAILABLE');
   }
+}
+
+// Stores a photo for a conversation the caller belongs to and may write in.
+// The returned id is then sent as `mediaId`; until it is, the upload belongs to
+// no message and the periodic cleanup removes it after a day.
+async function uploadImage(conversationId, user, file) {
+  const { conversation } = await requireMembership(conversationId, user);
+  await assertCanSend(conversation, user);
+  const media = await createFromUpload({ file, purpose: 'chat', user });
+  return serializeChatImage(media);
+}
+
+async function sendMessage(user, { conversationId, body = '', mediaId, clientId }) {
+  const { conversation, member } = await requireMembership(conversationId, user);
+  await assertCanSend(conversation, user);
 
   // A retry of a message that was already stored returns the stored message.
   if (clientId) {
-    const existing = await Message.findOne({ sender: user._id, clientId }).populate({ path: 'sender', select: AUTHOR_FIELDS });
+    const existing = await Message.findOne({ sender: user._id, clientId }).populate(MESSAGE_POPULATE);
     if (existing) {
       if (String(existing.conversation) !== String(conversation._id)) throw ApiError.conflict('That message was already sent.');
       return { message: serializeMessage(existing), duplicate: true };
@@ -318,16 +372,41 @@ async function sendMessage(user, { conversationId, body, clientId }) {
 
   consumeSendQuota(user._id);
 
+  // A photo must be the caller's own, unused chat upload; it is claimed for
+  // this message before the message exists, and released again if saving fails.
+  const messageId = new mongoose.Types.ObjectId();
+  let media = null;
+  if (mediaId) {
+    try {
+      await claimMedia({ ids: [mediaId], ownerId: user._id, purpose: 'chat', kind: 'Message', itemId: messageId });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'MEDIA_INVALID') {
+        throw ApiError.badRequest('That photo is no longer available. Please choose it again.', { mediaId: 'Invalid or unavailable upload.' }, 'MEDIA_INVALID');
+      }
+      throw err;
+    }
+    media = await Media.findById(mediaId);
+  }
+
   let message;
   try {
-    message = await Message.create({ conversation: conversation._id, sender: user._id, body, clientId });
+    message = await Message.create({
+      _id: messageId,
+      conversation: conversation._id,
+      sender: user._id,
+      type: media ? 'IMAGE' : 'TEXT',
+      body,
+      media: media ? media._id : null,
+      clientId,
+    });
   } catch (err) {
+    if (media) await unclaim([media._id]);
     if (!clientId || !err || err.code !== 11000) throw err;
-    const existing = await Message.findOne({ sender: user._id, clientId }).populate({ path: 'sender', select: AUTHOR_FIELDS });
+    const existing = await Message.findOne({ sender: user._id, clientId }).populate(MESSAGE_POPULATE);
     return { message: serializeMessage(existing), duplicate: true };
   }
 
-  const preview = body.replace(/\s+/g, ' ').slice(0, PREVIEW_LENGTH);
+  const preview = previewOf(message);
   // Only ever move the summary forward, so two messages saved at the same
   // moment cannot leave an older one as "latest".
   await Conversation.updateOne(
@@ -348,6 +427,7 @@ async function sendMessage(user, { conversationId, body, clientId }) {
   }
 
   message.sender = user;
+  message.media = media;
   const out = serializeMessage(message);
   realtime.emitToConversation(conversation._id, 'message:new', { conversationId: String(conversation._id), message: out });
   return { message: out, duplicate: false };
@@ -360,20 +440,14 @@ async function sendMessage(user, { conversationId, body, clientId }) {
 // anyone's unread count.
 async function reactToMessage(user, { conversationId, messageId, emoji }) {
   const { conversation } = await requireMembership(conversationId, user);
-
-  if (conversation.type === 'DIRECT') {
-    assertDirectEligible(user);
-    const peer = await User.findById(peerIdOf(conversation, user._id)).select('status');
-    if (!peer || peer.status !== ACCOUNT_STATUS.ACTIVE) {
-      throw ApiError.conflict('This member is no longer available.', undefined, 'PEER_UNAVAILABLE');
-    }
-  }
+  await assertCanSend(conversation, user);
 
   consumeSendQuota(user._id);
 
   // One atomic update: drop this member's reaction, then add the new one.
+  // A deleted message takes no reactions.
   const message = await Message.findOneAndUpdate(
-    { _id: messageId, conversation: conversation._id },
+    { _id: messageId, conversation: conversation._id, deletedAt: null },
     [
       {
         $set: {
@@ -388,11 +462,77 @@ async function reactToMessage(user, { conversationId, messageId, emoji }) {
     ],
     { returnDocument: 'after', updatePipeline: true }
   ).select('reactions');
-  if (!message) throw ApiError.notFound('That message could not be found.');
+  if (!message) {
+    const deleted = await Message.exists({ _id: messageId, conversation: conversation._id, deletedAt: { $ne: null } });
+    if (deleted) throw ApiError.conflict('This message was deleted.', undefined, 'MESSAGE_DELETED');
+    throw messageNotFound();
+  }
 
   const out = { conversationId: String(conversation._id), messageId: String(message._id), reactions: serializeReactions(message.reactions) };
   realtime.emitToConversation(conversation._id, 'message:reaction', out);
   return out;
+}
+
+// "Delete for everyone". Only the sender may delete a message (there is no
+// moderator role in chat). The text, photo and reactions are removed from the
+// database — the photo from Cloudinary too — and every member is told at once;
+// members who are offline get the deleted state with the next history load.
+// Deleting a message that is already deleted simply returns it again.
+async function deleteMessage(user, { conversationId, messageId }) {
+  const { conversation } = await requireMembership(conversationId, user);
+  const current = await Message.findOne({ _id: messageId, conversation: conversation._id }).select('sender deletedAt media');
+  if (!current) throw messageNotFound();
+  if (String(current.sender) !== String(user._id)) {
+    throw ApiError.forbidden('You can only delete messages you sent.', 'NOT_MESSAGE_SENDER');
+  }
+
+  if (!current.deletedAt) {
+    consumeSendQuota(user._id);
+    const now = new Date();
+    const changed = await Message.updateOne(
+      { _id: current._id, deletedAt: null },
+      { $set: { deletedAt: now, deletedBy: user._id, body: '', media: null, reactions: [] } }
+    );
+    if (changed.modifiedCount) {
+      if (current.media) await destroyMedia([current.media]);
+      await Conversation.updateOne(
+        { _id: conversation._id, 'lastMessage.id': current._id },
+        { $set: { 'lastMessage.preview': DELETED_PREVIEW } }
+      );
+      const deleted = await Message.findById(current._id).populate(MESSAGE_POPULATE);
+      const out = serializeMessage(deleted);
+      realtime.emitToConversation(conversation._id, 'message:deleted', {
+        conversationId: String(conversation._id),
+        messageId: out.id,
+        message: out,
+      });
+      return { conversationId: String(conversation._id), messageId: out.id, message: out };
+    }
+  }
+
+  const deleted = await Message.findById(current._id).populate(MESSAGE_POPULATE);
+  return { conversationId: String(conversation._id), messageId: String(current._id), message: serializeMessage(deleted) };
+}
+
+// The original file of a photo message, for a member of its conversation.
+// Resolves with { response, filename, contentType }; the controller streams it.
+async function openMessageImage(user, { conversationId, messageId }) {
+  const { conversation } = await requireMembership(conversationId, user);
+  const message = await Message.findOne({ _id: messageId, conversation: conversation._id }).populate('media');
+  if (!message) throw messageNotFound();
+  if (message.deletedAt) throw ApiError.conflict('This message was deleted.', undefined, 'MESSAGE_DELETED');
+  if (!message.media || !message.media.publicId) throw ApiError.notFound('This message has no photo.');
+
+  const media = message.media;
+  const stamp = new Date(message.createdAt).toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
+  const format = media.format || 'jpg';
+  const response = await cloud.fetchOriginal(media);
+  return {
+    response,
+    filename: `mkcgspandan-chat-${stamp}.${format}`,
+    contentType: { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[format] || 'application/octet-stream',
+    bytes: media.bytes || null,
+  };
 }
 
 /* ───────────── Account deletion ───────────── */
@@ -404,7 +544,7 @@ async function refreshLastMessage(conversationId) {
         id: latest._id,
         sender: latest.sender ? latest.sender._id : null,
         senderName: latest.sender ? latest.sender.name : '',
-        preview: latest.body.replace(/\s+/g, ' ').slice(0, PREVIEW_LENGTH),
+        preview: previewOf(latest),
         at: latest.createdAt,
       }
     : { id: null, sender: null, senderName: '', preview: '', at: null };
@@ -418,6 +558,10 @@ async function removeUserChatData(userId) {
   const directs = await Conversation.find({ type: 'DIRECT', participants: id }).select('_id').lean();
   const directIds = directs.map((c) => c._id);
   if (directIds.length) {
+    // The other member's photos in those conversations go with them (the
+    // account's own uploads are removed by the caller).
+    const photos = await Message.distinct('media', { conversation: { $in: directIds }, media: { $ne: null } });
+    await destroyMedia(photos);
     await Message.deleteMany({ conversation: { $in: directIds } });
     await ConversationMember.deleteMany({ conversation: { $in: directIds } });
     await Conversation.deleteMany({ _id: { $in: directIds } });
@@ -442,7 +586,10 @@ module.exports = {
   listMessages,
   openDirect,
   markRead,
+  uploadImage,
   sendMessage,
   reactToMessage,
+  deleteMessage,
+  openMessageImage,
   removeUserChatData,
 };

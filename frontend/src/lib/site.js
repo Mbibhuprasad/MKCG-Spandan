@@ -12,10 +12,14 @@ export const site = {
   tagline: "Together in Medicine. Connected Beyond Medicine.",
   description:
     "MKCGSPANDAN is a private community where doctors and medical batchmates reconnect, celebrate professional journeys, preserve shared memories and plan reunions.",
-  url: (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(
-    /\/+$/,
-    "",
-  ),
+  // NEXT_PUBLIC_SITE_URL, else (on Vercel) the project's production domain,
+  // which Vercel exposes to the build; localhost only for local development.
+  url: (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:5000")
+  ).replace(/\/+$/, ""),
   logo: {
     // The official MKCGSPANDAN logo (square artwork on white), in public/brand.
     // It is shown on a white tile so it stays legible in the dark theme, and is
@@ -32,11 +36,14 @@ export const site = {
   // page, then rebuild. Until it is set, the button shows "coming soon" and is
   // not a link.
   androidApkUrl: httpsUrl(""),
-  // Credit shown at the bottom of the footer. Replace the placeholder with the
-  // developer's name; add a full https:// address to `url` to make it a link.
+  // "Designed & Developed by" credit at the bottom of the footer (the Android
+  // app shows the same credit — keep mobile/utils/constants.js in sync).
+  // Only full https:// addresses become links; an empty value hides that link.
   developer: {
-    name: ": Bibhu Prsad Mahapatra",
-    url: "https://www.linkedin.com/in/bibhuprasad-mahapatra-a9a896282/?isSelfProfile=true",
+    name: "Bibhu Prasad Mahapatra",
+    // Personal portfolio website — not set yet: add its full https:// address here.
+    portfolioUrl: httpsUrl(""),
+    linkedinUrl: httpsUrl("https://www.linkedin.com/in/bibhuprasad-mahapatra-a9a896282/"),
   },
   // Optional real photograph for the homepage hero (e.g. '/brand/hero.jpg').
   // When empty, the built-in illustration is shown instead.

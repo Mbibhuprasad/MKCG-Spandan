@@ -17,7 +17,7 @@ import { site } from "@/lib/site";
 import HeroVisual from "./HeroVisual";
 
 const assurances = [
-  { icon: Stethoscope, text: "For doctors and batchmates" },
+  { icon: Stethoscope, text: "For doctors and Friends" },
   { icon: ShieldCheck, text: "Private and moderated" },
   { icon: UsersRound, text: "Join and enter straight away" },
 ];
@@ -86,7 +86,7 @@ export default function Hero() {
             style={{ "--delay": "0ms" }}
           >
             <span className="h-2 w-2 rounded-full bg-leaf" aria-hidden="true" />
-            A private community for medical batchmates
+            A private community for medical Friends
           </p>
 
           <h1
@@ -105,7 +105,7 @@ export default function Hero() {
             style={{ "--delay": "140ms" }}
           >
             MKCGSPANDAN brings doctors back to the people they trained with — to
-            reconnect with batchmates, celebrate each other&apos;s professional
+            reconnect with Friends, celebrate each other&apos;s professional
             journeys, preserve shared memories and organise reunions that are
             worth travelling for.
           </p>

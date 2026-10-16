@@ -84,7 +84,7 @@ function FeedTab() {
           href="/dashboard/create/post"
           className="flex h-11 min-w-0 flex-1 items-center rounded-xl border border-line-strong bg-surface-2 px-4 text-sm text-muted hover:border-brand hover:text-fg"
         >
-          <span className="truncate">Share an update with your batchmates…</span>
+          <span className="truncate">Share an update with your Friends…</span>
         </Link>
         <Button href="/dashboard/create/post" size="sm" icon={PenLine} className="hidden sm:inline-flex">
           New post

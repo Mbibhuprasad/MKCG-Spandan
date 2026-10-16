@@ -120,10 +120,15 @@ Both are idempotent, so running several API instances is safe, but they are not 
 | `/blogs`, `/blogs/[slug]`                                                                                                                   | Public            | Server-rendered for SEO and not cached, so a new, edited or deleted blog shows at once; likes and comments are client-side and member-only |
 | `/login`, `/register`                                                                                                                       | Public            | Client forms                                                                                                                               |
 | `/doctors`, `/doctors/[id]`, `/memories`, `/community`, `/community/posts/[id]`, `/events`, `/events/[id]`                                  | Members           | Page shell + `MemberGate`; data is fetched in the browser with the session cookie                                                          |
-| `/dashboard`, `/dashboard/profile`, `/dashboard/submissions`, `/dashboard/notifications`, `/dashboard/create/{post,blog,memory,event,poll}` | Signed-in users   | `dashboard/layout.js` wraps everything in `RequireAuth`; `noindex`                                                                         |
+| `/dashboard`, `/dashboard/profile`, `/dashboard/submissions`, `/dashboard/messages`, `/dashboard/notifications`, `/dashboard/create/{post,blog,memory,event,poll}` | Signed-in users   | `dashboard/layout.js` wraps everything in `RequireAuth`; `noindex`                                                                         |
 | `/admin`, `/admin/doctors`, `/admin/moderation`, `/admin/reports`, `/admin/audit-log`                                                       | `ADMIN` only      | `RequireAdmin`; `noindex`                                                                                                                  |
 
 Create pages double as edit pages with `?edit=<id>`; `/dashboard/create/event?type=VISIT_PLAN` preselects a visit plan.
+`/dashboard/messages` is the website's chat (the same conversations as the Android app): `?c=<id>` opens a
+conversation, `?with=<doctorId>` opens or starts the one-to-one chat ("Send a message" on a portfolio). Changes go
+through REST; a Socket.IO connection straight to the API origin (`NEXT_PUBLIC_CHAT_SOCKET_ORIGIN`, derived from
+`BACKEND_URL` in `next.config.mjs`) delivers live events, authenticated with a one-time ticket. Without it the page
+refreshes every few seconds.
 
 ### Server and client components, and the privacy boundary
 
@@ -145,9 +150,9 @@ to the web origin, which means:
 - no CORS preflights are needed in normal operation;
 - web and API can be hosted on unrelated domains.
 
-`experimental.proxyTimeout` is raised to 5 minutes because media uploads pass through this proxy. A direct mode is
-also supported: set `NEXT_PUBLIC_API_URL` to an absolute API URL on a sibling sub-domain and configure
-`COOKIE_DOMAIN` and `FRONTEND_URL` on the API to match.
+`experimental.proxyTimeout` is raised to 5 minutes because media uploads pass through this proxy. The proxy target is
+resolved in `frontend/src/lib/api-config.mjs` (`BACKEND_URL`, else the Render API in production builds, else the local
+API in `next dev`); the browser client (`src/lib/api.js`) always uses the same-origin `/api/v1`.
 
 ### Browser API client
 

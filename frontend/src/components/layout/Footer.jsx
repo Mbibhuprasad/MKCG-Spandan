@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { HeartPulse } from 'lucide-react';
 import { site } from '@/lib/site';
+import DeveloperCredit from './DeveloperCredit';
 import Logo from './Logo';
 
 const columns = [
@@ -32,9 +33,6 @@ const columns = [
   },
 ];
 
-// Only a full web address becomes a link; anything else is shown as plain text.
-const developerUrl = /^https?:\/\//i.test(site.developer.url) ? site.developer.url : '';
-
 export default function Footer() {
   return (
     <footer className="mt-auto border-t border-line bg-bg-soft">
@@ -42,7 +40,7 @@ export default function Footer() {
         <div className="max-w-sm">
           <Logo logoSize={48} />
           <p className="mt-4 text-sm leading-relaxed text-fg-soft">
-            A private community where doctors and medical batchmates reconnect,
+            A private community where doctors and medical Friends reconnect,
             celebrate one another&apos;s journeys and keep shared memories
             alive.
           </p>
@@ -79,25 +77,7 @@ export default function Footer() {
           </p>
           <p>Please never share patient-identifiable information here.</p>
         </div>
-        {site.developer.name && (
-          <p className="container-page -mt-2 pb-5 text-[0.9rem] text-fg-soft">
-            Design & Developed by{" "}
-            {developerUrl ? (
-              <a
-                href={developerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-fg-soft hover:text-brand-ink hover:underline"
-              >
-                {site.developer.name}
-              </a>
-            ) : (
-              <span className="font-semibold text-fg-soft">
-                {site.developer.name}
-              </span>
-            )}
-          </p>
-        )}
+        <DeveloperCredit />
       </div>
     </footer>
   );

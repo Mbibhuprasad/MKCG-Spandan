@@ -117,7 +117,7 @@ function BasicStep({ w }) {
           type="date"
           min="1900-01-01"
           max={todayInputValue()}
-          hint="Private — never shown on your profile. Batchmates only see you in Today's Birthdays on the day, unless you turn that off in the last step."
+          hint="Private — never shown on your profile. Friends only see you in Today's Birthdays on the day, unless you turn that off in the last step."
           optional
           {...w.text("dateOfBirth")}
         />
@@ -351,7 +351,7 @@ function ExpertiseStep({ w }) {
           )}
         </EntryList>
       </Group>
-      <Note>Your specialization and city are what batchmates use to find you in the Friends section.</Note>
+      <Note>Your specialization and city are what Friends use to find you in the Friends section.</Note>
     </>
   );
 }
@@ -590,7 +590,7 @@ function PracticeStep({ w }) {
             value={form.whatsappSame ? '' : form.whatsappNumber}
             disabled={form.whatsappSame}
             placeholder={form.whatsappSame ? w.user.phone : 'e.g. 98xxxxxxxx'}
-            hint="Lets batchmates message you on WhatsApp."
+            hint="Lets Friends message you on WhatsApp."
           />
           <Checkbox
             className="sm:pt-8"

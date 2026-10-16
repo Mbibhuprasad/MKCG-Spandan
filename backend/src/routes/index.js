@@ -16,6 +16,7 @@ const eventRoutes = require("./event.routes");
 const pollRoutes = require("./poll.routes");
 const notificationRoutes = require("./notification.routes");
 const chatRoutes = require("./chat.routes");
+const posterRoutes = require("./poster.routes");
 const adminRoutes = require("./admin.routes");
 const adminAuthRoutes = require("./adminAuth.routes");
 
@@ -41,6 +42,7 @@ function buildRouter(limiters) {
   api.use("/polls", pollRoutes(limiters));
   api.use("/notifications", notificationRoutes(limiters));
   api.use("/chat", chatRoutes(limiters));
+  api.use("/posters", posterRoutes(limiters));
   api.get("/dashboard/summary", requireAuth, dashboard.summary);
   api.use("/admin", adminRoutes(limiters));
 

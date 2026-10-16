@@ -14,8 +14,39 @@ function signToken(userId, sessionId) {
   });
 }
 
+const SOCKET_TICKET_TYPE = 'socket-ticket';
+const SOCKET_TICKET_TTL_SECONDS = 60;
+
+// Session tokens only. A socket ticket (below) is signed with the same key, so
+// it is refused here: it can never be used as a bearer token for the REST API.
 function verifyToken(token) {
-  return jwt.verify(token, getEnv().jwtSecret, { algorithms: ['HS256'] });
+  const payload = jwt.verify(token, getEnv().jwtSecret, { algorithms: ['HS256'] });
+  if (payload.typ) throw new Error('Not a session token');
+  return payload;
+}
+
+// The website's session lives in an httpOnly cookie that JavaScript cannot
+// read, and the realtime gateway never reads cookies. To open a chat socket the
+// page asks for a ticket: short-lived, bound to the session, usable once, and
+// accepted only by the socket handshake.
+function signSocketTicket(userId, sessionId) {
+  return jwt.sign(
+    { sub: String(userId), sid: String(sessionId), typ: SOCKET_TICKET_TYPE, jti: crypto.randomBytes(12).toString('hex') },
+    getEnv().jwtSecret,
+    { algorithm: 'HS256', expiresIn: SOCKET_TICKET_TTL_SECONDS }
+  );
+}
+
+const usedTickets = new Map(); // jti → expiry (ms)
+
+function verifySocketTicket(ticket) {
+  const payload = jwt.verify(ticket, getEnv().jwtSecret, { algorithms: ['HS256'] });
+  if (payload.typ !== SOCKET_TICKET_TYPE || !payload.jti) throw new Error('Not a socket ticket');
+  const now = Date.now();
+  for (const [jti, expiry] of usedTickets) if (expiry < now) usedTickets.delete(jti);
+  if (usedTickets.has(payload.jti)) throw new Error('Socket ticket already used');
+  usedTickets.set(payload.jti, payload.exp * 1000);
+  return payload;
 }
 
 // The CSRF token is an HMAC of the session id, so it is bound to one session
@@ -87,7 +118,10 @@ async function endAllSessions(userId, exceptSessionId) {
 }
 
 module.exports = {
+  SOCKET_TICKET_TTL_SECONDS,
   verifyToken,
+  signSocketTicket,
+  verifySocketTicket,
   csrfTokenFor,
   csrfTokenMatches,
   startSession,

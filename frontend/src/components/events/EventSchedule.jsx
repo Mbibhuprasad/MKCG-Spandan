@@ -276,7 +276,7 @@ export default function EventSchedule() {
                     description={
                       event.isPast
                         ? 'Nobody shared a travel plan for this event.'
-                        : 'Nobody has shared when they arrive and leave yet. Add yours so batchmates can plan to meet.'
+                        : 'Nobody has shared when they arrive and leave yet. Add yours so Friends can plan to meet.'
                     }
                   />
                 ) : (

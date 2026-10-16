@@ -3,6 +3,7 @@
 // service, feature APIs, profile model, utils) against the isolated test API.
 // Run with `npm run test:api` — see run.cjs.
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
 import path from "node:path";
 import {
   ApiError,
@@ -14,7 +15,7 @@ import {
 import { API_URL, isApiConfigured } from "@/services/config";
 import { createChatSocket, emitWithAck } from "@/services/socket";
 import { blogsApi } from "@/features/blogs/api";
-import { chatApi } from "@/features/chat/api";
+import { REACTIONS, chatApi, messagePreview } from "@/features/chat/api";
 import {
   commentsApi,
   likesApi,
@@ -28,6 +29,10 @@ import { memoriesApi } from "@/features/memories/api";
 import { notificationsApi } from "@/features/notifications/api";
 import { routeForLink } from "@/features/notifications/links";
 import { profileApi } from "@/features/profile/api";
+import { postersApi } from "@/features/posters/api";
+import * as posterModel from "@/features/posters/model";
+
+const POSTER_TEMPLATES = posterModel.TEMPLATES;
 import {
   placeServerErrors,
   sectionToForm,
@@ -950,6 +955,63 @@ await test("reactions: one per doctor, changed or removed, delivered live to the
     "VALIDATION_ERROR",
     400,
   );
+  // Every emoji the app offers is accepted (😊 was missing before).
+  for (const emoji of REACTIONS) {
+    const res = await as(bob, () => chatApi.react(direct.id, messageId, emoji));
+    assert.deepEqual(res.data.reactions, [{ emoji, userIds: [bob.id] }]);
+  }
+});
+await test("photos: uploaded to the conversation, sent, reacted to, downloaded in full and deleted for everyone", async () => {
+  const uploaded = await as(alice, () =>
+    chatApi.uploadImage(direct.id, { uri: IMAGE, mimeType: "image/png", fileName: "photo.png", type: "image" }),
+  );
+  assert.ok(uploaded.id && uploaded.previewUrl, "upload returns an id and a preview");
+  let incoming = nextEvent(sb, "message:new");
+  const clientId = newClientId();
+  const sent = await emitWithAck(sa, "message:send", {
+    conversationId: direct.id,
+    body: "Our class photo",
+    clientId,
+    mediaId: uploaded.id,
+  });
+  assert.equal(sent.message.type, "IMAGE");
+  assert.equal(sent.message.image.id, uploaded.id);
+  assert.equal((await incoming).message.id, sent.message.id);
+  assert.equal(messagePreview(sent.message), "📷 Our class photo");
+
+  // A retry with the same clientId (REST fallback) returns the same message.
+  const retried = await as(alice, () => chatApi.send(direct.id, "Our class photo", clientId, uploaded.id));
+  assert.equal(retried.data.id, sent.message.id);
+
+  const reacted = await as(bob, () => chatApi.react(direct.id, sent.message.id, "😊"));
+  assert.deepEqual(reacted.data.reactions, [{ emoji: "😊", userIds: [bob.id] }]);
+
+  // The original file streams with the bearer token only.
+  const url = chatApi.imageUrl(direct.id, sent.message.id);
+  const original = await fs.readFile(IMAGE);
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${bob.token}` } });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-disposition"), /mkcgspandan-chat-\d{8}-\d{6}\.png/);
+  assert.equal(Buffer.compare(Buffer.from(await res.arrayBuffer()), original), 0, "the downloaded file is the uploaded one");
+  assert.equal((await fetch(url)).status, 401);
+
+  // Bob may not delete Alice's photo; Alice deletes it over the socket.
+  await rejects(as(bob, () => chatApi.remove(direct.id, sent.message.id)), "NOT_MESSAGE_SENDER", 403);
+  incoming = nextEvent(sb, "message:deleted");
+  const deleted = await emitWithAck(sa, "message:delete", { conversationId: direct.id, messageId: sent.message.id });
+  assert.equal(deleted.message.deleted, true);
+  const live = await incoming;
+  assert.equal(live.messageId, sent.message.id);
+  assert.equal(live.message.image, null);
+  assert.equal(messagePreview(live.message), "This message was deleted");
+  const history = (await as(bob, () => chatApi.messages(direct.id))).data;
+  const shown = history.find((m) => m.id === sent.message.id);
+  assert.equal(shown.deleted, true);
+  assert.equal(shown.body, "");
+  assert.deepEqual(shown.reactions, []);
+  assert.equal((await fetch(url, { headers: { Authorization: `Bearer ${bob.token}` } })).status, 409);
+  // Deleting again is harmless.
+  assert.equal((await as(alice, () => chatApi.remove(direct.id, sent.message.id))).data.message.deleted, true);
 });
 let sc;
 await test("privacy: a third doctor cannot read, list, or send into the one-to-one conversation, and receives none of its messages", async () => {
@@ -1123,6 +1185,90 @@ await test("logging out closes that doctor’s live connection", async () => {
 });
 
 for (const socket of [sa, sb, sc]) if (socket) socket.disconnect();
+
+console.log("\nBatch Profile Poster Maker");
+await test("the app's poster model is a verbatim copy of the website's (fields, limits, templates, validation)", async () => {
+  const mobileModel = await fs.readFile(path.resolve(MOBILE_DIR, "features/posters/model.js"), "utf8");
+  const websiteModel = await fs.readFile(path.resolve(MOBILE_DIR, "../frontend/src/components/posters/model.js"), "utf8");
+  const start = mobileModel.indexOf("verbatim copy of frontend/src/components/posters/model.js ────────────────\n");
+  const end = mobileModel.indexOf("\n// ──────────────── App helpers");
+  assert.ok(start > 0 && end > start, "markers missing in features/posters/model.js");
+  const copy = mobileModel.slice(mobileModel.indexOf("\n", start) + 1, end);
+  assert.equal(copy.replace(/\r\n/g, "\n"), websiteModel.replace(/\r\n/g, "\n"));
+  assert.equal(POSTER_TEMPLATES.length, 6);
+});
+let posterDoc;
+await test("posters: a draft is created once, edited in place, and holds every field the website saves", async () => {
+  posterDoc = await newDoctor("Poster", { phone: `961${stamp}` });
+  const form = posterModel.applyPrefill(
+    posterModel.blankForm("medical-blue"),
+    posterModel.prefillFromProfile((await as(posterDoc, () => profileApi.me())).data),
+    ["basic", "professional", "contact", "photos"],
+  );
+  form.basic.displayName = "Dr Asha Rao";
+  form.messages.messageToFriends = "Thank you, friends 😊";
+  const created = await as(posterDoc, () => postersApi.create(posterModel.toPayload(form)));
+  assert.equal(created.data.status, "DRAFT");
+  assert.deepEqual(created.data.missing.sort(), ["basic.batchYear", "basic.college"]);
+  const id = created.data.id;
+  const edited = posterModel.fromPoster(created.data);
+  edited.basic.batchYear = "1998";
+  edited.basic.college = "MKCG Medical College";
+  edited.contact.email = { value: "asha@example.com", include: false };
+  const saved = await as(posterDoc, () => postersApi.update(id, posterModel.toPayload(edited, { status: "READY" })));
+  assert.equal(saved.data.id, id);
+  assert.equal(saved.data.status, "READY");
+  assert.equal(saved.data.messages.messageToFriends, "Thank you, friends 😊");
+  assert.deepEqual(saved.data.contact.email, { value: "asha@example.com", include: false });
+  const list = (await as(posterDoc, () => postersApi.list())).data;
+  assert.equal(list.filter((p) => p.id === id).length, 1, "no duplicate record");
+  // The saved poster round-trips through the app's form unchanged.
+  assert.equal(posterModel.payloadKey(posterModel.fromPoster(saved.data)), posterModel.payloadKey({ ...edited, status: "READY" }));
+});
+await test("posters: all six templates and their colours are accepted; switching keeps the content", async () => {
+  const poster = (await as(posterDoc, () => postersApi.list())).data[0];
+  for (const template of POSTER_TEMPLATES) {
+    for (const palette of template.palettes) {
+      const res = await as(posterDoc, () => postersApi.update(poster.id, { template: template.id, settings: { palette: palette.id } }));
+      assert.equal(res.data.template, template.id);
+      assert.equal(res.data.settings.palette, palette.id);
+      assert.equal(res.data.messages.messageToFriends, "Thank you, friends 😊");
+    }
+  }
+  await rejects(as(posterDoc, () => postersApi.update(poster.id, { template: "made-up" })), "VALIDATION_ERROR", 400);
+});
+await test("posters: photos upload privately, attach to the poster, and survive reopening", async () => {
+  const poster = (await as(posterDoc, () => postersApi.list())).data[0];
+  const uploaded = await as(posterDoc, () =>
+    postersApi.uploadPhoto({ uri: IMAGE, mimeType: "image/png", fileName: "family.png", type: "image" }),
+  );
+  await as(posterDoc, () => postersApi.update(poster.id, { photos: { portraitSource: "UPLOAD", portraitId: uploaded.id, familyId: null } }));
+  const reopened = (await as(posterDoc, () => postersApi.get(poster.id))).data;
+  assert.equal(reopened.photos.portraitSource, "UPLOAD");
+  assert.equal(reopened.photos.portrait.id, uploaded.id);
+  assert.ok(reopened.photos.portrait.url);
+  // Another doctor's upload cannot be attached.
+  const other = await newDoctor("PosterOther", { phone: `962${stamp}` });
+  const foreign = await as(other, () => postersApi.uploadPhoto({ uri: IMAGE, mimeType: "image/png", fileName: "x.png", type: "image" }));
+  await rejects(as(posterDoc, () => postersApi.update(poster.id, { photos: { familyId: foreign.id } })), "MEDIA_INVALID", 400);
+});
+await test("posters: export is authorised only for the owner's finished poster; others get 404; delete removes it", async () => {
+  const poster = (await as(posterDoc, () => postersApi.list())).data[0];
+  const authorised = await as(posterDoc, () => postersApi.authorizeExport(poster.id, "pdf"));
+  assert.equal(authorised.data.format, "pdf");
+  assert.equal(authorised.data.poster.id, poster.id);
+  assert.equal(authorised.data.poster.exportCount, 1);
+  const stranger = await newDoctor("PosterStranger", { phone: `963${stamp}` });
+  await rejects(as(stranger, () => postersApi.get(poster.id)), "NOT_FOUND", 404);
+  await rejects(as(stranger, () => postersApi.authorizeExport(poster.id, "png")), "NOT_FOUND", 404);
+  await rejects(as(stranger, () => postersApi.remove(poster.id)), "NOT_FOUND", 404);
+  // A draft cannot be exported.
+  const draft = await as(posterDoc, () => postersApi.create({ template: "classic-tribute" }));
+  await rejects(as(posterDoc, () => postersApi.authorizeExport(draft.data.id, "png")), "POSTER_NOT_READY", 409);
+  await as(posterDoc, () => postersApi.remove(poster.id));
+  await rejects(as(posterDoc, () => postersApi.get(poster.id)), "NOT_FOUND", 404);
+  await as(posterDoc, () => postersApi.remove(draft.data.id));
+});
 
 const failed = results.filter((r) => !r[0]);
 console.log(

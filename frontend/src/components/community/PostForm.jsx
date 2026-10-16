@@ -94,7 +94,7 @@ function PostFormFields({ initial }) {
               if (errors.body) setErrors((current) => ({ ...current, body: undefined }));
             }}
             error={errors.body}
-            placeholder="What would you like to share with your batchmates?"
+            placeholder="What would you like to share with your batchmateFriends?"
             hint="Plain text only. Never include patient-identifiable information."
             required
           />

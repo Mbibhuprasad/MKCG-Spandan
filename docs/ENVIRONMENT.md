@@ -102,9 +102,9 @@ a secure cookie.
 
 | Variable | Required | Default | Exposed to the browser | Purpose |
 | --- | --- | --- | --- | --- |
-| `BACKEND_URL` | Yes in production | `http://localhost:5000` | No | Where the Express API runs. Used by the `/api/v1/*` rewrite (`next.config.mjs`) and by server-side rendering of public pages (`src/lib/server-api.js`) |
-| `NEXT_PUBLIC_SITE_URL` | Yes in production | `http://localhost:3000` | Yes | Public address of the site: canonical URLs, sitemap, Open Graph |
-| `NEXT_PUBLIC_API_URL` | No | `/api/v1` | Yes | Leave unset to use the same-origin proxy. Set to an absolute URL only for the direct sub-domain mode |
+| `BACKEND_URL` | No | production: `https://mkcg-spandan.onrender.com`; `next dev`: the development default in `src/lib/api-config.mjs` | No | Origin of the Express API (`/api/v1` is appended; a trailing `/api/v1` or `/` is removed). Used by the `/api/v1/*` rewrite (`next.config.mjs`) and by server-side rendering of public pages (`src/lib/server-api.js`). Resolved in one place, `src/lib/api-config.mjs`; an invalid value fails the build, and a localhost value fails a Vercel build |
+| `NEXT_PUBLIC_SITE_URL` | Yes in production | Vercel production domain, else `http://localhost:3000` | Yes | Public address of the site: canonical URLs, sitemap, Open Graph |
+| `NEXT_PUBLIC_API_URL` | No | — | No (not read by browser code) | Alias of `BACKEND_URL`; `BACKEND_URL` wins when both are set. The browser always calls the same-origin `/api/v1` proxy |
 | `NEXT_PUBLIC_TIME_ZONE` | No | `Asia/Kolkata` | Yes | Time zone used to display dates consistently on server and client. Not listed in `.env.example` |
 | `NEXT_PUBLIC_ANDROID_APK_URL` | No | — | Yes | Full https:// address of the Android APK (or its download page) for the homepage "Download App" button (`site.androidApkUrl` in `src/lib/site.js`). Unset: the button shows "coming soon" and is not a link |
 

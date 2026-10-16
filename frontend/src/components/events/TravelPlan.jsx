@@ -255,7 +255,7 @@ export default function TravelPlanPanel({ event, onUpdated, className }) {
       ) : (
         <div className="mt-3 space-y-3">
           <p className="text-sm leading-relaxed text-fg-soft">
-            Let batchmates know where you are travelling from and when you arrive and leave, so you can plan to meet.
+            Let Friends know where you are travelling from and when you arrive and leave, so you can plan to meet.
           </p>
           <Button size="sm" icon={CalendarClock} onClick={startEditing}>
             Add my travel plan

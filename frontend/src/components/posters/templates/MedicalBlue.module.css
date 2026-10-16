@@ -1,0 +1,619 @@
+/* Template 6 — Medical Blue Professional. Clean white and clinical blue on the
+   fixed 1240 × 1754 poster canvas: header with a framed portrait, a batch
+   strip, a profile column and the doctor's own words. Text regions scale with
+   --fit (see ../fit.js). */
+
+.mb {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+/* ── Header ── */
+
+.mbHeader {
+  position: relative;
+  flex-shrink: 0;
+  height: 600px;
+  padding: 58px 72px 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(255, 255, 255, 0.9) 0, rgba(255, 255, 255, 0) 38%),
+    linear-gradient(180deg, var(--tint) 0%, #ffffff 100%);
+}
+
+.mbTopBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 16px;
+  background: linear-gradient(90deg, var(--deep), var(--main));
+}
+
+.mbPulseBg {
+  position: absolute;
+  right: -40px;
+  bottom: 0;
+  width: 760px;
+  height: 96px;
+  color: var(--main);
+  opacity: 0.12;
+}
+
+.mbKicker {
+  position: relative;
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--main);
+}
+
+.mbHero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 54px;
+  margin-top: 40px;
+  height: 420px;
+}
+
+.mbHeroRight {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.mbHeroCenter {
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+  text-align: center;
+}
+
+.mbPortrait {
+  position: relative;
+  flex-shrink: 0;
+  width: 340px;
+  height: 380px;
+  overflow: hidden;
+  border-radius: 44px;
+  border: 10px solid #ffffff;
+  box-shadow:
+    0 0 0 4px var(--main),
+    0 24px 48px rgba(15, 36, 64, 0.18);
+}
+
+.mbHeroCenter .mbPortrait {
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+}
+
+.mbPortrait > span {
+  background: linear-gradient(160deg, var(--main), var(--deep));
+  color: #ffffff;
+  font-size: 140px;
+}
+
+.mbHeroCenter .mbPortrait > span {
+  font-size: 92px;
+}
+
+.mbIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.mbHeroRight .mbIdentity {
+  align-items: flex-end;
+}
+
+.mbHeroCenter .mbIdentity {
+  flex: 0 0 auto;
+  align-items: center;
+  max-width: 1000px;
+  gap: 10px;
+}
+
+.mbNameBox {
+  max-height: 210px;
+  overflow: hidden;
+}
+
+.mbHeroCenter .mbNameBox {
+  max-height: 120px;
+}
+
+.mbName {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: calc(88px * var(--fit, 1));
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  color: var(--deep);
+  overflow-wrap: anywhere;
+}
+
+.mbHeroCenter .mbName {
+  font-size: calc(72px * var(--fit, 1));
+}
+
+.mbTitle {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.25;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.mbSpec {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 12px;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 10px 24px 10px 18px;
+  background: var(--main);
+  color: #ffffff;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.mbHeroRight .mbSpec {
+  align-self: flex-end;
+}
+
+.mbHeroCenter .mbSpec {
+  align-self: center;
+}
+
+.mbSpec span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.mbSpecIcon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.mbRole {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 25px;
+  line-height: 1.35;
+  color: #4a5b73;
+  overflow-wrap: anywhere;
+}
+
+/* ── Batch strip ── */
+
+.mbStrip {
+  flex-shrink: 0;
+  height: 128px;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--deep) 0%, var(--main) 100%);
+  color: #ffffff;
+}
+
+.mbStripInner {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 28px;
+  row-gap: 4px;
+  padding: 30px 72px 0;
+}
+
+.mbBatch {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(26px * var(--fit, 1));
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+.mbCollege {
+  min-width: 0;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(40px * var(--fit, 1));
+  line-height: 1.15;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+/* ── Content ── */
+
+.mbContent {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 372px minmax(0, 1fr);
+  gap: 44px;
+  padding: 46px 72px 26px;
+}
+
+.mbContentSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mbAside {
+  display: flex;
+  flex-direction: column;
+  gap: calc(20px * var(--fit, 1));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mbBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(4px * var(--fit, 1));
+  border-radius: 28px;
+  padding: calc(22px * var(--fit, 1)) 22px;
+  background: linear-gradient(160deg, var(--main), var(--deep));
+  color: #ffffff;
+  text-align: center;
+}
+
+.mbBadgeIcon {
+  width: calc(44px * var(--fit, 1));
+  height: calc(44px * var(--fit, 1));
+  opacity: 0.9;
+}
+
+.mbBadgeYears {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: calc(76px * var(--fit, 1));
+  line-height: 1;
+}
+
+.mbBadgeYears span {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: calc(22px * var(--fit, 1));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mbBadgeTitle {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(22px * var(--fit, 1));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.mbBadgeMeta {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(20px * var(--fit, 1));
+  opacity: 0.85;
+}
+
+.mbBadgeTagline {
+  margin-top: 4px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(24px * var(--fit, 1));
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.mbCard {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--fit, 1));
+  border-radius: 22px;
+  border: 2px solid var(--line);
+  padding: calc(20px * var(--fit, 1)) 24px;
+  background: #ffffff;
+}
+
+.mbContactCard {
+  margin-top: auto;
+  background: var(--tint);
+  border-color: transparent;
+}
+
+.mbCardLabel {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(16px * var(--fit, 1));
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--main);
+}
+
+.mbCardText {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(23px * var(--fit, 1));
+  line-height: 1.45;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.mbFacts {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--fit, 1));
+}
+
+.mbFact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(22px * var(--fit, 1));
+  color: var(--ink);
+}
+
+.mbFact svg {
+  width: 22px;
+  height: 22px;
+  color: var(--main);
+}
+
+.mbContacts {
+  display: flex;
+  flex-direction: column;
+  gap: calc(12px * var(--fit, 1));
+  max-height: 250px;
+  overflow: hidden;
+}
+
+.mbContact {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(21px * var(--fit, 1));
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.mbContact svg {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--main);
+}
+
+.mbMain {
+  display: flex;
+  flex-direction: column;
+  gap: calc(28px * var(--fit, 1));
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mbBlock {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--fit, 1));
+}
+
+.mbLabel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: calc(17px * var(--fit, 1));
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--main);
+}
+
+.mbLabel::after {
+  content: '';
+  flex: 1 1 0;
+  height: 2px;
+  background: var(--line);
+}
+
+.mbLead {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: calc(27px * var(--fit, 1));
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.mbText {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: calc(24px * var(--fit, 1));
+  line-height: 1.5;
+  color: #2b3b52;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.mbLists {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+}
+
+.mbListsSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mbList {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--fit, 1));
+}
+
+.mbList li {
+  position: relative;
+  padding-left: 26px;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: calc(22px * var(--fit, 1));
+  line-height: 1.42;
+  color: #2b3b52;
+  overflow-wrap: anywhere;
+}
+
+.mbList li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: calc(12px * var(--fit, 1));
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--main);
+}
+
+.mbQuote {
+  display: flex;
+  gap: 18px;
+  border-radius: 22px;
+  border-left: 8px solid var(--main);
+  padding: calc(22px * var(--fit, 1)) 28px;
+  background: var(--tint);
+}
+
+.mbQuoteMark {
+  flex-shrink: 0;
+  width: calc(40px * var(--fit, 1));
+  height: calc(40px * var(--fit, 1));
+  color: var(--main);
+}
+
+.mbQuoteText {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: calc(32px * var(--fit, 1));
+  line-height: 1.35;
+  color: var(--deep);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.mbQuoteBy {
+  margin-top: 8px;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: calc(20px * var(--fit, 1));
+  color: var(--main);
+}
+
+.mbGreeting {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(32px * var(--fit, 1));
+  line-height: 1.25;
+  color: var(--deep);
+  overflow-wrap: anywhere;
+}
+
+.mbClosing {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--fit, 1));
+}
+
+.mbSignature {
+  font-family: var(--script);
+  font-size: calc(60px * var(--fit, 1));
+  line-height: 1.1;
+  color: var(--deep);
+  overflow-wrap: anywhere;
+}
+
+/* ── Photos and footer ── */
+
+.mbGallery {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  height: 288px;
+  padding: 0 72px;
+}
+
+.mbPhoto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 340px;
+}
+
+.mbPhotoFrame {
+  height: 236px;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 6px solid #ffffff;
+  box-shadow:
+    0 0 0 2px var(--line),
+    0 12px 26px rgba(15, 36, 64, 0.14);
+}
+
+.mbPhoto figcaption {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--main);
+}
+
+.mbFooter {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 84px;
+  margin: 0 72px;
+  border-top: 2px solid var(--line);
+}
+
+.mbBrand {
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.32em;
+  color: var(--main);
+}
+
+.mbPulse {
+  width: 220px;
+  height: 36px;
+  color: var(--main);
+}

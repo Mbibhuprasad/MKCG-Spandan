@@ -4,7 +4,16 @@
 //  • credentials: the session is an httpOnly cookie, so JavaScript never sees it.
 //  • CSRF: the API returns a session-bound token from /auth/me, /auth/login and
 //    /auth/register. It is kept in memory only and sent on every change request.
-const BASE = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/+$/, '');
+//  • address: always this website's own /api/v1, which Next.js proxies to the
+//    API resolved in api-config.mjs (BACKEND_URL / production and development
+//    defaults). Same-origin requests keep the session cookie first-party.
+import { API_PREFIX } from './api-config.mjs';
+
+const BASE = API_PREFIX;
+
+// The hosted API sleeps when idle (Render free tier) and can take up to about a
+// minute to wake, so requests wait that long before reporting a timeout.
+const REQUEST_TIMEOUT_MS = 70000;
 
 let csrfToken = '';
 let unauthorizedHandler = null;
@@ -40,6 +49,14 @@ function buildUrl(path, query) {
 
 function toApiError(status, json) {
   const error = json && json.error;
+  if (error && error.code === 'ORIGIN_NOT_ALLOWED') {
+    // The API's FRONTEND_URL does not list this website's address.
+    return new ApiError(
+      status,
+      error.code,
+      'The server does not accept requests from this website address yet. Please let the site administrator know (the API’s FRONTEND_URL setting).'
+    );
+  }
   if (error) return new ApiError(status, error.code || 'ERROR', error.message || 'Something went wrong.', error.details);
   if (status >= 500 || status === 0) {
     return new ApiError(status, 'SERVER_UNAVAILABLE', 'The server is not reachable right now. Please try again in a moment.');
@@ -54,7 +71,19 @@ function notifyIfSessionEnded(error) {
 
 async function request(method, path, { query, body, signal, silentAuth = false } = {}) {
   const headers = { Accept: 'application/json' };
-  const options = { method, headers, credentials: 'include', cache: 'no-store', signal };
+  // The caller's signal still cancels the request; the timer only adds a deadline.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+  const cancel = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener('abort', cancel, { once: true });
+  }
+  const options = { method, headers, credentials: 'include', cache: 'no-store', signal: controller.signal };
 
   if (method !== 'GET') {
     if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
@@ -65,18 +94,25 @@ async function request(method, path, { query, body, signal, silentAuth = false }
   }
 
   let response;
-  try {
-    response = await fetch(buildUrl(path, query), options);
-  } catch (err) {
-    if (err && err.name === 'AbortError') throw err;
-    throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection and try again.');
-  }
-
   let json = null;
   try {
-    json = await response.json();
-  } catch {
-    json = null;
+    try {
+      response = await fetch(buildUrl(path, query), options);
+    } catch (err) {
+      if (timedOut) {
+        throw new ApiError(0, 'TIMEOUT', 'The server is taking too long to respond — it may be starting up. Please try again in a moment.');
+      }
+      if (err && err.name === 'AbortError') throw err;
+      throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection and try again.');
+    }
+    try {
+      json = await response.json();
+    } catch {
+      json = null;
+    }
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', cancel);
   }
 
   if (!response.ok || !json || json.success !== true) {
@@ -98,14 +134,19 @@ export const api = {
 // Uploads one file to the API (which validates it and stores it in Cloudinary).
 // XMLHttpRequest is used because fetch cannot report upload progress.
 // Resolves with the media object: { id, resourceType, url, thumbUrl, … }.
-export function uploadMedia(purpose, file, { onProgress, signal } = {}) {
+export function uploadMedia(purpose, file, options) {
+  return uploadFile('/media', { purpose }, file, options);
+}
+
+// Multipart upload of one file to `path`; `fields` are sent before the file.
+export function uploadFile(path, fields, file, { onProgress, signal } = {}) {
   return new Promise((resolve, reject) => {
     const form = new FormData();
-    form.append('purpose', purpose); // fields must precede the file
+    for (const [key, value] of Object.entries(fields || {})) form.append(key, value); // fields must precede the file
     form.append('file', file);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', buildUrl('/media'));
+    xhr.open('POST', buildUrl(path));
     xhr.withCredentials = true;
     xhr.responseType = 'json';
     xhr.setRequestHeader('Accept', 'application/json');
@@ -123,6 +164,8 @@ export function uploadMedia(purpose, file, { onProgress, signal } = {}) {
       notifyIfSessionEnded(error);
       return reject(error);
     };
+    xhr.timeout = 5 * 60 * 1000;
+    xhr.ontimeout = () => reject(new ApiError(0, 'TIMEOUT', 'The upload took too long. Please try again on a faster connection.'));
     xhr.onerror = () => reject(new ApiError(0, 'NETWORK_ERROR', 'The upload was interrupted. Please try again.'));
     xhr.onabort = () => reject(new ApiError(0, 'ABORTED', 'The upload was cancelled.'));
     if (signal) signal.addEventListener('abort', () => xhr.abort(), { once: true });

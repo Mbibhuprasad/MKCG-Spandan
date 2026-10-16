@@ -11,7 +11,8 @@
 const { Server } = require('socket.io');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, authenticateSession } = require('../middleware/auth');
+const { verifySocketTicket } = require('../services/session.service');
 const { formatIssues } = require('../middleware/validate');
 const v = require('../validators/chat.validators');
 const chat = require('../services/chat.service');
@@ -37,6 +38,36 @@ function parse(schema, payload) {
   return result.data;
 }
 
+// The session behind a socket: from the bearer token (mobile app) or from the
+// one-time ticket the website exchanged at connection time.
+function reauthenticate(socket) {
+  return socket.data.token
+    ? authenticateToken(socket.data.token)
+    : authenticateSession(socket.data.userId, socket.data.sessionId);
+}
+
+// Handshake credentials: `auth.token` (a session token) or `auth.ticket` (a
+// one-time socket ticket from POST /chat/socket-ticket). Cookies are never read.
+async function authenticateHandshake(auth) {
+  const token = auth && auth.token;
+  if (typeof token === 'string' && token) {
+    const result = await authenticateToken(token);
+    return { ...result, token };
+  }
+  const ticket = auth && auth.ticket;
+  if (typeof ticket === 'string' && ticket) {
+    let payload;
+    try {
+      payload = verifySocketTicket(ticket);
+    } catch {
+      throw ApiError.unauthorized('Your session has expired. Please sign in again.', 'SESSION_EXPIRED');
+    }
+    const result = await authenticateSession(payload.sub, payload.sid);
+    return { ...result, token: null };
+  }
+  throw ApiError.unauthorized();
+}
+
 // Wraps an event handler: only a callback-carrying, well-formed event from a
 // still-valid session is processed; anything else is answered with an error or ignored.
 function handle(socket, schema, action) {
@@ -45,7 +76,7 @@ function handle(socket, schema, action) {
     try {
       const data = parse(schema, payload);
       // The session may have been ended since the socket connected.
-      const { user } = await authenticateToken(socket.data.token);
+      const { user } = await reauthenticate(socket);
       reply({ ok: true, ...(await action(user, data)) });
     } catch (err) {
       reply(failure(err));
@@ -66,9 +97,7 @@ function attachRealtime(httpServer) {
 
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth && socket.handshake.auth.token;
-      if (typeof token !== 'string' || !token) throw ApiError.unauthorized();
-      const { user, session } = await authenticateToken(token);
+      const { user, session, token } = await authenticateHandshake(socket.handshake.auth);
       socket.data.token = token;
       socket.data.userId = String(user._id);
       socket.data.sessionId = String(session._id);
@@ -101,6 +130,10 @@ function attachRealtime(httpServer) {
       'message:react',
       handle(socket, v.socketReact, (user, data) => chat.reactToMessage(user, data))
     );
+    socket.on(
+      'message:delete',
+      handle(socket, v.socketDelete, (user, data) => chat.deleteMessage(user, data))
+    );
 
     try {
       // Keep the number of simultaneous devices per account bounded.
@@ -108,7 +141,7 @@ function attachRealtime(httpServer) {
       if (existing.length >= MAX_SOCKETS_PER_USER) existing[0].disconnect(true);
 
       socket.join([hub.rooms.user(userId), hub.rooms.session(sessionId)]);
-      const { user } = await authenticateToken(socket.data.token);
+      const { user } = await reauthenticate(socket);
       await chat.ensureCommunityMembership(user);
       const conversationIds = await chat.conversationIdsOf(user._id);
       socket.join(conversationIds.map((id) => hub.rooms.conversation(id)));

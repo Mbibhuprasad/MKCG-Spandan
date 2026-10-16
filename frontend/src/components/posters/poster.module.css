@@ -1,0 +1,1281 @@
+/* Batch poster templates. The poster is a fixed 1240 × 1754 px canvas (A4
+   proportions) that never follows the site theme: it is an artwork, exported
+   as it looks. Text that must fit a region scales with --fit, which
+   PosterCanvas lowers step by step until nothing overflows (see fit.js). */
+
+.poster {
+  --serif: var(--pf-serif), 'Cormorant Garamond', Georgia, 'Nirmala UI', 'Noto Serif', serif;
+  --script: var(--pf-script), 'Great Vibes', 'Segoe Script', cursive;
+  --caps: var(--pf-caps), 'Cinzel', Georgia, serif;
+  --hand: var(--pf-hand), 'Caveat', 'Segoe Print', 'Nirmala UI', cursive;
+  --playfair: var(--pf-playfair), 'Playfair Display', Georgia, 'Nirmala UI', 'Noto Serif', serif;
+  --display: var(--font-heading), Georgia, 'Nirmala UI', 'Noto Serif', serif;
+  --sans: var(--font-body), system-ui, -apple-system, 'Segoe UI', 'Nirmala UI', 'Noto Sans', sans-serif;
+  --gold: #c9a24c;
+  --gold-deep: #a07a2c;
+  --gold-gradient: linear-gradient(135deg, #b8862b 0%, #f3d27a 22%, #a9741f 45%, #f6dd94 68%, #b8862b 100%);
+  position: relative;
+  width: 1240px;
+  height: 1754px;
+  overflow: hidden;
+  font-family: var(--sans);
+  line-height: 1.35;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  font-kerning: normal;
+}
+
+.poster *,
+.poster *::before,
+.poster *::after {
+  box-sizing: border-box;
+}
+
+/* Element resets with zero class weight (:where), so a template's own class
+   (a padded quote card, a polaroid frame) always wins over them. */
+:where(.poster) :where(p, h2, h3, figure, blockquote, ul, ol) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(.poster) :where(ul, ol) {
+  list-style: none;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+.monogram {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.placeholder {
+  opacity: 0.35;
+}
+
+.factIcon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.contactIcon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.contactText {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* ════════════════════ Template 1 — Classic Personal Tribute ═══════════════════ */
+
+.ct {
+  position: absolute;
+  inset: 0;
+  background: #fbfaf5;
+  color: var(--ink);
+}
+
+.ctWash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 58% 34% at 6% 4%, rgb(var(--wash1) / 0.42), transparent 70%),
+    radial-gradient(ellipse 44% 30% at 96% 8%, rgb(var(--wash2) / 0.5), transparent 70%),
+    radial-gradient(ellipse 54% 28% at 92% 96%, rgb(var(--wash1) / 0.38), transparent 70%),
+    radial-gradient(ellipse 48% 30% at 2% 92%, rgb(var(--wash2) / 0.42), transparent 72%),
+    radial-gradient(ellipse 40% 26% at 50% 48%, rgb(var(--wash3) / 0.06), transparent 70%),
+    linear-gradient(180deg, #fdfcf8 0%, #f8f6ef 100%);
+}
+
+.ctBlooms {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ctFrameOuter,
+.ctFrameInner {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Gold frames are drawn as four gradient bars (border-image does not survive
+   the export to an image). */
+.ctFrameOuter {
+  inset: 30px;
+  --bar: 5px;
+}
+
+.ctFrameInner {
+  inset: 46px;
+  --bar: 1.5px;
+}
+
+.goldBar {
+  position: absolute;
+  background: var(--gold-gradient);
+}
+
+.goldTop,
+.goldBottom {
+  left: 0;
+  right: 0;
+  height: var(--bar);
+}
+
+.goldTop {
+  top: 0;
+}
+
+.goldBottom {
+  bottom: 0;
+}
+
+.goldLeft,
+.goldRight {
+  top: 0;
+  bottom: 0;
+  width: var(--bar);
+  background: linear-gradient(180deg, #b8862b 0%, #f3d27a 22%, #a9741f 45%, #f6dd94 68%, #b8862b 100%);
+}
+
+.goldLeft {
+  left: 0;
+}
+
+.goldRight {
+  right: 0;
+}
+
+.ctCorner {
+  position: absolute;
+  width: 168px;
+  height: 168px;
+  color: var(--gold);
+}
+
+.cornerTL {
+  top: 38px;
+  left: 38px;
+}
+
+.cornerTR {
+  top: 38px;
+  right: 38px;
+  transform: scaleX(-1);
+}
+
+.cornerBL {
+  bottom: 38px;
+  left: 38px;
+  transform: scaleY(-1);
+}
+
+.cornerBR {
+  bottom: 38px;
+  right: 38px;
+  transform: scale(-1, -1);
+}
+
+.ctArtCap,
+.ctArtBook,
+.ctArtSteth {
+  position: absolute;
+  color: var(--accent);
+  opacity: 0.1;
+}
+
+.ctArtCap {
+  top: 210px;
+  left: 92px;
+  width: 150px;
+}
+
+.ctArtBook {
+  top: 214px;
+  right: 92px;
+  width: 140px;
+}
+
+.ctArtSteth {
+  right: 120px;
+  bottom: 150px;
+  width: 190px;
+  opacity: 0.08;
+}
+
+.ctContent {
+  position: absolute;
+  inset: 96px 104px 78px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ctHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding-inline: 120px;
+}
+
+.ctCollegeBox {
+  max-height: 96px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.ctCollege {
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: calc(36px * var(--fit, 1));
+  line-height: 1.25;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.ctBatchRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ctBatch,
+.ctRibbon {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 7px 26px;
+  font-family: var(--caps);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ctBatch {
+  background: var(--ink);
+  color: #fdf6e3;
+  box-shadow: inset 0 0 0 2px #e9c979;
+}
+
+.ctRibbon {
+  background: var(--soft);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--gold);
+}
+
+.ctDivider {
+  width: 320px;
+  height: 24px;
+  color: var(--gold);
+}
+
+/* Hero: portrait beside (or above) the name. */
+.ctHero {
+  display: grid;
+  align-items: center;
+  gap: 48px;
+}
+
+.ctHeroLeft {
+  grid-template-columns: 360px minmax(0, 1fr);
+}
+
+.ctHeroRight {
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.ctHeroRight .ctPortrait {
+  order: 2;
+}
+
+.ctHeroRight .ctIdentity {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.ctHeroRight .ctFacts {
+  justify-content: flex-end;
+}
+
+.ctHeroCenter {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 16px;
+}
+
+.ctHeroCenter .ctPortrait {
+  width: 240px;
+  height: 240px;
+}
+
+.ctHeroCenter .ctPortrait > .monogram {
+  font-size: 86px;
+}
+
+.ctHeroCenter .ctIdentity {
+  text-align: center;
+  align-items: center;
+}
+
+.ctHeroCenter .ctFacts {
+  justify-content: center;
+}
+
+.ctHeroCenter .ctNameBox {
+  max-height: 160px;
+}
+
+.ctPortrait {
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  padding: 9px;
+  background: var(--gold-gradient);
+  box-shadow: 0 18px 40px -18px rgb(var(--wash3) / 0.6);
+}
+
+.ctPortrait > img,
+.ctPortrait > .monogram {
+  border-radius: 50%;
+  border: 7px solid #fffdf7;
+}
+
+.ctPortrait > .monogram {
+  background: linear-gradient(150deg, var(--soft), rgb(var(--wash2) / 0.9));
+  color: var(--ink);
+  font-size: 120px;
+}
+
+.ctIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ctNameBox {
+  width: 100%;
+  max-height: 196px;
+  overflow: hidden;
+}
+
+.ctName {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: calc(84px * var(--fit, 1));
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ctTitle {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 34px;
+  line-height: 1.2;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.ctSpec {
+  margin-top: 6px;
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 25px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.ctRole {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.3;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ctQual {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 27px;
+  line-height: 1.25;
+  color: var(--ink);
+  opacity: 0.85;
+  overflow-wrap: anywhere;
+}
+
+.ctFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 10px;
+}
+
+.ctFact {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 999px;
+  padding: 7px 18px 7px 14px;
+  background: rgb(255 255 255 / 0.7);
+  box-shadow: inset 0 0 0 1.5px rgb(201 162 76 / 0.7);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 21px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ctFact .factIcon {
+  color: var(--gold-deep);
+  width: 22px;
+  height: 22px;
+}
+
+/* Body: the doctor's own words. */
+.ctBody {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: calc(18px * var(--fit, 1));
+}
+
+.ctGreeting {
+  font-family: var(--script);
+  font-size: calc(64px * var(--fit, 1));
+  line-height: 1.15;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.ctColumns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  gap: calc(40px * var(--fit, 1));
+  align-items: start;
+}
+
+.ctSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ctMain,
+.ctAside {
+  display: flex;
+  flex-direction: column;
+  gap: calc(20px * var(--fit, 1));
+  min-width: 0;
+}
+
+.ctBlock,
+.ctCard {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--fit, 1));
+}
+
+.ctCard {
+  border-radius: 18px;
+  padding: 14px 20px;
+  background: rgb(255 255 255 / 0.72);
+  box-shadow: inset 0 0 0 1.5px rgb(201 162 76 / 0.55);
+}
+
+.ctLabel {
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: calc(18px * var(--fit, 1));
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.ctText {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: calc(29px * var(--fit, 1));
+  line-height: 1.38;
+  color: #1d2433;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.ctList {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--fit, 1));
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: calc(26px * var(--fit, 1));
+  line-height: 1.3;
+  color: #1d2433;
+  overflow-wrap: anywhere;
+}
+
+.ctList li {
+  position: relative;
+  padding-left: 22px;
+}
+
+.ctList li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  background: var(--gold);
+}
+
+.ctQuote {
+  position: relative;
+  border-radius: 20px;
+  padding: 18px 22px 16px;
+  background: linear-gradient(160deg, var(--ink), var(--accent));
+  color: #fdf8ea;
+  box-shadow: 0 16px 40px -22px rgb(var(--wash3) / 0.9);
+}
+
+.ctQuoteMark {
+  width: 30px;
+  height: 30px;
+  color: #f0d080;
+}
+
+.ctQuoteText {
+  margin-top: 6px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(31px * var(--fit, 1));
+  line-height: 1.32;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.ctQuoteBy {
+  margin-top: 10px;
+  font-family: var(--caps);
+  font-size: calc(17px * var(--fit, 1));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f0d080;
+  overflow-wrap: anywhere;
+}
+
+.ctClosing {
+  margin-top: auto;
+  align-self: flex-end;
+  max-width: 78%;
+  text-align: right;
+}
+
+.ctSignature {
+  font-family: var(--script);
+  font-size: calc(58px * var(--fit, 1));
+  line-height: 1.2;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Photo band */
+.ctGallery {
+  display: flex;
+  justify-content: center;
+  gap: 44px;
+  height: 252px;
+  flex-shrink: 0;
+  padding-top: 6px;
+}
+
+.ctPolaroid {
+  display: flex;
+  flex-direction: column;
+  width: 262px;
+  height: 240px;
+  padding: 11px 11px 0;
+  background: #ffffff;
+  box-shadow: 0 14px 30px -16px rgb(15 23 42 / 0.55), 0 0 0 1px rgb(201 162 76 / 0.4);
+}
+
+.ctPolaroid > img {
+  height: 180px;
+  flex-shrink: 0;
+}
+
+.ctPolaroid figcaption {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--script);
+  font-size: 34px;
+  color: var(--ink);
+}
+
+.tilt0 {
+  transform: rotate(-2.2deg);
+}
+
+.tilt1 {
+  transform: rotate(1.6deg) translateY(6px);
+}
+
+.tilt2 {
+  transform: rotate(-1deg);
+}
+
+.ctFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ctPulse {
+  width: 300px;
+  height: 28px;
+  color: var(--gold);
+}
+
+.ctContacts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(10px * var(--fit, 1)) calc(30px * var(--fit, 1));
+  max-height: 104px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.ctContact {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(23px * var(--fit, 1));
+  color: var(--ink);
+}
+
+.ctContact .contactIcon {
+  color: var(--gold-deep);
+}
+
+.ctBrand {
+  font-family: var(--caps);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: var(--gold-deep);
+  opacity: 0.85;
+}
+
+/* ═════════════════ Template 2 — Silver Jubilee / Batch Celebration ═════════════════ */
+
+.sj {
+  position: absolute;
+  inset: 0;
+  color: #ffffff;
+  background: linear-gradient(165deg, var(--bg2) 0%, var(--bg1) 48%, var(--bg3) 100%);
+}
+
+.sjGlow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 26% at 50% 10%, rgb(var(--glow) / 0.28), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 100% 60%, rgb(var(--glow) / 0.1), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 0% 75%, rgb(var(--glow) / 0.1), transparent 70%),
+    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.018) 0 2px, transparent 2px 46px);
+}
+
+.sjSparkle {
+  position: absolute;
+  color: var(--metal);
+  transform: translate(-50%, -50%);
+}
+
+.sjFacade {
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  width: 980px;
+  transform: translateX(-50%);
+  color: var(--metal);
+  opacity: 0.07;
+}
+
+.sjFrame,
+.sjFrameInner {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 34px;
+}
+
+.sjFrame {
+  inset: 28px;
+  border: 3px solid var(--metal);
+  opacity: 0.75;
+}
+
+.sjFrameInner {
+  inset: 42px;
+  border: 1px solid var(--metal-deep);
+  border-radius: 26px;
+  opacity: 0.7;
+}
+
+.sjContent {
+  position: absolute;
+  inset: 84px 92px 70px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.sjTop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.sjCollegeBox {
+  width: 100%;
+  max-height: 100px;
+  overflow: hidden;
+}
+
+.sjCollege {
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: calc(38px * var(--fit, 1));
+  line-height: 1.25;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--metal);
+  text-shadow: 0 2px 14px rgb(0 0 0 / 0.35);
+  overflow-wrap: anywhere;
+}
+
+.sjBatch {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 24px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sjRule {
+  display: block;
+  width: 90px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--metal));
+}
+
+.sjRule:last-child {
+  background: linear-gradient(90deg, var(--metal), transparent);
+}
+
+.sjCelebration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.sjBadge {
+  position: relative;
+  width: 270px;
+  height: 270px;
+  flex-shrink: 0;
+}
+
+.sjLaurel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--metal);
+}
+
+.sjBadgeInner {
+  position: absolute;
+  inset: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0.04) 70%);
+  box-shadow: inset 0 0 0 2px var(--metal), 0 0 40px rgb(var(--glow) / 0.25);
+}
+
+.sjYears {
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: 96px;
+  line-height: 0.95;
+  color: var(--metal);
+  text-shadow: 0 3px 0 var(--metal-deep), 0 6px 22px rgb(0 0 0 / 0.45);
+}
+
+.sjYearsLabel {
+  margin-top: 4px;
+  font-family: var(--caps);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0.42em;
+}
+
+.sjBadgeCap {
+  width: 92px;
+  color: var(--metal);
+}
+
+.sjCelebrationText {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 560px;
+}
+
+.sjCelebrationTitle {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 62px;
+  line-height: 1.05;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.sjTagline {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* Hero card */
+.sjHero {
+  display: grid;
+  align-items: center;
+  gap: 40px;
+  border-radius: 30px;
+  padding: 32px 38px;
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03));
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.22), 0 24px 60px -30px rgb(0 0 0 / 0.7);
+}
+
+.sjHeroLeft {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.sjHeroRight {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+.sjHeroRight .sjPortrait {
+  order: 2;
+}
+
+.sjHeroRight .sjIdentity {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.sjHeroRight .sjFacts {
+  justify-content: flex-end;
+}
+
+.sjHeroCenter {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 20px;
+}
+
+.sjHeroCenter .sjPortrait {
+  width: 260px;
+  height: 260px;
+}
+
+.sjHeroCenter .sjIdentity {
+  align-items: center;
+  text-align: center;
+}
+
+.sjHeroCenter .sjFacts {
+  justify-content: center;
+}
+
+.sjHeroCenter .sjNameBox {
+  max-height: 150px;
+}
+
+.sjPortrait {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  padding: 8px;
+  background: linear-gradient(140deg, var(--metal) 0%, var(--metal-deep) 40%, var(--metal) 60%, var(--metal-deep) 100%);
+  box-shadow: 0 0 0 6px rgb(255 255 255 / 0.06), 0 20px 50px -18px rgb(0 0 0 / 0.8);
+}
+
+.sjPortrait > img,
+.sjPortrait > .monogram {
+  border-radius: 50%;
+  border: 6px solid var(--bg1);
+}
+
+.sjPortrait > .monogram {
+  background: linear-gradient(150deg, var(--bg2), var(--bg3));
+  color: var(--metal);
+  font-size: 104px;
+}
+
+.sjIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sjNameBox {
+  width: 100%;
+  max-height: 176px;
+  overflow: hidden;
+}
+
+.sjName {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: calc(76px * var(--fit, 1));
+  line-height: 1.08;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.sjTitle {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 32px;
+  color: var(--metal);
+  overflow-wrap: anywhere;
+}
+
+.sjSpec {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 27px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.sjRole {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.3;
+  color: rgb(255 255 255 / 0.92);
+  overflow-wrap: anywhere;
+}
+
+.sjQual {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--metal);
+  overflow-wrap: anywhere;
+}
+
+.sjFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-top: 8px;
+}
+
+.sjFact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 6px 16px 6px 12px;
+  background: rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.28);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 20px;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.sjFact .factIcon {
+  width: 21px;
+  height: 21px;
+  color: var(--accent);
+}
+
+/* Body */
+.sjBody {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 34px;
+}
+
+.sjBodyPhotos {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.sjMain {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: calc(18px * var(--fit, 1));
+}
+
+.sjGreeting {
+  font-family: var(--script);
+  font-size: calc(62px * var(--fit, 1));
+  line-height: 1.15;
+  color: var(--metal);
+  overflow-wrap: anywhere;
+}
+
+.sjBlock {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--fit, 1));
+}
+
+.sjLabel {
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: calc(18px * var(--fit, 1));
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sjText {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: calc(25px * var(--fit, 1));
+  line-height: 1.48;
+  color: rgb(255 255 255 / 0.93);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.sjList {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--fit, 1));
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: calc(23px * var(--fit, 1));
+  line-height: 1.4;
+  color: rgb(255 255 255 / 0.93);
+  overflow-wrap: anywhere;
+}
+
+.sjList li {
+  position: relative;
+  padding-left: 24px;
+}
+
+.sjList li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--metal);
+}
+
+.sjQuote {
+  border-left: 4px solid var(--metal);
+  padding: 6px 0 6px 26px;
+}
+
+.sjQuoteMark {
+  width: 36px;
+  height: 36px;
+  color: var(--metal);
+}
+
+.sjQuoteText {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: calc(32px * var(--fit, 1));
+  line-height: 1.3;
+  color: #ffffff;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.sjQuoteBy {
+  margin-top: 8px;
+  font-family: var(--caps);
+  font-size: calc(17px * var(--fit, 1));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.sjClosing {
+  margin-top: auto;
+  padding-top: 4px;
+  text-align: right;
+}
+
+.sjSignature {
+  font-family: var(--script);
+  font-size: calc(56px * var(--fit, 1));
+  line-height: 1.2;
+  color: var(--metal);
+  overflow-wrap: anywhere;
+}
+
+.sjPhotos {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 0;
+}
+
+.sjPhotoFrame {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 380px;
+  border-radius: 20px;
+  padding: 8px;
+  background: linear-gradient(140deg, var(--metal), var(--metal-deep));
+  box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.8);
+}
+
+.sjPhotoFrame > img {
+  flex: 1 1 0;
+  min-height: 0;
+  border-radius: 14px;
+}
+
+.sjPhotoFrame figcaption {
+  padding: 6px 4px 2px;
+  text-align: center;
+  font-family: var(--caps);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bg3);
+}
+
+.sjFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.sjContacts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(10px * var(--fit, 1)) calc(34px * var(--fit, 1));
+  width: 100%;
+  align-items: center;
+  min-height: 66px;
+  max-height: 128px;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 16px 30px;
+  background: rgb(0 0 0 / 0.28);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.2);
+}
+
+.sjContact {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(23px * var(--fit, 1));
+  color: #ffffff;
+}
+
+.sjContact .contactIcon {
+  color: var(--metal);
+}
+
+.sjBrand {
+  font-family: var(--caps);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: var(--metal);
+  opacity: 0.75;
+}

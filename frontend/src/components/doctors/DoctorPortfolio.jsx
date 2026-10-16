@@ -18,6 +18,7 @@ import {
   MapPin,
   Medal,
   MessageCircle,
+  MessagesSquare,
   Pencil,
   Phone,
   Play,
@@ -624,6 +625,12 @@ export default function DoctorPortfolio() {
   ].filter(Boolean);
   const heroActions = [
     mine && { href: "/dashboard/profile", label: "Edit profile", icon: Pencil },
+    // In-app chat (the same conversations as the Android app).
+    !mine && {
+      href: `/dashboard/messages?with=${doctor.id}`,
+      label: "Send a message",
+      icon: MessagesSquare,
+    },
   ].filter(Boolean);
 
   return (
@@ -701,7 +708,7 @@ export default function DoctorPortfolio() {
             }
             description={
               mine
-                ? "Add your expertise, practice, education and awards so batchmates can see your journey."
+                ? "Add your expertise, practice, education and awards so Friends can see your journey."
                 : "This doctor has not added further details yet."
             }
             action={

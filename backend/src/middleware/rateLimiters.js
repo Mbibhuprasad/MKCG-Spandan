@@ -53,6 +53,20 @@ function createRateLimiters() {
       keyGenerator: userKey,
       message: 'Too many uploads. Please wait a few minutes and try again.',
     }),
+    // Batch posters: autosave sends many small updates while a doctor types, so
+    // it has its own budget instead of using up the general write limit.
+    posterSave: limiter({
+      windowMs: 10 * 60 * 1000,
+      limit: cfg.posterSaveMax,
+      keyGenerator: userKey,
+      message: 'Too many saves in a short time. Please wait a moment before saving again.',
+    }),
+    posterExport: limiter({
+      windowMs: 10 * 60 * 1000,
+      limit: cfg.posterExportMax,
+      keyGenerator: userKey,
+      message: 'Too many poster downloads. Please wait a few minutes and try again.',
+    }),
   };
 }
 

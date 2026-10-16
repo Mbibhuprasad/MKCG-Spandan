@@ -7,6 +7,7 @@ const Poll = require('../models/Poll');
 const Vote = require('../models/Vote');
 const Notification = require('../models/Notification');
 const Report = require('../models/Report');
+const Poster = require('../models/Poster');
 const { ACCOUNT_STATUS } = require('../config/constants');
 const content = require('./content.service');
 const { destroyMedia } = require('./media.service');
@@ -21,6 +22,7 @@ const { removeUserChatData } = require('./chat.service');
 //     comments) is removed together with its dependants;
 //   • their likes, votes, RSVPs and reports are removed and counters corrected;
 //   • their one-to-one conversations, chat messages and chat memberships are removed;
+//   • their private batch posters are removed;
 //   • the audit log keeps a minimal record (id + name) of the deletion.
 //
 // No multi-document transaction is used (not every MongoDB deployment supports
@@ -65,6 +67,7 @@ async function deleteDoctorCascade(doctor) {
   await Report.deleteMany({ reporter: userId });
   await Notification.deleteMany({ user: userId });
   await removeUserChatData(userId);
+  await Poster.deleteMany({ owner: userId }); // poster photos are among the media destroyed below
 
   const media = await Media.find({ owner: userId }).select('_id').lean();
   await destroyMedia(media.map((m) => m._id));

@@ -28,7 +28,7 @@ function Scene() {
   return (
     <svg viewBox="0 0 480 330" className="h-full w-full" role="img" aria-labelledby="hero-art-title">
       <title id="hero-art-title">
-        Illustration of five doctors standing together as batchmates, linked by lines that show them staying connected
+        Illustration of five doctors standing together as Friends, linked by lines that show them staying connected
       </title>
       <defs>
         <radialGradient id="hero-glow" cx="50%" cy="45%" r="60%">
@@ -178,7 +178,7 @@ export default function HeroVisual() {
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-brand-fg">
               <UsersRound className="h-4 w-4" aria-hidden="true" />
             </span>
-            Batchmates, reconnected
+            Friends, reconnected
           </p>
         </FloatingCard>
 

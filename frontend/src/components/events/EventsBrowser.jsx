@@ -93,7 +93,7 @@ export default function EventsBrowser() {
           }
           description={
             scope === 'upcoming'
-              ? 'Propose a reunion, a dinner or a meetup — or let batchmates know when you are visiting their city. They appear here as soon as they are published.'
+              ? 'Propose a reunion, a dinner or a meetup — or let Friends know when you are visiting their city. They appear here as soon as they are published.'
               : 'Events move here after they have taken place.'
           }
           action={scope === 'upcoming' ? createActions : undefined}

@@ -236,17 +236,24 @@ export default function DoctorManager() {
                   <th scope="col" className="px-4 py-3 font-semibold">
                     Doctor
                   </th>
+
                   <th scope="col" className="px-4 py-3 font-semibold">
                     Contact
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    City
+                    Address
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Status
+                    Zodiac Sign
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Joined
+                    Specialization
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-semibold">
+                    Designation
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-semibold">
+                    DOB
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
                     Profile
@@ -273,16 +280,13 @@ export default function DoctorManager() {
                           <p className="truncate font-semibold text-fg">
                             {doctor.name}
                           </p>
-                          <p className="truncate text-xs text-muted">
-                            {doctor.profile.specialization ||
-                              "No specialization added"}
-                          </p>
                         </div>
                         {doctor.featured && (
                           <Badge tone="brand">Featured</Badge>
                         )}
                       </div>
                     </th>
+
                     <td className="px-4 py-3 text-fg-soft">
                       <p className="max-w-[14rem] truncate">{doctor.email}</p>
                       <p className="text-xs text-muted">{doctor.phone}</p>
@@ -290,11 +294,20 @@ export default function DoctorManager() {
                     <td className="px-4 py-3 text-fg-soft">
                       {doctor.profile.city || "—"}
                     </td>
-                    <td className="px-4 py-3">
-                      <AccountStatusBadge status={doctor.status} />
+                    <td className="px-4 py-3">Demo zodiac</td>
+                    <td className="px-4 py-3 text-fg-soft">
+                      {" "}
+                      <p className="truncate text-xs text-muted">
+                        {doctor.profile.specialization ||
+                          "No specialization added"}
+                      </p>
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-fg-soft">
+                      demo designation
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-fg-soft">
-                      {formatDate(doctor.createdAt)}
+                      DOB Demo
                     </td>
                     <td className="px-4 py-3">
                       <CompletionMeter

@@ -147,24 +147,29 @@ Media uploads travel browser → Next.js → API → Cloudinary.
 - Any reverse proxy or platform in front of Next.js must allow request bodies at least as large as `MAX_VIDEO_MB` and
   a matching timeout (for nginx: `client_max_body_size` and `proxy_read_timeout`).
 - **Serverless platforms often cap request bodies at a few megabytes and limit execution time.** If your web host has
-  such limits, either host the web app on a regular Node server, or use the direct mode below so uploads bypass it,
+  such limits, either host the web app on a regular Node server, or verify the limits that apply to its rewrites,
   or lower the limits and accept images only.
 
-### Alternative: direct sub-domain mode
+The browser always calls the website's own `/api/v1` (the earlier direct sub-domain mode was removed: the browser
+client no longer reads an API address). Hosting web and API on unrelated domains without the proxy would need
+`SameSite=None` cookies, which several browsers block; the proxy avoids that.
 
-If the API is public at a sibling sub-domain (for example `api.example.com` next to `www.example.com`), the browser
-can call it directly:
+### Vercel (web) + Render (API)
 
-| Setting | Value |
-| --- | --- |
-| Web `NEXT_PUBLIC_API_URL` | `https://api.example.com/api/v1` |
-| API `FRONTEND_URL` | `https://www.example.com` |
-| API `COOKIE_DOMAIN` | `.example.com` |
-| API `COOKIE_SAMESITE` | `lax` (same site, different sub-domain) |
-| Web CSP | Add the API origin to `connect-src` in `frontend/next.config.mjs` |
+| Where | Variable | Value |
+| --- | --- | --- |
+| Vercel (Production, and Preview if used) | `BACKEND_URL` | `https://mkcg-spandan.onrender.com` (optional — this is also the production default) |
+| Vercel | `NEXT_PUBLIC_SITE_URL` | `https://mkcg-spandan.vercel.app` (or the custom domain) |
+| Vercel | Root directory / build | `frontend` / `next build` (framework preset: Next.js) |
+| Render (API) | `FRONTEND_URL` | `https://mkcg-spandan.vercel.app` — every origin the site is served from, comma-separated (add `http://localhost:3000` only if a local web app should talk to this API) |
 
-Hosting the two on unrelated domains without the proxy would need `SameSite=None` cookies, which several browsers
-block; the proxy topology avoids that and is the supported default.
+`FRONTEND_URL` matters even behind the proxy: Vercel forwards the browser's `Origin` header, and the API's origin guard
+rejects state-changing requests (login, saving) from origins not listed with `403 ORIGIN_NOT_ALLOWED`. Never put
+`MONGODB_URI`, `JWT_SECRET` or `CLOUDINARY_*` in Vercel — they belong to the API only.
+
+Check the deployment with `curl https://mkcg-spandan.onrender.com/api/v1/health` (the API) and
+`curl https://<site>/api/v1/health` (the proxy). After the API has been idle, Render may take up to a minute to wake;
+the web client waits 70 seconds before reporting a timeout.
 
 ## 5. Monitoring and operations
 

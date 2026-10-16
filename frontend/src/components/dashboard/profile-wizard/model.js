@@ -44,7 +44,7 @@ export const STEPS = [
     short: "Basic profile",
     icon: UserRound,
     description:
-      "How batchmates will recognise you. Your name is carried over from registration.",
+      "How Friends will recognise you. Your name is carried over from registration.",
     top: ["name"],
     profile: [
       "professionalTitle",

@@ -190,7 +190,7 @@ describe("environment validation", () => {
     NODE_ENV: "development",
     MONGODB_URI: "mongodb://127.0.0.1:27017/x",
     JWT_SECRET: "a".repeat(40),
-    FRONTEND_URL: "http://localhost:3000",
+    FRONTEND_URL: "http://localhost:5000",
   };
 
   test("accepts a valid configuration with sensible defaults", () => {

@@ -1,7 +1,7 @@
 import { HeartPulse, ShieldCheck, Users } from 'lucide-react';
 
 const points = [
-  { icon: Users, text: 'Reconnect with batchmates and discover where their journeys led.' },
+  { icon: Users, text: 'Reconnect with ba and discover where their journeys led.' },
   { icon: HeartPulse, text: 'Share achievements, memories and reunion plans in one place.' },
   { icon: ShieldCheck, text: 'A private, moderated space — member content stays inside the community.' },
 ];

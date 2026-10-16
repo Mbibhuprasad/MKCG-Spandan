@@ -7,11 +7,14 @@ export const site = {
   tagline: "Together in Medicine. Connected Beyond Medicine.",
   description:
     "MKCGSPANDAN is a private community where doctors and medical batchmates reconnect, celebrate professional journeys, preserve shared memories and plan reunions.",
-  // Credit shown at the end of Home and About. Replace the placeholder with the
-  // developer's name; add a full https:// address to `url` to make it a link.
+  // "Designed & Developed by" credit at the end of Home and About (the website
+  // footer shows the same credit — keep frontend/src/lib/site.js in sync).
+  // Only full https:// addresses become links; an empty value hides that link.
   developer: {
-    name: "Bibhu prasad Mahapatra",
-    url: "https://www.linkedin.com/in/bibhuprasad-mahapatra-a9a896282/?isSelfProfile=true",
+    name: "Bibhu Prasad Mahapatra",
+    // Personal portfolio website — not set yet: add its full https:// address here.
+    portfolioUrl: "",
+    linkedinUrl: "https://www.linkedin.com/in/bibhuprasad-mahapatra-a9a896282/",
   },
 };
 

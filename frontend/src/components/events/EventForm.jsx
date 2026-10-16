@@ -181,8 +181,8 @@ function EventFormInner({ initial, presetType }) {
       </h1>
       <p className="mt-2 text-fg-soft">
         {isVisit
-          ? 'Travelling to another city? Tell batchmates there when you will be around so you can meet.'
-          : 'Plan a reunion, get-together, dinner or meetup and let the batch RSVP.'}
+          ? 'Travelling to another city? Tell Friends there when you will be around so you can meet.'
+          : 'Plan a reunion, get-together, dinner or meetup and let the Friends RSVP.'}
       </p>
 
       <form onSubmit={handleSubmit} noValidate className="card mt-6 space-y-5 p-5 sm:p-7">
@@ -377,7 +377,7 @@ function EventFormInner({ initial, presetType }) {
               setTravelErrors({});
             }}
             label={savedTravel ? 'Keep my travel plan on the Event Schedule' : 'I am attending — add my arrival and departure'}
-            description={`Batchmates see where you travel from and when you arrive and leave on the Event Schedule. The venue comes from this ${noun}. You can change it later.`}
+            description={`Friends see where you travel from and when you arrive and leave on the Event Schedule. The venue comes from this ${noun}. You can change it later.`}
           />
           {withTravel && (
             <TravelFields

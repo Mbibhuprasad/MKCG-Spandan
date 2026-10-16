@@ -18,6 +18,7 @@ const {
   REPORT_REASONS,
   LIMITS,
   MEDIA_PURPOSES,
+  DEDICATED_UPLOAD_PURPOSES,
 } = require('../config/constants');
 const { COMMENT_TARGETS } = require('../models/Comment');
 const { LIKE_TARGETS } = require('../models/Like');
@@ -26,7 +27,9 @@ const { REPORT_TARGETS } = require('../models/Report');
 const DAY = 24 * 60 * 60 * 1000;
 
 /* ── Media ── */
-const uploadBody = z.object({ purpose: z.enum(Object.keys(MEDIA_PURPOSES)) });
+const uploadBody = z.object({
+  purpose: z.enum(Object.keys(MEDIA_PURPOSES).filter((p) => !DEDICATED_UPLOAD_PURPOSES.includes(p))),
+});
 
 /* ── Posts ── */
 const mediaIds = (max) => z.array(objectId).max(max, `Attach at most ${max} files.`);

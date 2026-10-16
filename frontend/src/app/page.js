@@ -36,7 +36,7 @@ export const metadata = {
 const benefits = [
   {
     icon: UsersRound,
-    title: "Find your batchmates",
+    title: "Find your Friends",
     text: "Search for friends by name, specialization and city, so you can see where everyone practises today.",
   },
   {

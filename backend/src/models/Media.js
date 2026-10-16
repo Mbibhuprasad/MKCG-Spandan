@@ -17,9 +17,9 @@ const mediaSchema = new Schema(
     width: { type: Number, default: null },
     height: { type: Number, default: null },
     duration: { type: Number, default: null },
-    // Set once the upload is claimed by a post, blog, memory, event or profile.
+    // Set once the upload is claimed by a post, blog, memory, event, profile, batch poster or chat message.
     attachedTo: {
-      kind: { type: String, enum: ['Post', 'Blog', 'Memory', 'Event', 'User'], default: null },
+      kind: { type: String, enum: ['Post', 'Blog', 'Memory', 'Event', 'User', 'Poster', 'Message'], default: null },
       item: { type: Schema.Types.ObjectId, default: null },
     },
     attachedAt: { type: Date, default: null },

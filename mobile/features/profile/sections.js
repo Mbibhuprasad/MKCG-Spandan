@@ -436,7 +436,7 @@ export const ESSENTIALS = {
   icon: "person-outline",
   title: "Complete your profile",
   description:
-    "A few details so batchmates can find and recognise you. You can add the rest any time.",
+    "A few details so Fr can find and recognise you. You can add the rest any time.",
   photo: true,
   whatsapp: true,
   fields: [

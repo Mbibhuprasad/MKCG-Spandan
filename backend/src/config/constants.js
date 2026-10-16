@@ -46,6 +46,79 @@ const MEDIA_PURPOSES = Object.freeze({
   memory: { kinds: ['image', 'video'], deliveryType: 'authenticated', folder: 'memories' },
   // Award photos and certificates shown on a doctor's portfolio (same delivery as profile photos).
   award: { kinds: ['image'], deliveryType: 'upload', folder: 'awards' },
+  // Photos placed on a doctor's private batch poster. Only the poster's owner ever receives their URLs.
+  poster: { kinds: ['image'], deliveryType: 'authenticated', folder: 'posters' },
+  // Photos sent in a chat. Uploaded only through POST /chat/conversations/:id/images,
+  // which checks membership first; the URLs are given only to that conversation's members.
+  chat: { kinds: ['image'], deliveryType: 'authenticated', folder: 'chat' },
+});
+
+// Purposes that have their own upload endpoint and are refused by the generic POST /media.
+const DEDICATED_UPLOAD_PURPOSES = Object.freeze(['chat']);
+
+// Batch Profile Poster Maker. Each template lists its colour variations; the
+// first one is the default. Bump a template's `version` when its layout changes
+// in a way that alters how saved content is placed.
+const POSTER_TEMPLATES = Object.freeze({
+  'classic-tribute': { version: 1, palettes: ['royal', 'teal', 'rose'] },
+  'silver-jubilee': { version: 1, palettes: ['navy', 'maroon', 'emerald'] },
+  'modern-professional': { version: 1, palettes: ['navy', 'slate', 'teal'] },
+  'college-memories': { version: 1, palettes: ['vintage', 'sepia', 'sage'] },
+  'friends-forever': { version: 1, palettes: ['sky', 'sunset', 'twilight'] },
+  'medical-blue': { version: 1, palettes: ['blue', 'teal', 'indigo'] },
+});
+
+const POSTER_STATUS = Object.freeze({ DRAFT: 'DRAFT', READY: 'READY' });
+
+const POSTER_PORTRAIT_PLACEMENTS = Object.freeze(['LEFT', 'CENTER', 'RIGHT']);
+
+const POSTER_PHOTO_SOURCES = Object.freeze(['NONE', 'PROFILE', 'UPLOAD']);
+
+// Optional poster sections the doctor can switch off (content is kept).
+const POSTER_SECTIONS = Object.freeze([
+  'birthday',
+  'professional',
+  'achievements',
+  'introduction',
+  'messageToFriends',
+  'quotation',
+  'memory',
+  'batchMessage',
+  'closing',
+  'gallery',
+  'celebration',
+]);
+
+// Maximum lengths of poster fields (kept equal in frontend/src/components/posters/model.js).
+const POSTER_LIMITS = Object.freeze({
+  perDoctor: 20,
+  title: 80,
+  displayName: 80,
+  professionalTitle: 80,
+  college: 120,
+  hometown: 80,
+  specialization: 80,
+  workplace: 120,
+  role: 80,
+  qualifications: 160,
+  achievements: 400,
+  milestones: 400,
+  greeting: 120,
+  introduction: 600,
+  messageToFriends: 600,
+  quotation: 240,
+  quotationAuthor: 80,
+  memory: 600,
+  batchMessage: 600,
+  closing: 200,
+  signature: 80,
+  celebrationTitle: 60,
+  celebrationTagline: 120,
+  celebrationYearsMax: 75,
+  contactEmail: 254,
+  contactPhone: 20,
+  contactAddress: 160,
+  contactWebsite: 300,
 });
 
 // Doctor profile: values offered by the profile wizard. '' always means "not stated".
@@ -123,6 +196,13 @@ module.exports = {
   REPORT_REASONS,
   REPORT_STATUS,
   MEDIA_PURPOSES,
+  DEDICATED_UPLOAD_PURPOSES,
+  POSTER_TEMPLATES,
+  POSTER_STATUS,
+  POSTER_PORTRAIT_PLACEMENTS,
+  POSTER_PHOTO_SOURCES,
+  POSTER_SECTIONS,
+  POSTER_LIMITS,
   EMPLOYMENT_TYPES,
   DEGREE_LEVELS,
   BLOOD_GROUPS,

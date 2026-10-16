@@ -29,9 +29,16 @@ async function authenticateToken(token) {
   } catch {
     throw ApiError.unauthorized('Your session has expired. Please sign in again.', 'SESSION_EXPIRED');
   }
-  if (!mongoose.isValidObjectId(payload.sub) || !mongoose.isValidObjectId(payload.sid)) {
+  return authenticateSession(payload.sub, payload.sid);
+}
+
+// Loads a still-valid session and its active user. Used for session tokens and
+// for the website's socket tickets, which name the same session.
+async function authenticateSession(userId, sessionId) {
+  if (!mongoose.isValidObjectId(userId) || !mongoose.isValidObjectId(sessionId)) {
     throw ApiError.unauthorized('Your session has expired. Please sign in again.', 'SESSION_EXPIRED');
   }
+  const payload = { sub: String(userId), sid: String(sessionId) };
 
   const session = await Session.findOne({ _id: payload.sid, user: payload.sub, expiresAt: { $gt: new Date() } });
   if (!session) throw ApiError.unauthorized('Your session has expired. Please sign in again.', 'SESSION_EXPIRED');
@@ -134,4 +141,4 @@ const requireAdmin = requireRole(ROLES.ADMIN);
 
 const isAdmin = (user) => Boolean(user && user.role === ROLES.ADMIN);
 
-module.exports = { authenticateToken, requireAuth, optionalAuth, probeSession, sessionForLogout, requireRole, requireAdmin, isAdmin };
+module.exports = { authenticateToken, authenticateSession, requireAuth, optionalAuth, probeSession, sessionForLogout, requireRole, requireAdmin, isAdmin };

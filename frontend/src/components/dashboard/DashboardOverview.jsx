@@ -268,7 +268,7 @@ export default function DashboardOverview() {
               </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-fg-soft">
                 A short step-by-step form builds your portfolio and helps
-                batchmates find and recognise you. You can do this now or later
+                Friends find and recognise you. You can do this now or later
                 — the community is already open to you, and your progress is
                 saved along the way.
               </p>

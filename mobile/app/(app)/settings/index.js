@@ -162,6 +162,25 @@ function LinkRow({ icon, label, value, onPress, danger }) {
   );
 }
 
+// Profile Settings → Batch Profile Poster Maker (doctor accounts only, like the API).
+function PosterEntry({ onPress }) {
+  const { colors } = useTheme();
+  return (
+    <Card onPress={onPress} style={styles.posterCard} accessibilityLabel="Create My Batch Poster. Create, personalize and share your batch profile poster.">
+      <View style={[styles.posterIcon, { backgroundColor: colors.brandSoft }]}>
+        <Ionicons name="image-outline" size={24} color={colors.brandInk} />
+      </View>
+      <View style={styles.flex}>
+        <Text variant="bodyStrong">Create My Batch Poster</Text>
+        <Text variant="small" tone="muted">
+          Create, personalize and share your batch profile poster.
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+    </Card>
+  );
+}
+
 function PasswordSheet({ visible, onClose }) {
   const toast = useToast();
   const [current, setCurrent] = useState("");
@@ -331,6 +350,15 @@ export default function Settings() {
         </Text>
       </Group>
 
+      {user.role === "DOCTOR" ? (
+        <View style={styles.group}>
+          <Text variant="eyebrow" tone="muted" style={styles.groupTitle}>
+            Batch Profile Poster Maker
+          </Text>
+          <PosterEntry onPress={() => router.push("/settings/posters")} />
+        </View>
+      ) : null}
+
       <Group title="Contact visibility">
         <Text variant="small" tone="muted">
           Choose which of your contact details other members can see.
@@ -475,4 +503,12 @@ const styles = StyleSheet.create({
   sheet: { paddingHorizontal: space.xl },
   sheetBanner: { marginBottom: 14 },
   signOut: { marginTop: 4 },
+  posterCard: { flexDirection: "row", alignItems: "center", gap: 14 },
+  posterIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

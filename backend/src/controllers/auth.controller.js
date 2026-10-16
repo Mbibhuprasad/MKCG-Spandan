@@ -64,7 +64,7 @@ async function register(req, res) {
   await notify(user._id, {
     type: 'WELCOME',
     title: 'Welcome to MKCGSPANDAN',
-    message: 'Complete your doctor profile so batchmates can find and recognise you.',
+    message: 'Complete your doctor profile so b can find and recognise you.',
     link: '/dashboard/profile',
     dedupeKey: 'welcome',
   });

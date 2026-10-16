@@ -5,7 +5,7 @@ import { alertNewMessage } from '@/features/notifications/localAlerts';
 import { ApiError, api } from '@/services/api';
 import { createChatSocket, emitWithAck } from '@/services/socket';
 import { publish, subscribe } from '@/utils/events';
-import { chatApi } from './api';
+import { chatApi, messagePreview } from './api';
 
 // One live chat connection for the signed-in doctor, plus the conversation list
 // that the Chat tab, the tab-bar badge and every conversation screen share.
@@ -19,6 +19,7 @@ const PREVIEW_LENGTH = 140;
 const UNREAD_CAP = 99;
 const messageTopic = (conversationId) => `chat:message:${conversationId}`;
 const reactionTopic = (conversationId) => `chat:reaction:${conversationId}`;
+const deletionTopic = (conversationId) => `chat:deleted:${conversationId}`;
 export const RESYNC_TOPIC = 'chat:resync';
 
 const byActivity = (a, b) => new Date(b.lastActivityAt || 0) - new Date(a.lastActivityAt || 0);
@@ -84,7 +85,7 @@ export function ChatProvider({ children }) {
                     ...c,
                     lastMessage: {
                       id: message.id,
-                      preview: String(message.body).replace(/\s+/g, ' ').slice(0, PREVIEW_LENGTH),
+                      preview: messagePreview(message).slice(0, PREVIEW_LENGTH),
                       senderId: message.sender ? message.sender.id : null,
                       senderName: message.sender ? message.sender.name : '',
                       at: message.createdAt,
@@ -102,13 +103,26 @@ export function ChatProvider({ children }) {
       if (!mine && !open) {
         alertNewMessage({
           title: message.sender ? message.sender.name : 'New message',
-          body: String(message.body).slice(0, 160),
+          body: messagePreview(message).slice(0, 160),
           conversationId,
         });
       }
     },
     [userId, refreshConversations]
   );
+
+  // A message deleted for everyone: the open conversation shows the
+  // placeholder, and the list stops quoting it if it was the latest message.
+  const applyDeleted = useCallback((conversationId, message) => {
+    setConversations((list) =>
+      list.map((c) =>
+        c.id === conversationId && c.lastMessage && c.lastMessage.id === message.id
+          ? { ...c, lastMessage: { ...c.lastMessage, preview: messagePreview(message) } }
+          : c
+      )
+    );
+    publish(deletionTopic(conversationId), message);
+  }, []);
 
   // Connect while signed in; disconnect and forget everything on sign-out.
   useEffect(() => {
@@ -151,12 +165,17 @@ export function ChatProvider({ children }) {
       if (!payload || !payload.conversationId || !payload.messageId) return;
       publish(reactionTopic(String(payload.conversationId)), payload);
     };
+    const onDeleted = (payload) => {
+      if (!payload || !payload.conversationId || !payload.message) return;
+      applyDeleted(String(payload.conversationId), payload.message);
+    };
 
     socket.on('ready', onReady);
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
     socket.on('message:new', onMessage);
     socket.on('message:reaction', onReaction);
+    socket.on('message:deleted', onDeleted);
     socket.io.on('reconnect_attempt', () => setConnection('connecting'));
     socket.connect();
 
@@ -173,29 +192,30 @@ export function ChatProvider({ children }) {
       socket.off('connect_error', onConnectError);
       socket.off('message:new', onMessage);
       socket.off('message:reaction', onReaction);
+      socket.off('message:deleted', onDeleted);
       socket.io.off('reconnect_attempt');
       socket.disconnect();
       if (socketRef.current === socket) socketRef.current = null;
     };
-  }, [token, applyIncoming, refreshConversations]);
+  }, [token, applyIncoming, applyDeleted, refreshConversations]);
 
   // Sends over the live connection; when there is none, or no acknowledgement
   // arrives, the same message (same clientId) goes through REST. The server
   // stores a clientId once, so a message can never be duplicated by the retry.
   const sendMessage = useCallback(
-    async (conversationId, body, clientId) => {
+    async (conversationId, body, clientId, mediaId) => {
       const socket = socketRef.current;
       let message;
       if (socket && socket.connected) {
         try {
-          const reply = await emitWithAck(socket, 'message:send', { conversationId, body, clientId });
+          const reply = await emitWithAck(socket, 'message:send', { conversationId, body, clientId, mediaId });
           message = reply.message;
         } catch (err) {
           if (!(err instanceof ApiError) || (err.code !== 'SOCKET_TIMEOUT' && err.code !== 'SOCKET_OFFLINE')) throw err;
         }
       }
       if (!message) {
-        const { data } = await chatApi.send(conversationId, body, clientId);
+        const { data } = await chatApi.send(conversationId, body, clientId, mediaId);
         message = data;
       }
       // The broadcast normally arrives first; this covers the REST path while offline from the socket.
@@ -221,6 +241,26 @@ export function ChatProvider({ children }) {
     publish(reactionTopic(conversationId), result);
     return result;
   }, []);
+
+  // "Delete for everyone" (the server only allows the sender). Deleting twice is
+  // harmless: the server answers with the already deleted message.
+  const deleteMessage = useCallback(
+    async (conversationId, messageId) => {
+      const socket = socketRef.current;
+      let result;
+      if (socket && socket.connected) {
+        try {
+          result = await emitWithAck(socket, 'message:delete', { conversationId, messageId });
+        } catch (err) {
+          if (!(err instanceof ApiError) || (err.code !== 'SOCKET_TIMEOUT' && err.code !== 'SOCKET_OFFLINE')) throw err;
+        }
+      }
+      if (!result) result = (await chatApi.remove(conversationId, messageId)).data;
+      applyDeleted(conversationId, result.message);
+      return result.message;
+    },
+    [applyDeleted]
+  );
 
   const markRead = useCallback(async (conversationId) => {
     setConversations((list) => list.map((c) => (c.id === conversationId && c.unreadCount ? { ...c, unreadCount: 0 } : c)));
@@ -262,6 +302,7 @@ export function ChatProvider({ children }) {
       refreshConversations,
       sendMessage,
       reactToMessage,
+      deleteMessage,
       markRead,
       setActiveConversation,
       upsertConversation,
@@ -275,6 +316,7 @@ export function ChatProvider({ children }) {
       refreshConversations,
       sendMessage,
       reactToMessage,
+      deleteMessage,
       markRead,
       setActiveConversation,
       upsertConversation,
@@ -311,5 +353,17 @@ export function useConversationReactions(conversationId, listener) {
   useEffect(() => {
     if (!conversationId) return undefined;
     return subscribe(reactionTopic(conversationId), (payload) => ref.current(payload));
+  }, [conversationId]);
+}
+
+// Calls `listener(message)` with the deleted state of every message deleted for everyone.
+export function useConversationDeletions(conversationId, listener) {
+  const ref = useRef(listener);
+  useEffect(() => {
+    ref.current = listener;
+  });
+  useEffect(() => {
+    if (!conversationId) return undefined;
+    return subscribe(deletionTopic(conversationId), (message) => ref.current(message));
   }, [conversationId]);
 }

@@ -3,7 +3,9 @@ import 'server-only';
 // Server-side reads of PUBLIC API endpoints only (homepage sections, blogs,
 // sitemap). No cookies or credentials are ever forwarded from here, so
 // nothing member-only can end up in server-rendered HTML.
-const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
+import { apiUrl, resolveBackendUrl } from './api-config.mjs';
+
+const BACKEND_URL = resolveBackendUrl(process.env).url;
 
 export async function publicFetch(path, { query, revalidate = 60 } = {}) {
   const params = new URLSearchParams();
@@ -12,7 +14,7 @@ export async function publicFetch(path, { query, revalidate = 60 } = {}) {
     params.set(key, String(value));
   }
   const qs = params.toString();
-  const url = `${BACKEND_URL}/api/v1${path}${qs ? `?${qs}` : ''}`;
+  const url = `${apiUrl(BACKEND_URL, path)}${qs ? `?${qs}` : ''}`;
 
   try {
     const response = await fetch(url, {

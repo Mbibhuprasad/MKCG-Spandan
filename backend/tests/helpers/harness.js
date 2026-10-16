@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const request = require('supertest');
 
-const ORIGIN = 'http://localhost:3000';
+const ORIGIN = 'http://localhost:5000';
 const PASSWORD = 'Reunion2026pass';
 const ADMIN_PASSWORD = 'AdminBootstrap2026';
 
@@ -19,7 +19,7 @@ function setupTestApp() {
     // Jest's CommonJS sandbox cannot execute. Supplying the adapter explicitly
     // (a supported driver option) avoids that; production code is unaffected.
     await mongoose.connect(getEnv().mongoUri, { runtimeAdapters: { os: require('os') } });
-    for (const file of ['User', 'Session', 'Media', 'Post', 'Blog', 'Comment', 'Like', 'Memory', 'Event', 'Rsvp', 'Poll', 'Vote', 'Notification', 'AuditLog', 'Report', 'Conversation', 'ConversationMember', 'Message']) {
+    for (const file of ['User', 'Session', 'Media', 'Post', 'Blog', 'Comment', 'Like', 'Memory', 'Event', 'Rsvp', 'Poll', 'Vote', 'Notification', 'AuditLog', 'Report', 'Conversation', 'ConversationMember', 'Message', 'Poster']) {
       await require(`../../src/models/${file}`).init();
     }
     ctx.app = createApp();

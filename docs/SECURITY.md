@@ -24,7 +24,10 @@ penetration test, dependency monitoring, and a legal review of its policies.
 | Same-origin API access | The browser reaches the API through the Next.js rewrite, so the session cookie is first-party |
 
 The CSP restricts images and media to `self`, `data:`/`blob:` and `https://res.cloudinary.com`, forbids framing,
-plugins and foreign form targets, and limits connections to `self`. It still allows `'unsafe-inline'` scripts and
+plugins and foreign form targets, and limits connections to `self`, `https://res.cloudinary.com` and the API's own
+`ws(s)://` origin (chat's live connection, which cannot pass through the rewrite). That socket never uses cookies: the
+page exchanges its session for a one-time, 60-second ticket (`POST /chat/socket-ticket`, CSRF-protected) that only the
+Socket.IO handshake accepts — it is refused as a bearer token. It still allows `'unsafe-inline'` scripts and
 styles because Next.js emits inline bootstrap scripts; a nonce-based policy would be stricter (see limitations).
 
 ### Authentication and sessions

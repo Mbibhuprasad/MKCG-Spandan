@@ -50,8 +50,9 @@ const splitHonorific = (name) => {
  * saved profile; anything missing is simply not rendered.
  *
  *  - `facts`    short facts under the text:  [{ icon, label, text }]
- *  - `actions`  buttons under the text:      [{ href, label, icon }] — the owner's "Edit profile";
- *               there are no contact buttons here, the contact section has those
+ *  - `actions`  buttons under the text:      [{ href, label, icon }] — the owner's "Edit profile",
+ *               or "Send a message" (in-app chat) for other members; phone, email and WhatsApp
+ *               buttons stay in the contact section
  */
 export default function PortfolioHero({ id, name, photoUrl, eyebrow, title, headline, bio, facts = [], actions = [] }) {
   const root = useRef(null);

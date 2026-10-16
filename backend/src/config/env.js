@@ -61,6 +61,8 @@ const schema = z.object({
   RATE_LIMIT_WRITE_MAX: int(90, 1, 1000000),
   RATE_LIMIT_UPLOAD_MAX: int(40, 1, 1000000),
   RATE_LIMIT_CHAT_MAX: int(60, 1, 1000000),
+  RATE_LIMIT_POSTER_SAVE_MAX: int(300, 1, 1000000),
+  RATE_LIMIT_POSTER_EXPORT_MAX: int(30, 1, 1000000),
   JOBS_ENABLED: bool(true),
   // Keep-alive for hosts that sleep when idle (Render free tier). The URL defaults
   // to <RENDER_EXTERNAL_URL>/ping, which Render sets on every web service.
@@ -158,6 +160,8 @@ function loadEnv(source = process.env) {
       writeMax: e.RATE_LIMIT_WRITE_MAX,
       uploadMax: e.RATE_LIMIT_UPLOAD_MAX,
       chatMax: e.RATE_LIMIT_CHAT_MAX, // chat messages per member per minute
+      posterSaveMax: e.RATE_LIMIT_POSTER_SAVE_MAX, // poster updates (autosave) per doctor per 10 minutes
+      posterExportMax: e.RATE_LIMIT_POSTER_EXPORT_MAX, // poster downloads per doctor per 10 minutes
     }),
     jobsEnabled: e.JOBS_ENABLED,
     keepAlive: Object.freeze({

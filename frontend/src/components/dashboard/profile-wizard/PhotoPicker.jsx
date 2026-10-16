@@ -102,7 +102,7 @@ export default function PhotoPicker() {
           Profile photo <span className="ml-1 text-xs font-normal text-muted">Optional</span>
         </p>
         <p className="mt-1 text-sm text-muted">
-          A clear, recent photo helps batchmates recognise you. JPG, PNG or WebP up to {UPLOAD_LIMITS.imageMb} MB. Photos are
+          A clear, recent photo helps Friends recognise you. JPG, PNG or WebP up to {UPLOAD_LIMITS.imageMb} MB. Photos are
           saved straight away.
         </p>
         <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">

@@ -290,7 +290,7 @@ Types: `WELCOME`, `CONTENT_REMOVED`, `EVENT_PUBLISHED`, `POLL_PUBLISHED`,
 
 ## Chat — `/chat` (members only)
 
-Used by the Android app (see [MOBILE.md](MOBILE.md#chat)). Access to a conversation is decided only by membership
+Used by the Android app (see [MOBILE.md](MOBILE.md#chat)) and the website's Messages page (`/dashboard/messages`). Access to a conversation is decided only by membership
 rows on the server; a conversation the caller does not belong to answers `404`, exactly like one that does not exist.
 
 | Method | Path                               | Access                                                         | Parameters / body                                                        | Result                                                                                                                                                                        |
@@ -300,30 +300,40 @@ rows on the server; a conversation the caller does not belong to answers `404`, 
 | POST   | `/chat/direct`                     | Member with a WhatsApp number on their profile (admins exempt) | `doctorId`                                                               | `201` the new one-to-one conversation, or `200` the existing one — there is exactly one per pair. `403 WHATSAPP_REQUIRED`; `404` for an unlisted, suspended or unknown doctor |
 | GET    | `/chat/conversations/:id`          | Participant                                                    | —                                                                        | The conversation                                                                                                                                                              |
 | GET    | `/chat/conversations/:id/messages` | Participant                                                    | `before` (id of the oldest message already loaded), `limit` (30, max 50) | A page of messages, oldest → newest; `meta { hasMore, nextBefore }`                                                                                                           |
-| POST   | `/chat/conversations/:id/messages` | Participant                                                    | `body` (1–4000), optional `clientId` (8–64 of `A–Z a–z 0–9 _ -`)         | `201` the message; `200` the stored message when that `clientId` was already sent. `409 PEER_UNAVAILABLE`, `429 RATE_LIMITED`                                                 |
+| POST   | `/chat/conversations/:id/messages` | Participant                                                    | `body` (0–4000), optional `mediaId` (an id from `…/images` below; then `body` is the optional caption), optional `clientId` (8–64 of `A–Z a–z 0–9 _ -`). Text or a photo is required | `201` the message; `200` the stored message when that `clientId` was already sent. `400 MEDIA_INVALID` (not the caller's own unused chat upload), `409 PEER_UNAVAILABLE`, `429 RATE_LIMITED` |
+| POST   | `/chat/conversations/:id/images`   | Participant (same rules as sending)                            | `multipart/form-data` with `file` (JPG, PNG or WebP, real content checked, `MAX_IMAGE_MB`) | `201 { id, width, height, format, bytes, url, previewUrl }` — stored in Cloudinary with authenticated delivery. Unsent uploads are removed by the daily cleanup. `413 FILE_TOO_LARGE`, `400 UNSUPPORTED_MEDIA_TYPE` |
+| GET    | `/chat/conversations/:id/messages/:messageId/image` | Participant                                   | —                                                                        | The **original** photo of an image message, streamed with `Content-Disposition: attachment; filename="mkcgspandan-chat-<date>-<time>.<ext>"` and `Cache-Control: private, no-store`. `409 MESSAGE_DELETED` |
+| DELETE | `/chat/conversations/:id/messages/:messageId` | Sender of the message                               | —                                                                        | "Delete for everyone": `{ conversationId, messageId, message }` with the deleted message. Its text, photo (also removed from Cloudinary) and reactions are erased; repeating the call returns the same result. `403 NOT_MESSAGE_SENDER` |
+| POST   | `/chat/socket-ticket`              | Member (website; cookie + CSRF)                                | —                                                                        | `{ ticket, expiresInSeconds: 60 }` — a one-time ticket for the Socket.IO handshake. It is not accepted as a bearer token anywhere else |
 | POST   | `/chat/conversations/:id/read`     | Participant                                                    | —                                                                        | `{ conversationId, unreadCount: 0 }`                                                                                                                                          |
-| PUT    | `/chat/conversations/:id/messages/:messageId/reaction` | Participant (same rules as sending)          | `emoji` — one of `👍 ❤️ 😂 😮 😢 🙏`, or `''` to remove                        | `{ conversationId, messageId, reactions }`. One reaction per member: a new emoji replaces theirs. Does not change unread counts. `404` for a message of another conversation, `429 RATE_LIMITED` |
+| PUT    | `/chat/conversations/:id/messages/:messageId/reaction` | Participant (same rules as sending)          | `emoji` — one of `👍 ❤️ 😂 😊 😮 😢 🙏`, or `''` to remove                        | `{ conversationId, messageId, reactions }`. One reaction per member: a new emoji replaces theirs. Does not change unread counts. `404` for a message of another conversation, `409 MESSAGE_DELETED`, `429 RATE_LIMITED` |
 
 Conversation: `{ id, type, isCommunity, name, description, avatarUrl, peer{ id, name, professionalTitle, specialization,
 photoUrl, city, available, whatsapp | null } | null, memberCount, lastMessage{ id, preview, senderId, senderName, at } | null,
 lastActivityAt, unreadCount, canSend }`. `peer.whatsapp` is present only while that doctor shows their WhatsApp number.
 
-Message: `{ id, conversationId, body, sender: <author summary>, clientId, reactions, createdAt }`. Messages are plain text.
+Message: `{ id, conversationId, type, body, image, deleted, deletedAt, sender: <author summary>, clientId, reactions, createdAt }`.
+`type` is `TEXT` or `IMAGE`; text is plain text. `image` is `{ id, width, height, format, bytes, url, previewUrl } | null`
+(signed URLs, given only to members). A deleted message has `deleted: true`, `body: ''`, `image: null` and no reactions.
 `reactions` is `[{ emoji, userIds }]`, in the order each emoji was first added.
 
 **Real time** — Socket.IO on the API's own port, path `/socket.io`. The handshake must carry the session token
-(`auth: { token }`); cookies are not read. The server joins the socket to the caller's conversations and emits `ready`.
+(`auth: { token }`, the app) or a one-time ticket from `POST /chat/socket-ticket` (`auth: { ticket }`, the website);
+cookies are not read. The server joins the socket to the caller's conversations and emits `ready`. The website only
+receives events over the socket and makes every change through REST.
 
 | Direction       | Event               | Payload                               | Acknowledgement                                                               |
 | --------------- | ------------------- | ------------------------------------- | ----------------------------------------------------------------------------- |
-| client → server | `message:send`      | `{ conversationId, body, clientId? }` | `{ ok: true, message, duplicate }` or `{ ok: false, error{ code, message } }` |
+| client → server | `message:send`      | `{ conversationId, body?, mediaId?, clientId? }` | `{ ok: true, message, duplicate }` or `{ ok: false, error{ code, message } }` |
 | client → server | `conversation:read` | `{ conversationId }`                  | `{ ok: true, conversationId, unreadCount: 0 }`                                |
 | client → server | `message:react`     | `{ conversationId, messageId, emoji }` | `{ ok: true, conversationId, messageId, reactions }`                         |
+| client → server | `message:delete`    | `{ conversationId, messageId }`       | `{ ok: true, conversationId, messageId, message }` (sender only)              |
 | server → client | `message:new`       | `{ conversationId, message }`         | — sent to every connected member of the conversation                          |
 | server → client | `message:reaction`  | `{ conversationId, messageId, reactions }` | — sent to every connected member of the conversation                     |
+| server → client | `message:deleted`   | `{ conversationId, messageId, message }` | — sent after the deletion is stored; offline members get the deleted state from history |
 
 Sending is limited to `RATE_LIMIT_CHAT_MAX` messages per member per minute (default 60), REST and sockets together;
-reactions count towards the same limit.
+reactions and deletions count towards the same limit.
 
 ## Dashboard
 
