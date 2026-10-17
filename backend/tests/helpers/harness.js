@@ -117,7 +117,7 @@ const EXE = Buffer.concat([Buffer.from('MZ'), Buffer.alloc(128)]);
 const inFuture = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
 const LONG_BODY =
-  'Reconnecting with batchmates after many years reminded me how much of our training we shared. ' +
+  'Reconnecting with Friends after many years reminded me how much of our training we shared. ' +
   'This article reflects on the habits from those years that still shape my practice today, ' +
   'and on why staying in touch with the people who knew us as students matters so much.';
 

@@ -6,7 +6,7 @@ export const site = {
   name: "MKCGSPANDAN",
   tagline: "Together in Medicine. Connected Beyond Medicine.",
   description:
-    "MKCGSPANDAN is a private community where doctors and medical batchmates reconnect, celebrate professional journeys, preserve shared memories and plan reunions.",
+    "MKCGSPANDAN is a private community where doctors and medical Friends reconnect, celebrate professional journeys, preserve shared memories and plan reunions.",
   // "Designed & Developed by" credit at the end of Home and About (the website
   // footer shows the same credit — keep frontend/src/lib/site.js in sync).
   // Only full https:// addresses become links; an empty value hides that link.

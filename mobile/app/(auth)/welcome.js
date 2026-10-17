@@ -17,7 +17,7 @@ const SLIDES = [
   {
     icon: 'people',
     title: 'Your batch, in one private place',
-    text: 'MKCGSPANDAN is a members-only community for doctors and medical batchmates — the friends you trained with, wherever their careers took them.',
+    text: 'MKCGSPANDAN is a members-only community for doctors and medical Friends — the friends you trained with, wherever their careers took them.',
   },
   {
     icon: 'images',

@@ -183,7 +183,8 @@ export default function PosterDashboard() {
         <View style={styles.flex}>
           <Text variant="h3">Create, personalize and share</Text>
           <Text variant="small" tone="soft">
-            A poster for your batchmates from your profile and a personal message — download it as PNG or PDF, or share it.
+            A poster for your Friends from your profile and a personal message —
+            download it as PNG or PDF, or share it.
           </Text>
         </View>
       </View>
@@ -205,12 +206,18 @@ export default function PosterDashboard() {
         <Button
           title={`Start with ${templateById(template).name}`}
           icon="add"
-          onPress={() => router.push({ pathname: "/settings/posters/[id]", params: { id: "new", template } })}
+          onPress={() =>
+            router.push({
+              pathname: "/settings/posters/[id]",
+              params: { id: "new", template },
+            })
+          }
           disabled={atLimit}
           full
         />
         <Text variant="caption" tone="muted" center>
-          You can switch template at any time without losing what you have written.
+          You can switch template at any time without losing what you have
+          written.
         </Text>
       </View>
 
@@ -236,7 +243,13 @@ export default function PosterDashboard() {
                 Drafts
               </Text>
               {drafts.map((p) => (
-                <PosterRow key={p.id} poster={p} onOpen={() => open(p)} onEdit={() => edit(p)} onMore={() => setActionsFor(p)} />
+                <PosterRow
+                  key={p.id}
+                  poster={p}
+                  onOpen={() => open(p)}
+                  onEdit={() => edit(p)}
+                  onMore={() => setActionsFor(p)}
+                />
               ))}
             </View>
           ) : null}
@@ -246,7 +259,13 @@ export default function PosterDashboard() {
                 My saved posters
               </Text>
               {finished.map((p) => (
-                <PosterRow key={p.id} poster={p} onOpen={() => open(p)} onEdit={() => edit(p)} onMore={() => setActionsFor(p)} />
+                <PosterRow
+                  key={p.id}
+                  poster={p}
+                  onOpen={() => open(p)}
+                  onEdit={() => edit(p)}
+                  onMore={() => setActionsFor(p)}
+                />
               ))}
             </View>
           ) : null}
@@ -256,21 +275,70 @@ export default function PosterDashboard() {
       <ActionSheet
         visible={Boolean(sheetPoster)}
         onClose={() => setActionsFor(null)}
-        title={sheetPoster ? sheetPoster.title || sheetPoster.displayName || "Poster" : ""}
+        title={
+          sheetPoster
+            ? sheetPoster.title || sheetPoster.displayName || "Poster"
+            : ""
+        }
         actions={
           sheetPoster
             ? [
-                { key: "preview", label: "Preview", icon: "eye-outline", onPress: () => open(sheetPoster) },
-                { key: "edit", label: "Continue editing", icon: "create-outline", onPress: () => edit(sheetPoster) },
-                { key: "template", label: "Select a different template", icon: "color-palette-outline", onPress: () => edit(sheetPoster, 5) },
+                {
+                  key: "preview",
+                  label: "Preview",
+                  icon: "eye-outline",
+                  onPress: () => open(sheetPoster),
+                },
+                {
+                  key: "edit",
+                  label: "Continue editing",
+                  icon: "create-outline",
+                  onPress: () => edit(sheetPoster),
+                },
+                {
+                  key: "template",
+                  label: "Select a different template",
+                  icon: "color-palette-outline",
+                  onPress: () => edit(sheetPoster, 5),
+                },
                 ...(sheetReady
                   ? [
-                      { key: "png", label: "Download PNG", icon: "image-outline", onPress: () => router.push(`/settings/posters/view/${sheetPoster.id}?action=png`) },
-                      { key: "pdf", label: "Download PDF", icon: "document-outline", onPress: () => router.push(`/settings/posters/view/${sheetPoster.id}?action=pdf`) },
-                      { key: "share", label: "Share", icon: "share-social-outline", onPress: () => router.push(`/settings/posters/view/${sheetPoster.id}?action=share`) },
+                      {
+                        key: "png",
+                        label: "Download PNG",
+                        icon: "image-outline",
+                        onPress: () =>
+                          router.push(
+                            `/settings/posters/view/${sheetPoster.id}?action=png`,
+                          ),
+                      },
+                      {
+                        key: "pdf",
+                        label: "Download PDF",
+                        icon: "document-outline",
+                        onPress: () =>
+                          router.push(
+                            `/settings/posters/view/${sheetPoster.id}?action=pdf`,
+                          ),
+                      },
+                      {
+                        key: "share",
+                        label: "Share",
+                        icon: "share-social-outline",
+                        onPress: () =>
+                          router.push(
+                            `/settings/posters/view/${sheetPoster.id}?action=share`,
+                          ),
+                      },
                     ]
                   : []),
-                { key: "delete", label: "Delete", icon: "trash-outline", danger: true, onPress: () => confirmDelete(sheetPoster) },
+                {
+                  key: "delete",
+                  label: "Delete",
+                  icon: "trash-outline",
+                  danger: true,
+                  onPress: () => confirmDelete(sheetPoster),
+                },
               ]
             : []
         }

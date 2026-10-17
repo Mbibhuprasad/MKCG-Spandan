@@ -9,7 +9,7 @@ import DoctorsDirectory from "@/components/doctors/DoctorsDirectory";
 export const metadata = {
   title: "Friends",
   description:
-    "Friends on MKCGSPANDAN — find batchmates by name, specialization and city.",
+    "Friends on MKCGSPANDAN — find Friends by name, specialization and city.",
   alternates: { canonical: "/doctors" },
   robots: { index: false, follow: false },
 };
@@ -18,9 +18,9 @@ export default function DoctorsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Your batchmates"
+        eyebrow="Your Friends"
         title="Friends"
-        description="Find batchmates by name, specialization or city, and see where their journeys in medicine have taken them."
+        description="Find Friends by name, specialization or city, and see where their journeys in medicine have taken them."
       />
       <MemberGate
         title="Friends are visible to members"

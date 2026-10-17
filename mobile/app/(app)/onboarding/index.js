@@ -39,7 +39,7 @@ export default function OnboardingWelcome() {
           Welcome, {user.name}
         </Text>
         <Text color="rgba(255,255,255,0.85)" center style={styles.heroText}>
-          Your account is ready and you are signed in. Three quick, optional steps help batchmates find you.
+          Your account is ready and you are signed in. Three quick, optional steps help  find you.
         </Text>
       </LinearGradient>
 

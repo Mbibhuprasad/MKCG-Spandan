@@ -154,8 +154,22 @@ export function TravelPlanCard({ event, onUpdated }) {
           <TravelSummary travel={saved} />
           {!event.isPast ? (
             <View style={styles.actions}>
-              <Button title="Edit" icon="create-outline" variant="secondary" size="sm" onPress={open} disabled={Boolean(busy)} />
-              <Button title="Remove" icon="trash-outline" variant="danger" size="sm" onPress={remove} loading={busy === 'remove'} />
+              <Button
+                title="Edit"
+                icon="create-outline"
+                variant="secondary"
+                size="sm"
+                onPress={open}
+                disabled={Boolean(busy)}
+              />
+              <Button
+                title="Remove"
+                icon="trash-outline"
+                variant="danger"
+                size="sm"
+                onPress={remove}
+                loading={busy === "remove"}
+              />
             </View>
           ) : null}
         </>
@@ -164,22 +178,45 @@ export function TravelPlanCard({ event, onUpdated }) {
       ) : (
         <>
           <Text variant="small" tone="soft">
-            Share where you are travelling from and when you arrive and leave, so batchmates can plan to meet.
+            Share where you are travelling from and when you arrive and leave,
+            so Friends can plan to meet.
           </Text>
-          <Button title="Add my travel plan" icon="airplane-outline" size="sm" onPress={open} style={styles.start} />
+          <Button
+            title="Add my travel plan"
+            icon="airplane-outline"
+            size="sm"
+            onPress={open}
+            style={styles.start}
+          />
         </>
       )}
 
-      <Sheet visible={editing} onClose={() => setEditing(false)} title={saved ? 'Edit travel plan' : 'Add travel plan'} maxHeight="90%">
-        <ScrollView contentContainerStyle={styles.sheet} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          {failure ? <Banner tone="danger" message={failure} style={styles.gap} /> : null}
+      <Sheet
+        visible={editing}
+        onClose={() => setEditing(false)}
+        title={saved ? "Edit travel plan" : "Add travel plan"}
+        maxHeight="90%"
+      >
+        <ScrollView
+          contentContainerStyle={styles.sheet}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {failure ? (
+            <Banner tone="danger" message={failure} style={styles.gap} />
+          ) : null}
           <TravelFields form={form} errors={errors} onChange={change} />
           {!attending ? (
             <Text variant="caption" tone="muted" style={styles.gap}>
               Saving your plan also marks you as going to this event.
             </Text>
           ) : null}
-          <Button title={saved ? 'Save changes' : 'Save my plan'} onPress={save} loading={busy === 'save'} full />
+          <Button
+            title={saved ? "Save changes" : "Save my plan"}
+            onPress={save}
+            loading={busy === "save"}
+            full
+          />
         </ScrollView>
       </Sheet>
     </Card>

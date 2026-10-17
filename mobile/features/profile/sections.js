@@ -277,7 +277,7 @@ export const SECTIONS = [
     icon: "person-outline",
     title: "Basic profile",
     description:
-      "Photo, title and a short biography — how batchmates recognise you.",
+      "Photo, title and a short biography — how Friends recognise you.",
     photo: true,
     top: ["name"],
     fields: [

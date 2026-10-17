@@ -11,12 +11,36 @@ import { site } from '@/utils/constants';
 
 // The same account of the community as the website's About page.
 const FEATURES = [
-  ['people', 'Find your friends', 'Find batchmates by name, specialization or city, and read their professional journeys.'],
-  ['chatbubbles', 'Group and one-to-one chat', 'Talk with the whole community, or privately with one colleague.'],
-  ['newspaper', 'A community feed', 'Updates, achievements, reunion news and announcements from members.'],
-  ['book', 'Blogs by members', 'Experiences and ideas written by the people you trained with.'],
-  ['images', 'Shared memories', 'Photos and videos from college years and reunions, kept in one place.'],
-  ['calendar', 'Events and visit plans', 'Plan reunions, dinners and visits, with RSVPs.'],
+  [
+    "people",
+    "Find your friends",
+    "Find Friends by name, specialization or city, and read their professional journeys.",
+  ],
+  [
+    "chatbubbles",
+    "Group and one-to-one chat",
+    "Talk with the whole community, or privately with one colleague.",
+  ],
+  [
+    "newspaper",
+    "A community feed",
+    "Updates, achievements, reunion news and announcements from members.",
+  ],
+  [
+    "book",
+    "Blogs by members",
+    "Experiences and ideas written by the people you trained with.",
+  ],
+  [
+    "images",
+    "Shared memories",
+    "Photos and videos from college years and reunions, kept in one place.",
+  ],
+  [
+    "calendar",
+    "Events and visit plans",
+    "Plan reunions, dinners and visits, with RSVPs.",
+  ],
 ];
 
 const VALUES = [
@@ -48,7 +72,12 @@ export default function About() {
   const router = useRouter();
   return (
     <Screen header={<StackHeader title="About" />} scroll padded={false}>
-      <LinearGradient colors={colors.gradientHero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+      <LinearGradient
+        colors={colors.gradientHero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
         <PulsingLogo size={70} />
         <Text variant="eyebrow" color="#6fe3ad">
           About {site.name}
@@ -65,13 +94,20 @@ export default function About() {
         <Card style={styles.card}>
           <Text variant="h2">A community of doctors who trained together</Text>
           <Text tone="soft">
-            MKCGSPANDAN brings doctors and medical batchmates together in one place — to reconnect, to celebrate each other’s work, to keep shared memories safe and to make the next reunion easier to plan.
+            MKCGSPANDAN brings doctors and medical Friends together in one place
+            — to reconnect, to celebrate each other’s work, to keep shared
+            memories safe and to make the next reunion easier to plan.
           </Text>
           <Text tone="soft">
-            It is not a hospital system, a patient service or a general social network. There are no patient records here, no advertisements and no public timeline. It exists to keep people who shared the years of medical training connected throughout their careers.
+            It is not a hospital system, a patient service or a general social
+            network. There are no patient records here, no advertisements and no
+            public timeline. It exists to keep people who shared the years of
+            medical training connected throughout their careers.
           </Text>
           <Text variant="small" tone="muted">
-            MKCGSPANDAN is an independent, member-run community. It does not represent, and is not presented as being endorsed by, any medical college, hospital, council or other institution.
+            MKCGSPANDAN is an independent, member-run community. It does not
+            represent, and is not presented as being endorsed by, any medical
+            college, hospital, council or other institution.
           </Text>
         </Card>
 
@@ -81,7 +117,10 @@ export default function About() {
             <Text variant="h3">Why “Spandan”?</Text>
           </View>
           <Text tone="soft">
-            Spandan means a heartbeat — a pulse. It is the first sign every doctor learns to look for, and a fitting name for what keeps a batch alive: the regular, quiet rhythm of people checking in on one another.
+            Spandan means a heartbeat — a pulse. It is the first sign every
+            doctor learns to look for, and a fitting name for what keeps a batch
+            alive: the regular, quiet rhythm of people checking in on one
+            another.
           </Text>
         </Card>
 
@@ -95,11 +134,23 @@ export default function About() {
         <Card style={styles.card}>
           <Text variant="h3">What the community stands for</Text>
           {VALUES.map(([icon, title, text]) => (
-            <Item key={title} icon={icon} title={title} text={text} tone="leaf" />
+            <Item
+              key={title}
+              icon={icon}
+              title={title}
+              text={text}
+              tone="leaf"
+            />
           ))}
         </Card>
 
-        <Button title="Privacy and Community Guidelines" icon="document-text-outline" variant="secondary" onPress={() => router.push('/guidelines')} full />
+        <Button
+          title="Privacy and Community Guidelines"
+          icon="document-text-outline"
+          variant="secondary"
+          onPress={() => router.push("/guidelines")}
+          full
+        />
         <DeveloperCredit style={styles.credit} />
       </View>
     </Screen>

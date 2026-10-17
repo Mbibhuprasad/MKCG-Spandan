@@ -18,7 +18,7 @@ export const metadata = {
   },
   description: site.description,
   applicationName: site.name,
-  keywords: ['doctors community', 'medical batchmates', 'medical alumni', 'doctor reunion', 'doctor networking', 'MKCGSPANDAN'],
+  keywords: ['doctors community', 'medical Friends', 'medical alumni', 'doctor reunion', 'doctor networking', 'MKCGSPANDAN'],
   openGraph: {
     type: 'website',
     siteName: site.name,

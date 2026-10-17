@@ -49,7 +49,7 @@ export default function DoctorsDirectory() {
 
   return (
     <Screen
-      header={<StackHeader title="Friends" subtitle="Your batchmates" />}
+      header={<StackHeader title="Friends" subtitle="Your Friends" />}
       padded={false}
       keyboard
     >

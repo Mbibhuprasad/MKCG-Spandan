@@ -25,12 +25,12 @@ import { PageHeader, SectionHeading } from '@/components/ui/Layout';
 export const metadata = {
   title: 'About',
   description:
-    'MKCGSPANDAN is a private, member-run community where doctors and medical batchmates reconnect, share professional journeys, preserve memories and plan reunions.',
+    'MKCGSPANDAN is a private, member-run community where doctors and medical Friends reconnect, share professional journeys, preserve memories and plan reunions.',
   alternates: { canonical: '/about' },
   openGraph: {
     title: `About ${site.name}`,
     description:
-      'Why MKCGSPANDAN exists, how it helps doctors reconnect with their batchmates, and the standards of privacy and respect its members keep.',
+      'Why MKCGSPANDAN exists, how it helps doctors reconnect with their Friends, and the standards of privacy and respect its members keep.',
     url: '/about',
     type: 'website',
   },
@@ -40,7 +40,7 @@ const features = [
   {
     icon: Stethoscope,
     title: 'Find your friends',
-    text: 'Find batchmates by name, specialization or city, and see where their careers have taken them through professional profile pages.',
+    text: 'Find Friends by name, specialization or city, and see where their careers have taken them through professional profile pages.',
   },
   {
     icon: MessagesSquare,
@@ -60,7 +60,7 @@ const features = [
   {
     icon: CalendarDays,
     title: 'Events and visit plans',
-    text: 'Propose reunions, dinners and meetups, RSVP in a click, or simply let batchmates know when you are visiting their city.',
+    text: 'Propose reunions, dinners and meetups, RSVP in a click, or simply let Friends know when you are visiting their city.',
   },
   {
     icon: Vote,
@@ -135,7 +135,7 @@ export default function AboutPage() {
       <PageHeader
         eyebrow={`About ${site.name}`}
         title="A private home for a medical batch, long after graduation"
-        description="MKCGSPANDAN brings doctors and medical batchmates together in one place — to reconnect, to celebrate each other's work, to keep shared memories safe and to make the next reunion easier to plan."
+        description="MKCGSPANDAN brings doctors and medical Friends together in one place — to reconnect, to celebrate each other's work, to keep shared memories safe and to make the next reunion easier to plan."
         actions={
           <>
             <Button href="/register">Join the Community</Button>
@@ -155,7 +155,7 @@ export default function AboutPage() {
           </h2>
           <div className="mt-5 space-y-4 text-base leading-relaxed text-fg-soft">
             <p>
-              MKCGSPANDAN is an online community for doctors and medical batchmates. It combines a Friends section,
+              MKCGSPANDAN is an online community for doctors and medical Friends. It combines a Friends section,
               a community feed, member blogs, a memories gallery, events and polls — everything a batch needs to stay
               in touch — inside a space that is private to its members.
             </p>

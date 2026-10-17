@@ -563,7 +563,7 @@ describe("events and visit plans", () => {
     const visit = await author.post("/api/v1/events", {
       title: "Visiting Bengaluru in December",
       description:
-        "In town for a conference — happy to meet batchmates for coffee.",
+        "In town for a conference — happy to meet Friends for coffee.",
       eventType: "VISIT_PLAN",
       city: "Bengaluru",
       startsAt: inFuture(40),

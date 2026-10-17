@@ -360,7 +360,7 @@ export function Portfolio({ doctorId, own = false, ownActions = null }) {
           {!identity.length ? (
             <Text variant="small" tone="muted">
               {mine
-                ? "Add your education and current role so batchmates can recognise you."
+                ? "Add your education and current role so Friends can recognise you."
                 : "This doctor has not added professional details yet."}
             </Text>
           ) : null}

@@ -243,7 +243,7 @@ export default function Home() {
 
         <Section
           title="Discover friends"
-          eyebrow="Your batchmates"
+          eyebrow="Your Friends"
           actionLabel="View all friends"
           onAction={() => router.push("/doctors")}
           resource={{ ...doctors, data: doctors.data ? others : null }}
@@ -332,8 +332,17 @@ export default function Home() {
                 : "Explore MKCGSPANDAN on the Web. Coming soon."
             }
           >
-            <View style={[styles.exploreIcon, { backgroundColor: colors.brandSoft }]}>
-              <Ionicons name="globe-outline" size={24} color={colors.brandInk} />
+            <View
+              style={[
+                styles.exploreIcon,
+                { backgroundColor: colors.brandSoft },
+              ]}
+            >
+              <Ionicons
+                name="globe-outline"
+                size={24}
+                color={colors.brandInk}
+              />
             </View>
             <View style={styles.flex}>
               <Text variant="h3">Explore MKCGSPANDAN on the Web</Text>
@@ -429,7 +438,7 @@ export default function Home() {
               </View>
             </View>
             <Text variant="small" tone="soft">
-              MKCGSPANDAN helps doctors reconnect with batchmates, share
+              MKCGSPANDAN helps doctors reconnect with Friends, share
               achievements, preserve memories and organise reunions — in a space
               that is private to its members.
             </Text>

@@ -42,21 +42,28 @@ export default function Login() {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to reconnect with your batchmates."
+      subtitle="Sign in to reconnect with your Friends."
       footer={
         <Text tone="muted">
-          New to MKCGSPANDAN?{' '}
-          <Text variant="bodyStrong" tone="brand" onPress={() => router.push('/register')} accessibilityRole="link">
+          New to MKCGSPANDAN?{" "}
+          <Text
+            variant="bodyStrong"
+            tone="brand"
+            onPress={() => router.push("/register")}
+            accessibilityRole="link"
+          >
             Create an account
           </Text>
         </Text>
       }
     >
-      {notice ? <Banner tone="warn" message={notice} style={styles.banner} /> : null}
+      {notice ? (
+        <Banner tone="warn" message={notice} style={styles.banner} />
+      ) : null}
       {failure ? (
         <Banner
           tone="danger"
-          title={failure.isNetwork ? 'Cannot reach the server' : undefined}
+          title={failure.isNetwork ? "Cannot reach the server" : undefined}
           message={messageOf(failure)}
           style={styles.banner}
         />
@@ -66,7 +73,7 @@ export default function Login() {
         label="Email or phone number"
         icon="person-outline"
         value={form.identifier}
-        onChangeText={set('identifier')}
+        onChangeText={set("identifier")}
         error={errors.identifier}
         placeholder="you@example.com or 98765 43210"
         autoCapitalize="none"
@@ -74,7 +81,9 @@ export default function Login() {
         autoComplete="username"
         keyboardType="email-address"
         returnKeyType="next"
-        onSubmitEditing={() => passwordRef.current && passwordRef.current.focus()}
+        onSubmitEditing={() =>
+          passwordRef.current && passwordRef.current.focus()
+        }
         blurOnSubmit={false}
         maxLength={254}
       />
@@ -83,7 +92,7 @@ export default function Login() {
         label="Password"
         icon="lock-closed-outline"
         value={form.password}
-        onChangeText={set('password')}
+        onChangeText={set("password")}
         error={errors.password}
         placeholder="Your password"
         secure
@@ -93,10 +102,18 @@ export default function Login() {
         onSubmitEditing={submit}
         maxLength={200}
       />
-      <Button title="Sign in" icon="log-in-outline" onPress={submit} loading={busy} full size="lg" />
+      <Button
+        title="Sign in"
+        icon="log-in-outline"
+        onPress={submit}
+        loading={busy}
+        full
+        size="lg"
+      />
       <View style={styles.note}>
         <Text variant="caption" tone="muted" center>
-          Forgotten your password? Ask a community administrator to help you reset it.
+          Forgotten your password? Ask a community administrator to help you
+          reset it.
         </Text>
       </View>
     </AuthShell>

@@ -82,8 +82,8 @@ export function PhotoEditor() {
       <View style={styles.flex}>
         <Text variant="bodyStrong">Profile photo</Text>
         <Text variant="caption" tone="muted">
-          A clear, recent photo helps batchmates recognise you. JPG, PNG or
-          WebP, up to 8 MB.
+          A clear, recent photo helps Friends recognise you. JPG, PNG or WebP,
+          up to 8 MB.
         </Text>
         <View style={styles.photoActions}>
           <Button

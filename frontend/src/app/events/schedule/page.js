@@ -18,7 +18,7 @@ export default function EventSchedulePage() {
       <PageHeader
         eyebrow="Events"
         title="Event Schedule"
-        description="Choose an event to see which batchmates are coming, where they are travelling from and when they arrive and leave — and share your own plan."
+        description="Choose an event to see which Friends are coming, where they are travelling from and when they arrive and leave — and share your own plan."
       />
       <MemberGate
         title="The event schedule is for members"

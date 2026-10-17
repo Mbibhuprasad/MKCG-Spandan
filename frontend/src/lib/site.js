@@ -11,7 +11,7 @@ export const site = {
   shortName: "Spandan",
   tagline: "Together in Medicine. Connected Beyond Medicine.",
   description:
-    "MKCGSPANDAN is a private community where doctors and medical batchmates reconnect, celebrate professional journeys, preserve shared memories and plan reunions.",
+    "MKCGSPANDAN is a private community where doctors and medical Friends reconnect, celebrate professional journeys, preserve shared memories and plan reunions.",
   // NEXT_PUBLIC_SITE_URL, else (on Vercel) the project's production domain,
   // which Vercel exposes to the build; localhost only for local development.
   url: (
@@ -43,7 +43,9 @@ export const site = {
     name: "Bibhu Prasad Mahapatra",
     // Personal portfolio website — not set yet: add its full https:// address here.
     portfolioUrl: httpsUrl(""),
-    linkedinUrl: httpsUrl("https://www.linkedin.com/in/bibhuprasad-mahapatra-a9a896282/"),
+    linkedinUrl: httpsUrl(
+      "https://www.linkedin.com/in/bibhuprasad-mahapatra-a9a896282/",
+    ),
   },
   // Optional real photograph for the homepage hero (e.g. '/brand/hero.jpg').
   // When empty, the built-in illustration is shown instead.
